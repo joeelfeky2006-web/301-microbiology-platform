@@ -1,4 +1,5 @@
-export type ModuleName = "CNS" | "URS" | "REP";
+export const MODULE_NAMES = ["CNS", "URS", "REP"] as const;
+export type ModuleName = (typeof MODULE_NAMES)[number];
 export type GroupSection = "G1" | "G2";
 export type MaterialCategory =
   | "lec_pdf"
@@ -11,6 +12,12 @@ export type MaterialCategory =
   | "final_study"
   | "final_qs"
   | "ospe_simulation";
+
+/** Safely convert a URL segment like "cns" into a ModuleName, or null. */
+export function parseModuleName(value: string | undefined | null): ModuleName | null {
+  const upper = (value ?? "").toUpperCase();
+  return (MODULE_NAMES as readonly string[]).includes(upper) ? (upper as ModuleName) : null;
+}
 
 export interface Material {
   id: string;
