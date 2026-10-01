@@ -120,7 +120,7 @@ export default function AdminPage() {
 
   if (!session) {
     return shell(
-      <p className="text-slate-500 dark:text-slate-400">
+      <p className="text-slate-500 dark:text-slate-300">
         {session === null ? 'Redirecting to sign in…' : 'Checking your session…'}
       </p>
     );
@@ -130,7 +130,7 @@ export default function AdminPage() {
     return shell(
       <>
         <h1 className="mb-2 text-2xl font-extrabold text-slate-900 dark:text-white">Not authorized</h1>
-        <p className="mb-4 text-slate-600 dark:text-slate-400">
+        <p className="mb-4 text-slate-600 dark:text-slate-300">
           Your account ({session.user.email}) is not allowed to publish materials.
         </p>
         <Link href="/" className="font-semibold text-blue-600 hover:underline dark:text-cyan-300">
@@ -151,7 +151,7 @@ export default function AdminPage() {
       <div className="mb-8 flex items-center justify-between border-b border-slate-200 pb-6 dark:border-white/10">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">Dr. Youssef&apos;s Upload Center</h1>
-          <p className="mt-1 text-slate-500 dark:text-slate-400">Publish MUST 301 Microbiology materials</p>
+          <p className="mt-1 text-slate-500 dark:text-slate-300">Publish MUST 301 Microbiology materials</p>
         </div>
         <Link href="/" className="text-sm font-medium text-blue-600 hover:underline dark:text-cyan-300">
           View Portal &rarr;
@@ -169,7 +169,7 @@ export default function AdminPage() {
             placeholder="e.g., CNS Lec 1: Meningitis"
             className={inputClass}
           />
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             Files with the exact same title are grouped into one card (e.g. PDF + G1 + G2 record).
           </p>
         </div>
