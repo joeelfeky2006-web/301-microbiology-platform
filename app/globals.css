@@ -4,26 +4,34 @@
 @tailwind components;
 @tailwind utilities;
 
-/* The whole platform is a dark lab theme. Declaring color-scheme makes the
-   browser render native controls (scrollbars, inputs, selects, date pickers)
-   dark too, so they no longer clash with the dark UI on light-mode systems. */
+/* Light is the default theme. Dark mode is enabled by adding class="dark" to <html>
+   (done by the toggle in the header, and remembered in localStorage). */
 :root {
+  color-scheme: light;
+}
+.dark {
   color-scheme: dark;
 }
 
 html {
+  background-color: #f8fafc;
+}
+html.dark {
   background-color: #070b14;
 }
 
 body {
   font-family: 'Space Grotesk', system-ui, sans-serif;
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+.dark body {
   background-color: #070b14;
   color: #e6ecf5;
 }
 
 ::selection {
-  background-color: rgba(34, 211, 238, 0.3);
-  color: #ffffff;
+  background-color: rgba(37, 99, 235, 0.25);
 }
 
 .font-mono-accent {

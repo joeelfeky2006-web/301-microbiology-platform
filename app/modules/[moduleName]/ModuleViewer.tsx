@@ -1,152 +1,168 @@
 'use client';
 
-import { Material } from '@/types';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
+import { cardClass } from '@/lib/ui';
+import {
+  EXAM_TYPES,
+  MATERIAL_TYPE_LABELS,
+  MODULE_TITLES,
+  PRACTICAL_TYPES,
+  THEORY_TYPES,
+  type Material,
+  type MaterialCategory,
+  type ModuleName,
+} from '@/types';
 
-interface ModuleViewerProps {
-  moduleName: string;
-  theory: Material[];
-  practicals: Material[];
-  exams: Material[];
+type Tone = 'blue' | 'emerald' | 'purple';
+
+const tones: Record<Tone, { bar: string; badge: string; button: string }> = {
+  blue: {
+    bar: 'bg-blue-500',
+    badge: 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-400/10 dark:text-blue-300 dark:ring-blue-400/30',
+    button: 'bg-blue-600 hover:bg-blue-700',
+  },
+  emerald: {
+    bar: 'bg-emerald-500',
+    badge: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-400/10 dark:text-emerald-300 dark:ring-emerald-400/30',
+    button: 'bg-emerald-600 hover:bg-emerald-700',
+  },
+  purple: {
+    bar: 'bg-purple-500',
+    badge: 'bg-purple-50 text-purple-700 ring-purple-200 dark:bg-purple-400/10 dark:text-purple-300 dark:ring-purple-400/30',
+    button: 'bg-purple-600 hover:bg-purple-700',
+  },
+};
+
+const TYPE_ORDER = Object.keys(MATERIAL_TYPE_LABELS) as MaterialCategory[];
+
+// Files sharing a title (e.g. PDF + G1 + G2 record of one lecture) appear in one card.
+function groupByTitle(items: Material[]): [string, Material[]][] {
+  const groups = new Map<string, Material[]>();
+  for (const item of items) {
+    const list = groups.get(item.title) ?? [];
+    list.push(item);
+    groups.set(item.title, list);
+  }
+  return Array.from(groups.entries()).map(([title, list]) => [
+    title,
+    [...list].sort((a, b) => TYPE_ORDER.indexOf(a.type) - TYPE_ORDER.indexOf(b.type)),
+  ]);
 }
 
-export default function ModuleViewer({ moduleName, theory, practicals, exams }: ModuleViewerProps) {
-  const groupMaterials = (items: Material[]) => {
-    const groups: { [key: string]: Material[] } = {};
-    items.forEach(item => {
-      const key = item.title; 
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(item);
-    });
-    return groups;
-  };
-
-  const theoryGroups = groupMaterials(theory);
-  const practicalGroups = groupMaterials(practicals);
-  const examGroups = groupMaterials(exams);
+function Section({ heading, tone, items, emptyText }: { heading: string; tone: Tone; items: Material[]; emptyText: string }) {
+  const t = tones[tone];
+  const groups = groupByTitle(items);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 p-6 md:p-12">
-      <div className="max-w-5xl mx-auto space-y-10">
-        
-        {/* Top Header */}
+    <section className="space-y-4">
+      <div className="flex items-center space-x-3">
+        <div className={`h-6 w-2.5 rounded-full ${t.bar}`} />
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{heading}</h2>
+      </div>
+
+      {groups.length === 0 ? (
+        <p className="italic text-slate-500">{emptyText}</p>
+      ) : (
+        <div className="grid gap-4">
+          {groups.map(([title, materials]) => (
+            <div key={title} className={`${cardClass} space-y-4 p-6`}>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">{title}</h3>
+                <p className="font-mono-accent mt-0.5 text-xs uppercase tracking-wider text-slate-500">
+                  {materials.length} file{materials.length === 1 ? '' : 's'} available
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 border-t border-slate-200 pt-4 dark:border-white/10 md:grid-cols-2 lg:grid-cols-3">
+                {materials.map((mat) => (
+                  <div
+                    key={mat.id}
+                    className="flex flex-col justify-between rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-900/60"
+                  >
+                    <span className={`font-mono-accent w-fit rounded px-2 py-0.5 text-xs font-semibold uppercase ring-1 ${t.badge}`}>
+                      {MATERIAL_TYPE_LABELS[mat.type] ?? mat.type}
+                    </span>
+
+                    {mat.format === 'audio' && <audio controls preload="none" src={mat.file_url} className="mt-3 w-full" />}
+
+                    <a
+                      href={mat.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`mt-3 rounded-lg px-3 py-1.5 text-center text-xs font-semibold text-white transition-colors ${t.button}`}
+                    >
+                      {mat.format === 'audio' ? 'Open audio →' : 'Open file →'}
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+export default function ModuleViewer({ moduleName }: { moduleName: ModuleName }) {
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      // public.materials has no created_at column, so order by title.
+      const { data, error } = await supabase
+        .from('materials')
+        .select('*')
+        .eq('module', moduleName)
+        .order('title', { ascending: true })
+        .returns<Material[]>();
+      if (cancelled) return;
+      if (error) {
+        console.error('Error fetching materials:', error);
+        setLoadError(error.message);
+      } else {
+        setMaterials(data ?? []);
+      }
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [moduleName]);
+
+  return (
+    <main className="p-6 md:p-12">
+      <div className="mx-auto max-w-5xl space-y-10">
         <div>
-          <Link href="/" className="text-blue-600 hover:underline text-sm font-medium">
+          <Link href="/" className="text-sm font-medium text-blue-600 hover:underline dark:text-cyan-300">
             ← Back to Dashboard
           </Link>
-          <h1 className="text-4xl font-extrabold text-slate-900 mt-2">
-            {moduleName} <span className="text-slate-400 font-normal">Module</span>
+          <h1 className="mt-2 text-4xl font-extrabold text-slate-900 dark:text-white">
+            {moduleName} <span className="font-normal text-slate-400 dark:text-slate-500">· {MODULE_TITLES[moduleName]}</span>
           </h1>
         </div>
 
-        {/* Theory & Lectures Section */}
-        <section className="space-y-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-2.5 h-6 bg-blue-600 rounded-full"></div>
-            <h2 className="text-2xl font-bold text-slate-900">Theory & Lectures</h2>
+        {loadError && (
+          <div role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
+            Couldn&apos;t load materials right now. Please refresh in a moment.
           </div>
+        )}
 
-          {Object.keys(theoryGroups).length === 0 ? (
-            <p className="text-slate-500 italic">No theory materials uploaded yet.</p>
-          ) : (
-            <div className="grid gap-4">
-              {Object.entries(theoryGroups).map(([title, materials], idx) => (
-                <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900">{title}</h3>
-                    <p className="text-xs text-slate-500 mt-0.5 uppercase tracking-wider font-mono-accent">
-                      Lecture Folder &bull; {materials.length} file(s) available
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
-                    {materials.map((mat) => (
-                      <div key={mat.id} className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between">
-                        <div>
-                          <span className="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-600 font-mono-accent uppercase font-semibold">
-                            {mat.type}
-                          </span>
-                          <p className="text-sm font-medium text-slate-800 mt-2 line-clamp-2">{mat.title}</p>
-                        </div>
-                        
-                        <div className="mt-4 pt-3 border-t border-slate-200 flex justify-end">
-                          <a 
-                            href={mat.file_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center space-x-1"
-                          >
-                            <span>Access Material →</span>
-                          </a>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Practicals & OSPE Section */}
-        <section className="space-y-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-2.5 h-6 bg-emerald-600 rounded-full"></div>
-            <h2 className="text-2xl font-bold text-slate-900">Practicals & OSPE</h2>
-          </div>
-          {Object.keys(practicalGroups).length === 0 ? (
-            <p className="text-slate-500 italic">No practical materials uploaded yet.</p>
-          ) : (
-            <div className="grid gap-4">
-              {Object.entries(practicalGroups).map(([title, materials], idx) => (
-                <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
-                  <h3 className="text-lg font-bold text-slate-900">{title}</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
-                    {materials.map((mat) => (
-                      <div key={mat.id} className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between">
-                        <span className="text-xs px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 font-mono-accent uppercase font-semibold">{mat.type}</span>
-                        <a href={mat.file_url} target="_blank" rel="noopener noreferrer" className="mt-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-1.5 px-3 rounded-lg text-center">
-                          Open File →
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Exam Vault Section */}
-        <section className="space-y-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-2.5 h-6 bg-purple-600 rounded-full"></div>
-            <h2 className="text-2xl font-bold text-slate-900">Exam Vault</h2>
-          </div>
-          {Object.keys(examGroups).length === 0 ? (
-            <p className="text-slate-500 italic">No exam materials uploaded yet.</p>
-          ) : (
-            <div className="grid gap-4">
-              {Object.entries(examGroups).map(([title, materials], idx) => (
-                <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
-                  <h3 className="text-lg font-bold text-slate-900">{title}</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
-                    {materials.map((mat) => (
-                      <div key={mat.id} className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between">
-                        <span className="text-xs px-2 py-0.5 rounded bg-purple-50 text-purple-600 font-mono-accent uppercase font-semibold">{mat.type}</span>
-                        <a href={mat.file_url} target="_blank" rel="noopener noreferrer" className="mt-3 text-xs bg-purple-600 hover:bg-purple-700 text-white font-semibold py-1.5 px-3 rounded-lg text-center">
-                          Open File →
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
+        {loading ? (
+          <p className="text-slate-500">Loading materials…</p>
+        ) : (
+          <>
+            <Section heading="Theory & Lectures" tone="blue" items={materials.filter((m) => THEORY_TYPES.includes(m.type))} emptyText="No theory materials uploaded yet." />
+            <Section heading="Practicals & OSPE" tone="emerald" items={materials.filter((m) => PRACTICAL_TYPES.includes(m.type))} emptyText="No practical materials uploaded yet." />
+            <Section heading="Exam Vault" tone="purple" items={materials.filter((m) => EXAM_TYPES.includes(m.type))} emptyText="No exam materials uploaded yet." />
+          </>
+        )}
       </div>
-    </div>
+    </main>
   );
 }
