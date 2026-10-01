@@ -24,17 +24,17 @@ type Tone = 'blue' | 'emerald' | 'purple';
 const tones: Record<Tone, { bar: string; badge: string; button: string }> = {
   blue: {
     bar: 'bg-blue-500',
-    badge: 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-400/10 dark:text-blue-300 dark:ring-blue-400/30',
+    badge: 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/80 dark:text-blue-200 dark:ring-blue-700/80',
     button: 'bg-blue-600 hover:bg-blue-700',
   },
   emerald: {
     bar: 'bg-emerald-500',
-    badge: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-400/10 dark:text-emerald-300 dark:ring-emerald-400/30',
+    badge: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-200 dark:ring-emerald-700/80',
     button: 'bg-emerald-600 hover:bg-emerald-700',
   },
   purple: {
     bar: 'bg-purple-500',
-    badge: 'bg-purple-50 text-purple-700 ring-purple-200 dark:bg-purple-400/10 dark:text-purple-300 dark:ring-purple-400/30',
+    badge: 'bg-purple-50 text-purple-700 ring-purple-200 dark:bg-purple-950/80 dark:text-purple-200 dark:ring-purple-700/80',
     button: 'bg-purple-600 hover:bg-purple-700',
   },
 };
@@ -87,12 +87,12 @@ function Section({
             <div key={title} className={`${cardClass} space-y-4 p-6`}>
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">{title}</h3>
-                <p className="font-mono-accent mt-0.5 text-xs uppercase tracking-wider text-slate-500">
+                <p className="font-mono-accent mt-0.5 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   {materials.length} file{materials.length === 1 ? '' : 's'} available
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 border-t border-slate-200 pt-4 dark:border-white/10 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 border-t border-slate-200 pt-4 dark:border-slate-800 md:grid-cols-2 lg:grid-cols-3">
                 {materials.map((mat) => {
                   const completed = isComplete(mat.id);
                   return (
@@ -100,8 +100,8 @@ function Section({
                       key={mat.id}
                       className={`flex flex-col justify-between rounded-xl border p-4 transition-colors ${
                         completed
-                          ? 'border-emerald-300 bg-emerald-50/40 dark:border-emerald-800/40 dark:bg-emerald-950/20'
-                          : 'border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-slate-900/60'
+                          ? 'border-emerald-300 bg-emerald-50/70 dark:border-emerald-800/60 dark:bg-emerald-950/40'
+                          : 'border-slate-200 bg-slate-50/90 dark:border-slate-800 dark:bg-slate-800/80'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">

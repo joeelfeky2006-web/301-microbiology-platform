@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { cardClass } from '@/lib/ui';
 import { MODULE_TITLES, type ModuleName } from '@/types';
+import { useUserCredits, ACTION_COSTS } from '@/lib/credits';
+import CreditBadge from '@/components/credits/CreditBadge';
 
 interface AILearningStudioProps {
   initialModule?: ModuleName;
@@ -31,6 +33,9 @@ export default function AILearningStudio({
   const [selectedModule, setSelectedModule] = useState<ModuleName>(initialModule);
   const [difficulty, setDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('intermediate');
   const [customTopic, setCustomTopic] = useState('');
+  const [creditNotice, setCreditNotice] = useState<string | null>(null);
+
+  const { credits, deductCredits, refundCredits } = useUserCredits();
 
   // Case Study State
   const [caseStudy, setCaseStudy] = useState<any>(null);
@@ -42,20 +47,27 @@ export default function AILearningStudio({
   const [summary, setSummary] = useState<any>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
 
-  // Quiz Eval State
+  // Quiz Eval State (Server-Graded to prevent network answer leakage)
+  const [activeQuestionId, setActiveQuestionId] = useState<string>('urs-q1');
   const [quizQuestion, setQuizQuestion] = useState(
     'A 22-year-old student presents with painful dysuria and cloudy urine. Culture on MacConkey agar shows pink colonies with rapid lactose fermentation and positive indole test. What is the organism, and what pili facilitate ascent?'
   );
   const [studentAnswer, setStudentAnswer] = useState(
     'E. coli (UPEC) using P-fimbriae to reach the renal pelvis'
   );
-  const [correctAnswer, setCorrectAnswer] = useState(
-    'Uropathogenic Escherichia coli with P-fimbriae (pyelonephritis-associated pili)'
-  );
   const [evalResult, setEvalResult] = useState<any>(null);
   const [evalLoading, setEvalLoading] = useState(false);
 
   const fetchCaseStudy = async () => {
+    setCreditNotice(null);
+    const deduction = deductCredits('case_study');
+    if (!deduction.success) {
+      setCreditNotice(
+        `AI Credit Limit Reached (Cost: 3 credits). Daily balance: ${deduction.remainingDaily}/${credits.dailyLimit} credits. Free tier cooling down to ensure fair access for all 700 students. Please review the static Lecture Notes and PDFs.`
+      );
+      return;
+    }
+
     setCaseLoading(true);
     setSelectedOption(null);
     setRevealed(false);
@@ -75,12 +87,22 @@ export default function AILearningStudio({
       }
     } catch (err) {
       console.error(err);
+      refundCredits(ACTION_COSTS.case_study);
     } finally {
       setCaseLoading(false);
     }
   };
 
   const fetchSummary = async (topicToUse?: string) => {
+    setCreditNotice(null);
+    const deduction = deductCredits('summary');
+    if (!deduction.success) {
+      setCreditNotice(
+        `AI Credit Limit Reached (Cost: 1 credit). Daily balance: ${deduction.remainingDaily}/${credits.dailyLimit} credits. Resets at midnight UTC.`
+      );
+      return;
+    }
+
     setSummaryLoading(true);
     const targetTopic = topicToUse || customTopic.trim() || `${MODULE_TITLES[selectedModule]} Core Pathogens`;
     try {
@@ -98,22 +120,32 @@ export default function AILearningStudio({
       }
     } catch (err) {
       console.error(err);
+      refundCredits(ACTION_COSTS.summary);
     } finally {
       setSummaryLoading(false);
     }
   };
 
   const runQuizEval = async () => {
+    setCreditNotice(null);
+    const deduction = deductCredits('mcq');
+    if (!deduction.success) {
+      setCreditNotice(
+        `AI Credit Limit Reached (Cost: 2 credits). Daily balance: ${deduction.remainingDaily}/${credits.dailyLimit} credits. Resets at midnight UTC.`
+      );
+      return;
+    }
+
     setEvalLoading(true);
     try {
       const res = await fetch('/api/gemini/quiz-eval', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          questionId: activeQuestionId,
           module: MODULE_TITLES[selectedModule],
           question: quizQuestion,
           studentAnswer,
-          correctAnswer,
         }),
       });
       const data = await res.json();
@@ -122,6 +154,7 @@ export default function AILearningStudio({
       }
     } catch (err) {
       console.error(err);
+      refundCredits(ACTION_COSTS.mcq);
     } finally {
       setEvalLoading(false);
     }
@@ -146,10 +179,16 @@ export default function AILearningStudio({
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Interactive medical case vignettes, high-yield lecture summaries, and automated diagnostic quiz evaluation.
           </p>
+          {/* Academic Calibration Tag */}
+          <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-800 dark:bg-indigo-950/50 dark:text-cyan-300 ring-1 ring-indigo-200 dark:ring-indigo-900/60">
+            <BookOpen className="h-3 w-3 text-indigo-600 dark:text-cyan-400" />
+            <span>Calibrated on Levinson Medical Microbiology, First Aid (USMLE Step 1), &amp; MUST 301 Standards</span>
+          </div>
         </div>
 
-        {/* Module Switcher */}
+        {/* Module Switcher & Live Credits */}
         <div className="flex flex-wrap items-center gap-2">
+          <CreditBadge compact />
           {(['URS', 'CNS', 'REP'] as ModuleName[]).map((mod) => (
             <button
               key={mod}
@@ -170,6 +209,23 @@ export default function AILearningStudio({
           ))}
         </div>
       </div>
+
+      {/* Credit Notice Alert */}
+      {creditNotice && (
+        <div className="mt-4 flex items-center justify-between rounded-xl border border-amber-300 bg-amber-50 p-3.5 text-xs text-amber-900 shadow-sm dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200">
+          <div className="flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-amber-900 dark:bg-amber-800 dark:text-amber-100 font-bold text-xs">!</span>
+            <span>{creditNotice}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCreditNotice(null)}
+            className="rounded p-1 hover:bg-amber-100 dark:hover:bg-amber-900"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="mt-6 flex border-b border-slate-200 dark:border-white/10">
@@ -582,43 +638,78 @@ export default function AILearningStudio({
 
             <div className="mt-4 space-y-4">
               <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Exam Question</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Exam Question</label>
+                  <div className="flex items-center gap-1.5 text-[11px]">
+                    <span className="text-slate-400">Presets:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveQuestionId('urs-q1');
+                        setQuizQuestion('A 22-year-old student presents with painful dysuria and cloudy urine. Culture on MacConkey agar shows pink colonies with rapid lactose fermentation and positive indole test. What is the organism, and what pili facilitate ascent?');
+                        setStudentAnswer('');
+                        setEvalResult(null);
+                      }}
+                      className="rounded bg-slate-100 px-1.5 py-0.5 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+                    >
+                      URS
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveQuestionId('cns-q1');
+                        setQuizQuestion('An 18-year-old college student presents with high fever, neck stiffness, and a petechial rash. CSF analysis reveals opening pressure 280 mm H2O, WBC 4500 (90% PMNs), high protein, and low glucose. Gram stain shows intracellular Gram-negative diplococci. What is the organism and the primary capsule virulence factor?');
+                        setStudentAnswer('');
+                        setEvalResult(null);
+                      }}
+                      className="rounded bg-slate-100 px-1.5 py-0.5 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+                    >
+                      CNS
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveQuestionId('rep-q1');
+                        setQuizQuestion('A 29-year-old male presents with a single, painless, hard indurated ulcer on the penis and bilateral non-tender lymphadenopathy. Darkfield microscopy reveals slender, corkscrew motile spirochetes. What is the pathogen, and what is the drug of choice?');
+                        setStudentAnswer('');
+                        setEvalResult(null);
+                      }}
+                      className="rounded bg-slate-100 px-1.5 py-0.5 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+                    >
+                      REP
+                    </button>
+                  </div>
+                </div>
                 <textarea
                   rows={2}
                   value={quizQuestion}
-                  onChange={(e) => setQuizQuestion(e.target.value)}
+                  onChange={(e) => {
+                    setQuizQuestion(e.target.value);
+                    setActiveQuestionId('');
+                  }}
                   className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-3 text-xs text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Your Answer</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Your Clinical Answer (Graded against authoritative server benchmark)</label>
                 <textarea
-                  rows={2}
+                  rows={3}
                   value={studentAnswer}
                   onChange={(e) => setStudentAnswer(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-3 text-xs text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Reference Benchmark Answer</label>
-                <textarea
-                  rows={2}
-                  value={correctAnswer}
-                  onChange={(e) => setCorrectAnswer(e.target.value)}
+                  placeholder="Type your differential diagnosis, causative organism, and virulence factors..."
                   className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-3 text-xs text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 />
               </div>
 
               <button
                 type="button"
-                disabled={evalLoading}
+                disabled={evalLoading || !studentAnswer.trim()}
                 onClick={runQuizEval}
                 className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow transition hover:bg-blue-700 disabled:opacity-50"
               >
                 {evalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                Evaluate Answer with AI
+                Submit &amp; Evaluate Answer with AI
               </button>
             </div>
 

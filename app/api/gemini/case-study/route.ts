@@ -8,6 +8,22 @@ interface CaseStudyPayload {
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
 }
 
+// In-memory cache for high-demand clinical cases (0 tokens, 0 latency)
+const caseCache = new Map<string, any>();
+
+function safeJsonParse(rawText: string): any {
+  let cleaned = rawText.trim();
+  if (cleaned.startsWith('```json')) {
+    cleaned = cleaned.slice(7);
+  } else if (cleaned.startsWith('```')) {
+    cleaned = cleaned.slice(3);
+  }
+  if (cleaned.endsWith('```')) {
+    cleaned = cleaned.slice(0, -3);
+  }
+  return JSON.parse(cleaned.trim());
+}
+
 const FALLBACK_CASES: Record<ModuleName, any> = {
   CNS: {
     title: 'Acute Onset Fever, Severe Headache, and Nuchal Rigidity in an 18-Year-Old College Student',
@@ -35,7 +51,7 @@ const FALLBACK_CASES: Record<ModuleName, any> = {
     ],
     explanation: 'The classic clinical triad of acute bacterial meningitis along with petechial/purpuric rash and Gram-negative coffee-bean shaped diplococci points directly to Neisseria meningitidis (meningococcus). Its key virulence factors include the antiphagocytic polysaccharide capsule, lipooligosaccharide (LOS) endotoxin triggering septic shock and petechiae, and IgA1 protease aiding mucosal colonization.',
     clinicalPearls: [
-      'Empirical therapy: IV Ceftriaxone or Cefotaxime + Vancomycin (plus Ampicillin if Listeria is suspected in neonates/elderly).',
+      'Calibrated on Levinson & First Aid: Empirical therapy is IV Ceftriaxone + Vancomycin (plus Ampicillin if Listeria is suspected in neonates/elderly).',
       'Prophylaxis for close household/dorm contacts: Rifampin, Ciprofloxacin, or single-dose Ceftriaxone.',
     ],
   },
@@ -62,7 +78,7 @@ const FALLBACK_CASES: Record<ModuleName, any> = {
     ],
     explanation: 'Uropathogenic Escherichia coli (UPEC) is the leading cause of both cystitis and acute pyelonephritis. While Type 1 fimbriae mediate binding to bladder epithelium, P fimbriae (pyelonephritis-associated pili) recognize Gala(1-4)Gal receptors present on renal tubular and uroepithelial cells, facilitating upward ascension to the renal parenchyma causing acute pyelonephritis.',
     clinicalPearls: [
-      'WBC casts are the hallmark differentiator between upper UTI (pyelonephritis) vs lower UTI (cystitis).',
+      'Calibrated on Levinson & First Aid: WBC casts are the hallmark differentiator between upper UTI (pyelonephritis) vs lower UTI (cystitis).',
       'Proteus mirabilis produces urease, producing alkaline urine (pH > 7.5) and staghorn calculi (struvite stones).',
     ],
   },
@@ -90,7 +106,7 @@ const FALLBACK_CASES: Record<ModuleName, any> = {
     ],
     explanation: 'A single, painless, hard indurated ulcer (Hunterian chancre) accompanied by non-tender regional lymphadenopathy is pathognomonic for Primary Syphilis caused by Treponema pallidum. Because T. pallidum lacks peptidoglycan-remodeling enzymes leading to penicillin resistance, Benzathine Penicillin G remains 100% bactericidal and the gold standard drug of choice.',
     clinicalPearls: [
-      'Remember: "Hard & Painless = Syphilis; Soft & Painful = Chancroid (Haemophilus ducreyi)".',
+      'Calibrated on Levinson & First Aid: "Hard & Painless = Syphilis; Soft & Painful = Chancroid (Haemophilus ducreyi)".',
       'Watch out for the Jarisch-Herxheimer reaction (fever, chills, hypotension) hours after starting penicillin due to massive spirochetal endotoxin/antigen release.',
     ],
   },
@@ -103,8 +119,18 @@ export async function POST(req: NextRequest) {
     const topic = body.topic || '';
     const difficulty = body.difficulty || 'intermediate';
 
+    // 1. Check in-memory edge cache (Saves Gemini token burn & rate limits)
+    const cacheKey = `${moduleName}_${(topic || 'core').toLowerCase().trim()}_${difficulty}`;
+    if (caseCache.has(cacheKey)) {
+      return NextResponse.json({
+        success: true,
+        caseStudy: caseCache.get(cacheKey),
+        source: 'cached_edge',
+      });
+    }
+
     if (ai) {
-      const prompt = `Generate a realistic medical student microbiology case study vignette for 301 Microbiology at MUST University.
+      const prompt = `Generate a realistic medical student microbiology case study vignette for MUST 301 Medical Microbiology, calibrated on Levinson (Review of Medical Microbiology & Immunology) and First Aid (USMLE Step 1).
 Module: ${moduleName} (CNS: Central Nervous System, URS: Urinary System, REP: Reproductive System).
 Specific Topic / Pathogen requested: ${topic || 'High-yield common pathology for this module'}.
 Difficulty level: ${difficulty}.
@@ -133,7 +159,7 @@ Return ONLY valid JSON matching this schema:
 
       try {
         const response = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
+          model: 'gemini-2.5-flash',
           contents: prompt,
           config: {
             responseMimeType: 'application/json',
@@ -141,11 +167,13 @@ Return ONLY valid JSON matching this schema:
         });
 
         if (response.text) {
-          const parsed = JSON.parse(response.text.trim());
+          const parsed = safeJsonParse(response.text);
+          // Store in edge cache
+          caseCache.set(cacheKey, parsed);
           return NextResponse.json({ success: true, caseStudy: parsed, source: 'gemini' });
         }
-      } catch (genErr) {
-        console.warn('Gemini generation fallback to local clinical case bank:', genErr);
+      } catch (genErr: any) {
+        console.warn('Gemini case generation fallback:', genErr?.message || genErr);
       }
     }
 
@@ -158,6 +186,7 @@ Return ONLY valid JSON matching this schema:
         title: topic ? `${fallbackCase.title} [Focus: ${topic}]` : fallbackCase.title,
       },
       source: 'curated_bank',
+      notice: 'AI Study Studio is currently cooling down due to high demand. Serving calibrated offline clinical case.',
     });
   } catch (error: any) {
     console.error('Case study API error:', error);

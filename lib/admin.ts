@@ -65,7 +65,7 @@ export function setUserRole(email: string, role: UserRole): void {
   }
 }
 
-/** Determine role for an email */
+/** Determine role for an email - strictly without loose substring heuristics */
 export function getUserRole(email?: string | null): UserRole {
   if (!email) return 'student';
   const clean = email.trim().toLowerCase();
@@ -74,9 +74,6 @@ export function getUserRole(email?: string | null): UserRole {
   }
   const roles = getStoredUserRoles();
   if (roles[clean]) return roles[clean];
-
-  if (clean.includes('superadmin') || clean.includes('head')) return 'super_admin';
-  if (clean.includes('editor') || clean.includes('staff') || clean.includes('dr.')) return 'editor';
 
   return 'student';
 }

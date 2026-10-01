@@ -96,7 +96,31 @@ export default function AdSlot({
     if (!activeCampaign.discountCode) return;
     navigator.clipboard?.writeText(activeCampaign.discountCode);
     setCopied(true);
+    // Track coupon copy event for CTR analysis
+    fetch('/api/analytics/sponsor-click', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'coupon_copy',
+        placement,
+        coupon: activeCampaign.discountCode,
+      }),
+    }).catch(() => {});
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleLinkClick = () => {
+    // Track outgoing sponsor click
+    fetch('/api/analytics/sponsor-click', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'click',
+        placement,
+        coupon: activeCampaign.discountCode,
+      }),
+    }).catch(() => {});
+    if (onActionClick) onActionClick();
   };
 
   // Top banner format
@@ -280,6 +304,7 @@ export default function AdSlot({
                 href="https://www.revive-mw.net/"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={handleLinkClick}
                 className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-slate-800 hover:shadow active:scale-95 dark:bg-cyan-500 dark:text-slate-950 dark:hover:bg-cyan-400"
               >
                 <span>Shop Revive</span>
@@ -290,6 +315,7 @@ export default function AdSlot({
                 href="https://www.instagram.com/revive_mw/"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={handleLinkClick}
                 title="View Revive on Instagram"
                 className="rounded-xl border border-slate-300 bg-white p-2.5 text-slate-700 transition hover:bg-slate-50 dark:border-white/10 dark:bg-slate-800 dark:text-slate-200"
               >

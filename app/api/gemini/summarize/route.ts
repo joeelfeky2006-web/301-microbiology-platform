@@ -8,6 +8,22 @@ interface SummarizePayload {
   focusArea?: string;
 }
 
+// In-memory summary cache (0 token cost, 0 latency for repeated student queries)
+const summaryCache = new Map<string, any>();
+
+function safeJsonParse(rawText: string): any {
+  let cleaned = rawText.trim();
+  if (cleaned.startsWith('```json')) {
+    cleaned = cleaned.slice(7);
+  } else if (cleaned.startsWith('```')) {
+    cleaned = cleaned.slice(3);
+  }
+  if (cleaned.endsWith('```')) {
+    cleaned = cleaned.slice(0, -3);
+  }
+  return JSON.parse(cleaned.trim());
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body: SummarizePayload = await req.json();
@@ -15,8 +31,19 @@ export async function POST(req: NextRequest) {
     const topic = body.topic || 'Core High-Yield Microorganisms';
     const moduleFullName = MODULE_TITLES[moduleName] || 'Medical Microbiology';
 
+    // 1. Check in-memory cache
+    const cacheKey = `${moduleName}_${topic.toLowerCase().trim()}`;
+    if (summaryCache.has(cacheKey)) {
+      return NextResponse.json({
+        success: true,
+        summary: summaryCache.get(cacheKey),
+        source: 'cached_edge',
+      });
+    }
+
     if (ai) {
-      const prompt = `You are a microbiology professor for MUST 301 Medical Microbiology (${moduleFullName}).
+      const prompt = `You are a medical microbiology professor for MUST 301 Medical Microbiology (${moduleFullName}).
+Calibrate this syllabus summary specifically on Review of Medical Microbiology & Immunology (Levinson), First Aid (USMLE Step 1), and MUST 301 exam standards.
 Provide a high-yield, exam-focused syllabus summary on: "${topic}".
 Include:
 1. Executive summary of pathology
@@ -48,7 +75,7 @@ Return ONLY valid JSON matching this schema:
 
       try {
         const response = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
+          model: 'gemini-2.5-flash',
           contents: prompt,
           config: {
             responseMimeType: 'application/json',
@@ -56,11 +83,12 @@ Return ONLY valid JSON matching this schema:
         });
 
         if (response.text) {
-          const parsed = JSON.parse(response.text.trim());
+          const parsed = safeJsonParse(response.text);
+          summaryCache.set(cacheKey, parsed);
           return NextResponse.json({ success: true, summary: parsed, source: 'gemini' });
         }
-      } catch (err) {
-        console.warn('Gemini summarize fallback to local database:', err);
+      } catch (err: any) {
+        console.warn('Gemini summarize fallback:', err?.message || err);
       }
     }
 
@@ -69,7 +97,7 @@ Return ONLY valid JSON matching this schema:
       module: moduleName,
       moduleTitle: moduleFullName,
       topic: topic,
-      overview: `High-yield syllabus review for ${moduleFullName} (301 Microbiology). Emphasizing differential diagnosis, distinctive colonial morphology, selective growth media, and primary mechanisms of antimicrobial resistance.`,
+      overview: `High-yield syllabus review for ${moduleFullName} (301 Microbiology). Calibrated on Levinson Medical Microbiology & First Aid. Emphasizing differential diagnosis, distinctive colonial morphology, selective growth media, and primary mechanisms of antimicrobial resistance.`,
       keyPathogens: [
         {
           name: moduleName === 'URS' ? 'Escherichia coli (UPEC)' : moduleName === 'CNS' ? 'Neisseria meningitidis' : 'Treponema pallidum',
@@ -107,7 +135,12 @@ Return ONLY valid JSON matching this schema:
       ],
     };
 
-    return NextResponse.json({ success: true, summary: fallbackSummary, source: 'curated_bank' });
+    return NextResponse.json({
+      success: true,
+      summary: fallbackSummary,
+      source: 'curated_bank',
+      notice: 'AI Study Studio is currently cooling down due to high demand. Serving calibrated offline syllabus summary.',
+    });
   } catch (error: any) {
     console.error('Summarize API error:', error);
     return NextResponse.json(

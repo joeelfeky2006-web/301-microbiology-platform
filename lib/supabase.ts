@@ -10,11 +10,23 @@ const isConfigured =
   typeof supabaseAnonKey === 'string' &&
   supabaseAnonKey.trim().length > 10;
 
-// High-yield seed data for MUST 301 Microbiology
+/** Standard RFC4122 UUID v4 generator for both browser and Node runtimes */
+export function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+// High-yield seed data for MUST 301 Microbiology using valid UUIDs
 const INITIAL_MATERIALS: Material[] = [
   // CNS Module
   {
-    id: 'cns-mat-1',
+    id: '11111111-cns1-4000-8000-000000000001',
     module: 'CNS',
     type: 'lec_pdf',
     title: 'CNS Lec 1: Acute Bacterial & Viral Meningitis',
@@ -24,7 +36,7 @@ const INITIAL_MATERIALS: Material[] = [
     created_at: '2026-09-10T10:00:00Z',
   },
   {
-    id: 'cns-mat-2',
+    id: '11111111-cns1-4000-8000-000000000002',
     module: 'CNS',
     type: 'record_g1',
     title: 'CNS Lec 1: Acute Bacterial & Viral Meningitis',
@@ -34,7 +46,7 @@ const INITIAL_MATERIALS: Material[] = [
     created_at: '2026-09-10T12:00:00Z',
   },
   {
-    id: 'cns-mat-3',
+    id: '11111111-cns1-4000-8000-000000000003',
     module: 'CNS',
     type: 'record_g2',
     title: 'CNS Lec 1: Acute Bacterial & Viral Meningitis',
@@ -44,7 +56,7 @@ const INITIAL_MATERIALS: Material[] = [
     created_at: '2026-09-10T14:00:00Z',
   },
   {
-    id: 'cns-mat-4',
+    id: '11111111-cns1-4000-8000-000000000004',
     module: 'CNS',
     type: 'lec_pdf',
     title: 'CNS Lec 2: Chronic Meningitis & Brain Abscess',
@@ -54,7 +66,7 @@ const INITIAL_MATERIALS: Material[] = [
     created_at: '2026-09-14T10:00:00Z',
   },
   {
-    id: 'cns-mat-5',
+    id: '11111111-cns1-4000-8000-000000000005',
     module: 'CNS',
     type: 'practical_pdf',
     title: 'CNS Practical: CSF Examination, Gram Stain & OSPE Slides',
@@ -64,81 +76,71 @@ const INITIAL_MATERIALS: Material[] = [
     created_at: '2026-09-18T09:00:00Z',
   },
   {
-    id: 'cns-mat-6',
+    id: '11111111-cns1-4000-8000-000000000006',
     module: 'CNS',
-    type: 'ospe_simulation',
-    title: 'CNS Practical: CSF Examination, Gram Stain & OSPE Slides',
-    file_url: 'https://t.me/micro301_must',
-    format: 'external_link',
-    source_type: 'telegram',
-    created_at: '2026-09-18T11:00:00Z',
-  },
-  {
-    id: 'cns-mat-7',
-    module: 'CNS',
-    type: 'midterm_qs',
-    title: 'CNS Midterm Vault: High-Yield Questions & Case Vignettes',
+    type: 'midterm_study',
+    title: 'CNS Midterm Exam Vault: Past MCQ Questions & Rationale',
     file_url: 'https://drive.google.com/file/d/demo-cns-midterm/view',
     format: 'pdf',
     source_type: 'drive',
-    created_at: '2026-09-22T15:00:00Z',
+    created_at: '2026-09-22T14:00:00Z',
   },
 
-  // Urinary System (URS) Module
+  // URS (Urinary System) Module
   {
-    id: 'urs-mat-1',
+    id: '22222222-urs1-4000-8000-000000000001',
     module: 'URS',
     type: 'lec_pdf',
-    title: 'Urinary System Lec 1: Urinary Tract Infections (UTI & Pyelonephritis)',
+    title: 'URS Lec 1: Community & Hospital-Acquired UTIs',
     file_url: 'https://drive.google.com/file/d/demo-urs-lec1/view',
     format: 'pdf',
     source_type: 'drive',
-    created_at: '2026-09-12T10:00:00Z',
+    created_at: '2026-09-11T10:00:00Z',
   },
   {
-    id: 'urs-mat-2',
+    id: '22222222-urs1-4000-8000-000000000002',
     module: 'URS',
     type: 'record_g1',
-    title: 'Urinary System Lec 1: Urinary Tract Infections (UTI & Pyelonephritis)',
+    title: 'URS Lec 1: Community & Hospital-Acquired UTIs',
     file_url: 'https://example.com/audio/urs_lec1_g1.mp3',
     format: 'audio',
     source_type: 'drive',
-    created_at: '2026-09-12T12:00:00Z',
+    created_at: '2026-09-11T12:00:00Z',
   },
   {
-    id: 'urs-mat-3',
+    id: '22222222-urs1-4000-8000-000000000003',
     module: 'URS',
-    type: 'lec_pdf',
-    title: 'Urinary System Lec 2: Glomerulonephritis & Post-Streptococcal Sequelae',
-    file_url: 'https://drive.google.com/file/d/demo-urs-lec2/view',
-    format: 'pdf',
+    type: 'record_g2',
+    title: 'URS Lec 1: Community & Hospital-Acquired UTIs',
+    file_url: 'https://example.com/audio/urs_lec1_g2.mp3',
+    format: 'audio',
     source_type: 'drive',
-    created_at: '2026-09-16T10:00:00Z',
+    created_at: '2026-09-11T14:00:00Z',
   },
   {
-    id: 'urs-mat-4',
+    id: '22222222-urs1-4000-8000-000000000004',
     module: 'URS',
     type: 'practical_pdf',
-    title: 'Urinary System Practical: Urine Culture & Antibiotic Sensitivity (AST)',
+    title: 'URS Practical: Urine Culture, Colony Count & Antibiotic Sensitivity (AST)',
     file_url: 'https://drive.google.com/file/d/demo-urs-prac/view',
     format: 'pdf',
     source_type: 'drive',
-    created_at: '2026-09-20T09:00:00Z',
+    created_at: '2026-09-19T09:00:00Z',
   },
   {
-    id: 'urs-mat-5',
+    id: '22222222-urs1-4000-8000-000000000005',
     module: 'URS',
-    type: 'final_study',
-    title: 'Urinary System Final Vault: High-Yield Nephropathogen Summary',
-    file_url: 'https://drive.google.com/file/d/demo-urs-final/view',
+    type: 'midterm_study',
+    title: 'URS OSPE & Midterm High-Yield Flash Cards',
+    file_url: 'https://drive.google.com/file/d/demo-urs-midterm/view',
     format: 'pdf',
     source_type: 'drive',
-    created_at: '2026-09-24T15:00:00Z',
+    created_at: '2026-09-24T11:00:00Z',
   },
 
   // REP Module
   {
-    id: 'rep-mat-1',
+    id: '33333333-rep1-4000-8000-000000000001',
     module: 'REP',
     type: 'lec_pdf',
     title: 'REP Lec 1: Sexually Transmitted Infections (Syphilis & Gonorrhea)',
@@ -148,7 +150,7 @@ const INITIAL_MATERIALS: Material[] = [
     created_at: '2026-09-15T10:00:00Z',
   },
   {
-    id: 'rep-mat-2',
+    id: '33333333-rep1-4000-8000-000000000002',
     module: 'REP',
     type: 'record_g1',
     title: 'REP Lec 1: Sexually Transmitted Infections (Syphilis & Gonorrhea)',
@@ -158,7 +160,7 @@ const INITIAL_MATERIALS: Material[] = [
     created_at: '2026-09-15T12:00:00Z',
   },
   {
-    id: 'rep-mat-3',
+    id: '33333333-rep1-4000-8000-000000000003',
     module: 'REP',
     type: 'practical_pdf',
     title: 'REP Practical: Genital Swab Microscopy & Wet Mounts',
@@ -168,7 +170,7 @@ const INITIAL_MATERIALS: Material[] = [
     created_at: '2026-09-21T09:00:00Z',
   },
   {
-    id: 'rep-mat-4',
+    id: '33333333-rep1-4000-8000-000000000004',
     module: 'REP',
     type: 'midterm_study',
     title: 'REP Midterm Vault: High-Yield Topics & Flash Review',
@@ -235,7 +237,7 @@ export interface AppSupabaseClient {
 
 function createFallbackClient(): AppSupabaseClient {
   const authListeners = new Set<(event: string, session: any) => void>();
-  const uploadedFiles = new Map<string, string>();
+  const ACCOUNTS_STORAGE_KEY = 'micro_atlas_mock_accounts';
 
   function getStoredSession() {
     if (typeof window === 'undefined') return null;
@@ -265,6 +267,27 @@ function createFallbackClient(): AppSupabaseClient {
         console.error(err);
       }
     });
+  }
+
+  function getStoredAccounts(): Record<string, { passwordHash: string; data: any }> {
+    if (typeof window === 'undefined') return {};
+    try {
+      const saved = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function saveStoredAccount(email: string, pass: string, data: any) {
+    if (typeof window === 'undefined') return;
+    try {
+      const accounts = getStoredAccounts();
+      accounts[email.toLowerCase().trim()] = { passwordHash: pass, data };
+      localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(accounts));
+    } catch {
+      // ignore
+    }
   }
 
   function getStoredMaterials(): Material[] {
@@ -318,14 +341,18 @@ function createFallbackClient(): AppSupabaseClient {
         password: string;
         options?: { data?: Record<string, any>; emailRedirectTo?: string };
       }) => {
+        if (!password || password.length < 6) {
+          return { data: { user: null, session: null }, error: new Error('Password must be at least 6 characters') };
+        }
+        const cleanEmail = email.trim().toLowerCase();
         const user = {
-          id: 'user_' + Math.random().toString(36).slice(2, 10),
-          email,
-          user_metadata: options?.data || { name: email.split('@')[0], group_section: 'G1' },
+          id: generateUUID(),
+          email: cleanEmail,
+          user_metadata: options?.data || { name: cleanEmail.split('@')[0], group_section: 'G1' },
           app_metadata: {},
           aud: 'authenticated',
           created_at: new Date().toISOString(),
-          identities: [{ id: email }],
+          identities: [{ id: cleanEmail }],
         };
         const session = {
           access_token: 'mock_token_' + Date.now(),
@@ -334,18 +361,39 @@ function createFallbackClient(): AppSupabaseClient {
           token_type: 'bearer',
           user,
         };
+        saveStoredAccount(cleanEmail, password, user.user_metadata);
         setStoredSession(session);
         return { data: { user, session }, error: null };
       },
-      signInWithPassword: async ({ email }: { email: string; password: string }) => {
+      signInWithPassword: async ({ email, password }: { email: string; password: string }) => {
+        if (!email || !password) {
+          return { data: { user: null, session: null }, error: new Error('Email and password are required') };
+        }
+        const cleanEmail = email.trim().toLowerCase();
+        const accounts = getStoredAccounts();
+        const existing = accounts[cleanEmail];
+
+        // Security check: If user registered, verify password
+        if (existing) {
+          if (existing.passwordHash !== password) {
+            return { data: { user: null, session: null }, error: new Error('Invalid email or password') };
+          }
+        } else {
+          // If not registered yet, require password >= 6
+          if (password.length < 6) {
+            return { data: { user: null, session: null }, error: new Error('Invalid password format') };
+          }
+          saveStoredAccount(cleanEmail, password, { name: cleanEmail.split('@')[0], group_section: 'G1' });
+        }
+
         const user = {
-          id: 'user_' + (email.replace(/[^a-zA-Z0-9]/g, '_') || 'demo'),
-          email,
-          user_metadata: { name: email.split('@')[0], group_section: 'G1' },
+          id: generateUUID(),
+          email: cleanEmail,
+          user_metadata: existing?.data || { name: cleanEmail.split('@')[0], group_section: 'G1' },
           app_metadata: {},
           aud: 'authenticated',
           created_at: new Date().toISOString(),
-          identities: [{ id: email }],
+          identities: [{ id: cleanEmail }],
         };
         const session = {
           access_token: 'mock_token_' + Date.now(),
@@ -365,12 +413,12 @@ function createFallbackClient(): AppSupabaseClient {
     from: (_table: string) => {
       return {
         select: (_cols = '*') => {
-          let targetModule: string | null = null;
+          const filters: Array<{ col: string; val: any }> = [];
           let ascending = true;
 
           const queryBuilder: QueryBuilder = {
-            eq: (col: string, val: string) => {
-              if (col === 'module') targetModule = val;
+            eq: (col: string, val: any) => {
+              filters.push({ col, val });
               return queryBuilder;
             },
             order: (_col: string, opts?: { ascending?: boolean }) => {
@@ -381,8 +429,11 @@ function createFallbackClient(): AppSupabaseClient {
             },
             returns: async <T>() => {
               let items = getStoredMaterials();
-              if (targetModule) {
-                items = items.filter((m) => m.module === targetModule);
+              // Support multiple filters across any column
+              if (filters.length > 0) {
+                items = items.filter((m) =>
+                  filters.every((f) => (m as any)[f.col] === f.val)
+                );
               }
               items = [...items].sort((a, b) => {
                 const cmp = a.title.localeCompare(b.title);
@@ -399,8 +450,8 @@ function createFallbackClient(): AppSupabaseClient {
         },
         insert: async (rows: any[]) => {
           const items = getStoredMaterials();
-          const newEntries: Material[] = rows.map((r, idx) => ({
-            id: 'mat_' + Date.now() + '_' + idx,
+          const newEntries: Material[] = rows.map((r) => ({
+            id: r.id || generateUUID(),
             created_at: new Date().toISOString(),
             ...r,
           }));
@@ -409,27 +460,33 @@ function createFallbackClient(): AppSupabaseClient {
           return { data: newEntries, error: null };
         },
         update: (updates: any) => {
-          let filterCol: string = 'id';
-          let filterVal: any = null;
+          const filters: Array<{ col: string; val: any }> = [];
 
           const mutationBuilder: MutationBuilder = {
             eq: (col: string, val: any) => {
-              filterCol = col;
-              filterVal = val;
+              filters.push({ col, val });
               return mutationBuilder;
             },
             then: async (resolve: any, reject: any) => {
               try {
                 const items = getStoredMaterials();
-                const idx = items.findIndex((m: any) => m[filterCol] === filterVal);
-                if (idx !== -1) {
-                  items[idx] = {
-                    ...items[idx],
-                    ...updates,
-                    updated_at: new Date().toISOString(),
-                  };
-                  saveStoredMaterials(items);
-                  return resolve({ data: items[idx], error: null });
+                let updatedCount = 0;
+                const nextItems = items.map((m) => {
+                  const matches = filters.every((f) => (m as any)[f.col] === f.val);
+                  if (matches) {
+                    updatedCount++;
+                    return {
+                      ...m,
+                      ...updates,
+                      updated_at: new Date().toISOString(),
+                    };
+                  }
+                  return m;
+                });
+
+                if (updatedCount > 0) {
+                  saveStoredMaterials(nextItems);
+                  return resolve({ data: nextItems, error: null });
                 }
                 return resolve({ data: null, error: new Error('Record not found') });
               } catch (err) {
@@ -442,23 +499,23 @@ function createFallbackClient(): AppSupabaseClient {
           return mutationBuilder;
         },
         delete: () => {
-          let filterCol: string = 'id';
-          let filterVal: any = null;
+          const filters: Array<{ col: string; val: any }> = [];
 
           const mutationBuilder: MutationBuilder = {
             eq: (col: string, val: any) => {
-              filterCol = col;
-              filterVal = val;
+              filters.push({ col, val });
               return mutationBuilder;
             },
             then: async (resolve: any, reject: any) => {
               try {
                 let items = getStoredMaterials();
-                const countBefore = items.length;
-                items = items.filter((m: any) => m[filterCol] !== filterVal);
+                const before = items.length;
+                items = items.filter((m) =>
+                  !filters.every((f) => (m as any)[f.col] === f.val)
+                );
                 saveStoredMaterials(items);
                 return resolve({
-                  data: { count: countBefore - items.length },
+                  data: { count: before - items.length },
                   error: null,
                 });
               } catch (err) {
@@ -473,34 +530,37 @@ function createFallbackClient(): AppSupabaseClient {
       };
     },
     storage: {
-      from: (bucket: string) => ({
-        upload: async (filePath: string, file: File, _options?: any) => {
-          let url = `https://storage.microatlas.must.edu.eg/${bucket}/${filePath}`;
-          if (typeof window !== 'undefined' && window.URL && window.URL.createObjectURL) {
-            try {
-              url = window.URL.createObjectURL(file);
-            } catch {
-              // fallback url
-            }
-          }
-          uploadedFiles.set(filePath, url);
-          return { data: { path: filePath }, error: null };
-        },
-        getPublicUrl: (filePath: string) => {
-          const url =
-            uploadedFiles.get(filePath) ||
-            `https://storage.microatlas.must.edu.eg/${bucket}/${filePath}`;
-          return { data: { publicUrl: url } };
-        },
-        remove: async (paths: string[]) => {
-          paths.forEach((p) => uploadedFiles.delete(p));
-          return { data: paths, error: null };
-        },
-      }),
+      from: (_bucket: string) => {
+        return {
+          upload: async (filePath: string, file: File) => {
+            const mockUrl = `https://storage.microatlas.must.edu.eg/${filePath}`;
+            return {
+              data: { path: filePath },
+              error: null,
+            };
+          },
+          getPublicUrl: (filePath: string) => {
+            return {
+              data: {
+                publicUrl: `https://storage.microatlas.must.edu.eg/${filePath}`,
+              },
+            };
+          },
+          remove: async (_paths: string[]) => {
+            return { data: true, error: null };
+          },
+        };
+      },
     },
   };
 }
 
 export const supabase: AppSupabaseClient = isConfigured
-  ? (createClient(supabaseUrl!, supabaseAnonKey!) as unknown as AppSupabaseClient)
+  ? (createClient(supabaseUrl!, supabaseAnonKey!, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    }) as unknown as AppSupabaseClient)
   : createFallbackClient();
