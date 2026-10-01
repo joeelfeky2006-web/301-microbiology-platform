@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Sparkles, BookOpen, Layers } from 'lucide-react';
+import { Sparkles, BookOpen, Layers, CheckCircle2, Circle, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { cardClass } from '@/lib/ui';
 import {
@@ -17,6 +17,7 @@ import {
 } from '@/types';
 import AdSlot from '@/components/marketing/AdSlot';
 import AILearningStudio from '@/components/ai/AILearningStudio';
+import { useModuleProgress } from '@/lib/progress';
 
 type Tone = 'blue' | 'emerald' | 'purple';
 
@@ -53,7 +54,21 @@ function groupByTitle(items: Material[]): [string, Material[]][] {
   ]);
 }
 
-function Section({ heading, tone, items, emptyText }: { heading: string; tone: Tone; items: Material[]; emptyText: string }) {
+function Section({
+  heading,
+  tone,
+  items,
+  emptyText,
+  isComplete,
+  onToggleComplete,
+}: {
+  heading: string;
+  tone: Tone;
+  items: Material[];
+  emptyText: string;
+  isComplete: (id: string) => boolean;
+  onToggleComplete: (id: string) => void;
+}) {
   const t = tones[tone];
   const groups = groupByTitle(items);
 
@@ -78,27 +93,59 @@ function Section({ heading, tone, items, emptyText }: { heading: string; tone: T
               </div>
 
               <div className="grid grid-cols-1 gap-3 border-t border-slate-200 pt-4 dark:border-white/10 md:grid-cols-2 lg:grid-cols-3">
-                {materials.map((mat) => (
-                  <div
-                    key={mat.id}
-                    className="flex flex-col justify-between rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-900/60"
-                  >
-                    <span className={`font-mono-accent w-fit rounded px-2 py-0.5 text-xs font-semibold uppercase ring-1 ${t.badge}`}>
-                      {MATERIAL_TYPE_LABELS[mat.type] ?? mat.type}
-                    </span>
-
-                    {mat.format === 'audio' && <audio controls preload="none" src={mat.file_url} className="mt-3 w-full" />}
-
-                    <a
-                      href={mat.file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`mt-3 rounded-lg px-3 py-1.5 text-center text-xs font-semibold text-white transition-colors ${t.button}`}
+                {materials.map((mat) => {
+                  const completed = isComplete(mat.id);
+                  return (
+                    <div
+                      key={mat.id}
+                      className={`flex flex-col justify-between rounded-xl border p-4 transition-colors ${
+                        completed
+                          ? 'border-emerald-300 bg-emerald-50/40 dark:border-emerald-800/40 dark:bg-emerald-950/20'
+                          : 'border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-slate-900/60'
+                      }`}
                     >
-                      {mat.format === 'audio' ? 'Open audio →' : 'Open file →'}
-                    </a>
-                  </div>
-                ))}
+                      <div className="flex items-start justify-between gap-2">
+                        <span className={`font-mono-accent w-fit rounded px-2 py-0.5 text-xs font-semibold uppercase ring-1 ${t.badge}`}>
+                          {MATERIAL_TYPE_LABELS[mat.type] ?? mat.type}
+                        </span>
+
+                        {/* Completion Toggle Button */}
+                        <button
+                          type="button"
+                          onClick={() => onToggleComplete(mat.id)}
+                          className={`flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold transition active:scale-95 ${
+                            completed
+                              ? 'bg-emerald-600 text-white shadow-xs'
+                              : 'border border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                          }`}
+                        >
+                          {completed ? (
+                            <>
+                              <Check className="h-3 w-3" />
+                              <span>Completed</span>
+                            </>
+                          ) : (
+                            <>
+                              <Circle className="h-3 w-3 text-slate-400" />
+                              <span>Mark Done</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {mat.format === 'audio' && <audio controls preload="none" src={mat.file_url} className="mt-3 w-full" />}
+
+                      <a
+                        href={mat.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`mt-3 rounded-lg px-3 py-1.5 text-center text-xs font-semibold text-white transition-colors ${t.button}`}
+                      >
+                        {mat.format === 'audio' ? 'Open audio →' : 'Open file →'}
+                      </a>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -113,6 +160,9 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [showAIStudio, setShowAIStudio] = useState(false);
+
+  const { isComplete, toggle, stats } = useModuleProgress(materials);
+  const currentModStats = stats.byModule[moduleName];
 
   useEffect(() => {
     let cancelled = false;
@@ -140,7 +190,7 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
   return (
     <main className="p-4 sm:p-6 md:p-12">
       <div className="mx-auto max-w-5xl space-y-8">
-        {/* Module Header */}
+        {/* Module Header with Live Progress */}
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <Link href="/" className="text-xs font-semibold text-blue-600 hover:underline dark:text-cyan-300">
@@ -152,6 +202,24 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
                 · {MODULE_TITLES[moduleName]}
               </span>
             </h1>
+
+            {/* Module Completion Indicator */}
+            {currentModStats && currentModStats.total > 0 && (
+              <div className="mt-2 flex items-center gap-3 text-xs">
+                <span className="font-semibold text-slate-600 dark:text-slate-300">
+                  Module Progress:
+                </span>
+                <div className="h-2 w-32 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                    style={{ width: `${currentModStats.percent}%` }}
+                  />
+                </div>
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  {currentModStats.completed}/{currentModStats.total} ({currentModStats.percent}%)
+                </span>
+              </div>
+            )}
           </div>
 
           <button
@@ -187,18 +255,24 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
                 tone="blue"
                 items={materials.filter((m) => THEORY_TYPES.includes(m.type))}
                 emptyText={`No theory materials uploaded yet for ${MODULE_TITLES[moduleName]}.`}
+                isComplete={isComplete}
+                onToggleComplete={toggle}
               />
               <Section
                 heading="Practicals & OSPE"
                 tone="emerald"
                 items={materials.filter((m) => PRACTICAL_TYPES.includes(m.type))}
                 emptyText={`No practical materials uploaded yet for ${MODULE_TITLES[moduleName]}.`}
+                isComplete={isComplete}
+                onToggleComplete={toggle}
               />
               <Section
                 heading="Exam Vault"
                 tone="purple"
                 items={materials.filter((m) => EXAM_TYPES.includes(m.type))}
                 emptyText={`No exam materials uploaded yet for ${MODULE_TITLES[moduleName]}.`}
+                isComplete={isComplete}
+                onToggleComplete={toggle}
               />
             </div>
 
