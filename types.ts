@@ -1,6 +1,8 @@
 export const MODULE_NAMES = ["CNS", "URS", "REP"] as const;
 export type ModuleName = (typeof MODULE_NAMES)[number];
 export type GroupSection = "G1" | "G2";
+export type UserRole = "super_admin" | "editor" | "student";
+
 export type MaterialCategory =
   | "lec_pdf"
   | "record_g1"
@@ -18,15 +20,16 @@ export type MaterialFormat = "pdf" | "audio" | "external_link";
 /** Matches the CHECK constraint on public.materials.source_type */
 export type MaterialSource = "supabase" | "drive" | "telegram";
 
-/** Safely convert a URL segment like "cns" into a ModuleName, or null. */
+/** Safely convert a URL segment like "cns" or "urinary" into a ModuleName, or null. */
 export function parseModuleName(value: string | undefined | null): ModuleName | null {
   const upper = (value ?? "").toUpperCase();
+  if (upper === "URINARY" || upper === "UROGENITAL") return "URS";
   return (MODULE_NAMES as readonly string[]).includes(upper) ? (upper as ModuleName) : null;
 }
 
 export const MODULE_TITLES: Record<ModuleName, string> = {
   CNS: "Central Nervous System",
-  URS: "Urogenital System",
+  URS: "Urinary System",
   REP: "Reproductive System",
 };
 
@@ -57,8 +60,10 @@ export interface Material {
   /** Present in the database (default 'external_link'). */
   format?: MaterialFormat;
   source_type?: MaterialSource | null;
-  /** NOT a column in public.materials today — never select/order by it unless you add it. */
+  /** Present in our extended metadata */
   created_at?: string;
+  updated_at?: string;
+  author_email?: string;
 }
 
 export interface Student {
@@ -66,6 +71,39 @@ export interface Student {
   email: string;
   name: string;
   group_section: GroupSection;
+  role?: UserRole;
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+  group_section: GroupSection;
+  role: UserRole;
+  created_at?: string;
+}
+
+export interface PlatformSettings {
+  siteName: string;
+  announcement: string;
+  showAnnouncement: boolean;
+  maintenanceMode: boolean;
+  allowRegistrations: boolean;
+  supportWhatsApp: string;
+}
+
+export interface AdCampaign {
+  id: string;
+  title: string;
+  brand: string;
+  badge: string;
+  tagline: string;
+  description: string;
+  discountCode?: string;
+  ctaText: string;
+  ctaUrl: string;
+  active: boolean;
+  variant: "revive" | "academic" | "medova" | "qbank" | "stethoscope" | "fellowship";
 }
 
 export interface QuizQuestionResult {

@@ -1,4 +1,7 @@
 {
-  "name": "Micro Atlas — 301 Microbiology",
-  "description": "301 Microbiology learning platform: CNS, URS, and REP modules with lectures, practical records, and exam materials."
+  "name": "MedAtlas Egypt",
+  "description": "Next-Gen AI Training for Medical Students. Micro 301 — Culturing Curiosity: Central Nervous System, Urinary System, and Reproductive System modules with interactive case studies, practical records, and exam vault.",
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

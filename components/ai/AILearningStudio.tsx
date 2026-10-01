@@ -1,0 +1,668 @@
+'use client';
+
+import { useState } from 'react';
+import {
+  Sparkles,
+  BookOpen,
+  Stethoscope,
+  GraduationCap,
+  ChevronRight,
+  CheckCircle2,
+  XCircle,
+  HelpCircle,
+  Lightbulb,
+  RotateCcw,
+  Loader2,
+  FileText,
+} from 'lucide-react';
+import { cardClass } from '@/lib/ui';
+import { MODULE_TITLES, type ModuleName } from '@/types';
+
+interface AILearningStudioProps {
+  initialModule?: ModuleName;
+  embedded?: boolean;
+}
+
+export default function AILearningStudio({
+  initialModule = 'URS',
+  embedded = false,
+}: AILearningStudioProps) {
+  const [activeTab, setActiveTab] = useState<'case' | 'summary' | 'eval'>('case');
+  const [selectedModule, setSelectedModule] = useState<ModuleName>(initialModule);
+  const [difficulty, setDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('intermediate');
+  const [customTopic, setCustomTopic] = useState('');
+
+  // Case Study State
+  const [caseStudy, setCaseStudy] = useState<any>(null);
+  const [caseLoading, setCaseLoading] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState(false);
+
+  // Summary State
+  const [summary, setSummary] = useState<any>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+
+  // Quiz Eval State
+  const [quizQuestion, setQuizQuestion] = useState(
+    'A 22-year-old student presents with painful dysuria and cloudy urine. Culture on MacConkey agar shows pink colonies with rapid lactose fermentation and positive indole test. What is the organism, and what pili facilitate ascent?'
+  );
+  const [studentAnswer, setStudentAnswer] = useState(
+    'E. coli (UPEC) using P-fimbriae to reach the renal pelvis'
+  );
+  const [correctAnswer, setCorrectAnswer] = useState(
+    'Uropathogenic Escherichia coli with P-fimbriae (pyelonephritis-associated pili)'
+  );
+  const [evalResult, setEvalResult] = useState<any>(null);
+  const [evalLoading, setEvalLoading] = useState(false);
+
+  const fetchCaseStudy = async () => {
+    setCaseLoading(true);
+    setSelectedOption(null);
+    setRevealed(false);
+    try {
+      const res = await fetch('/api/gemini/case-study', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          module: selectedModule,
+          topic: customTopic.trim() || undefined,
+          difficulty,
+        }),
+      });
+      const data = await res.json();
+      if (data.caseStudy) {
+        setCaseStudy(data.caseStudy);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCaseLoading(false);
+    }
+  };
+
+  const fetchSummary = async (topicToUse?: string) => {
+    setSummaryLoading(true);
+    const targetTopic = topicToUse || customTopic.trim() || `${MODULE_TITLES[selectedModule]} Core Pathogens`;
+    try {
+      const res = await fetch('/api/gemini/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          module: selectedModule,
+          topic: targetTopic,
+        }),
+      });
+      const data = await res.json();
+      if (data.summary) {
+        setSummary(data.summary);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  const runQuizEval = async () => {
+    setEvalLoading(true);
+    try {
+      const res = await fetch('/api/gemini/quiz-eval', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          module: MODULE_TITLES[selectedModule],
+          question: quizQuestion,
+          studentAnswer,
+          correctAnswer,
+        }),
+      });
+      const data = await res.json();
+      if (data.evaluation) {
+        setEvalResult(data.evaluation);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setEvalLoading(false);
+    }
+  };
+
+  return (
+    <section className={`${cardClass} overflow-hidden border border-indigo-200 dark:border-indigo-900/40 p-6 md:p-8 bg-gradient-to-b from-white via-indigo-50/20 to-white dark:from-slate-900/90 dark:via-slate-900 dark:to-slate-950`}>
+      {/* Header */}
+      <div className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-6 dark:border-white/10 md:flex-row md:items-center">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-md">
+              <Sparkles className="h-4 w-4" />
+            </span>
+            <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              MedAtlas Egypt: Micro 301 AI Study Studio
+            </h2>
+            <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[11px] font-bold text-blue-800 dark:bg-blue-900/40 dark:text-cyan-300">
+              Micro 301
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Interactive medical case vignettes, high-yield lecture summaries, and automated diagnostic quiz evaluation.
+          </p>
+        </div>
+
+        {/* Module Switcher */}
+        <div className="flex flex-wrap items-center gap-2">
+          {(['URS', 'CNS', 'REP'] as ModuleName[]).map((mod) => (
+            <button
+              key={mod}
+              type="button"
+              onClick={() => {
+                setSelectedModule(mod);
+                setCaseStudy(null);
+                setSummary(null);
+              }}
+              className={`rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
+                selectedModule === mod
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                  : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+              }`}
+            >
+              {mod} — {MODULE_TITLES[mod]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="mt-6 flex border-b border-slate-200 dark:border-white/10">
+        <button
+          type="button"
+          onClick={() => setActiveTab('case')}
+          className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-bold transition-colors ${
+            activeTab === 'case'
+              ? 'border-blue-600 text-blue-600 dark:border-cyan-400 dark:text-cyan-300'
+              : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+          }`}
+        >
+          <Stethoscope className="h-4 w-4" />
+          Clinical Case Studies
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('summary')}
+          className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-bold transition-colors ${
+            activeTab === 'summary'
+              ? 'border-blue-600 text-blue-600 dark:border-cyan-400 dark:text-cyan-300'
+              : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+          }`}
+        >
+          <BookOpen className="h-4 w-4" />
+          Syllabus & Lecture Summarizer
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('eval')}
+          className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-bold transition-colors ${
+            activeTab === 'eval'
+              ? 'border-blue-600 text-blue-600 dark:border-cyan-400 dark:text-cyan-300'
+              : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+          }`}
+        >
+          <GraduationCap className="h-4 w-4" />
+          Intelligent Quiz Evaluator
+        </button>
+      </div>
+
+      {/* Tab 1: Case Studies */}
+      {activeTab === 'case' && (
+        <div className="mt-6 space-y-6">
+          <div className="flex flex-col gap-3 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4 dark:border-white/5 dark:bg-slate-800/40 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                Difficulty:
+              </span>
+              {(['beginner', 'intermediate', 'advanced'] as const).map((lvl) => (
+                <button
+                  key={lvl}
+                  type="button"
+                  onClick={() => setDifficulty(lvl)}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold capitalize transition ${
+                    difficulty === lvl
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'bg-white text-slate-700 hover:bg-slate-100 dark:bg-slate-700 dark:text-slate-300'
+                  }`}
+                >
+                  {lvl}
+                </button>
+              ))}
+
+              <input
+                type="text"
+                placeholder="Optional topic (e.g. Pyelonephritis, Meningitis, Syphilis)"
+                value={customTopic}
+                onChange={(e) => setCustomTopic(e.target.value)}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 outline-none focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white sm:w-64"
+              />
+            </div>
+
+            <button
+              type="button"
+              disabled={caseLoading}
+              onClick={fetchCaseStudy}
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-700 disabled:opacity-50"
+            >
+              {caseLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generating Case...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  Generate Case Vignette
+                </>
+              )}
+            </button>
+          </div>
+
+          {!caseStudy && !caseLoading && (
+            <div className="rounded-2xl border-2 border-dashed border-slate-200 p-10 text-center dark:border-white/10">
+              <Stethoscope className="mx-auto h-12 w-12 text-slate-400" />
+              <h3 className="mt-3 text-lg font-bold text-slate-800 dark:text-slate-200">
+                Ready to review a {MODULE_TITLES[selectedModule]} patient case?
+              </h3>
+              <p className="mx-auto mt-1 max-w-md text-sm text-slate-500 dark:text-slate-400">
+                Click &ldquo;Generate Case Vignette&rdquo; above to receive a full simulated clinical scenario with vitals, lab workup, and diagnostic challenge questions.
+              </p>
+              <button
+                type="button"
+                onClick={fetchCaseStudy}
+                className="mt-4 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow hover:bg-blue-700"
+              >
+                Load {selectedModule} Case Study
+              </button>
+            </div>
+          )}
+
+          {caseStudy && (
+            <div className="space-y-6">
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900/60">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-4 dark:border-white/10">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                    {caseStudy.title}
+                  </h3>
+                  <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700 dark:bg-blue-900/40 dark:text-cyan-300">
+                    {MODULE_TITLES[selectedModule]}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <div className="space-y-3">
+                    <div className="rounded-xl border border-slate-100 bg-slate-50 p-3.5 dark:border-white/5 dark:bg-slate-800/40">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Patient Profile</p>
+                      <p className="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-200">
+                        {caseStudy.patient?.demographics}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-100 bg-slate-50 p-3.5 dark:border-white/5 dark:bg-slate-800/40">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Chief Complaint & History</p>
+                      <p className="mt-0.5 text-sm text-slate-700 dark:text-slate-300">
+                        {caseStudy.patient?.chiefComplaint}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-100 bg-slate-50 p-3.5 dark:border-white/5 dark:bg-slate-800/40">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Physical Examination</p>
+                      <p className="mt-0.5 text-sm text-slate-700 dark:text-slate-300">
+                        {caseStudy.patient?.physicalExam}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-4 dark:border-white/5 dark:bg-slate-800/40">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-indigo-700 dark:text-cyan-400">
+                      Microbiology & Diagnostic Findings
+                    </p>
+                    <ul className="mt-2 space-y-2 text-xs text-slate-700 dark:text-slate-300">
+                      {caseStudy.patient?.labFindings?.map((item: string, i: number) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="font-bold text-indigo-600 dark:text-cyan-400">•</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Question Section */}
+                <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/80 p-5 dark:border-white/10 dark:bg-slate-800/60">
+                  <div className="flex items-center gap-2 text-indigo-700 dark:text-cyan-400">
+                    <HelpCircle className="h-5 w-5" />
+                    <h4 className="font-bold text-sm uppercase tracking-wide">
+                      Clinical Vignette Question
+                    </h4>
+                  </div>
+                  <p className="mt-2 font-medium text-slate-900 dark:text-white">
+                    {caseStudy.question}
+                  </p>
+
+                  <div className="mt-4 space-y-2.5">
+                    {caseStudy.options?.map((opt: any) => {
+                      const isSelected = selectedOption === opt.id;
+                      const showResult = revealed || isSelected;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setSelectedOption(opt.id)}
+                          className={`flex w-full items-start justify-between rounded-xl border p-3.5 text-left text-sm transition-all ${
+                            isSelected
+                              ? 'border-blue-500 bg-blue-50/80 text-blue-900 dark:border-cyan-400 dark:bg-cyan-950/40 dark:text-white'
+                              : 'border-slate-200 bg-white text-slate-800 hover:border-slate-300 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200'
+                          } ${
+                            showResult && opt.isCorrect
+                              ? '!border-emerald-500 !bg-emerald-50/80 text-emerald-900 dark:!bg-emerald-950/40 dark:text-emerald-300'
+                              : ''
+                          } ${
+                            showResult && isSelected && !opt.isCorrect
+                              ? '!border-red-500 !bg-red-50/80 text-red-900 dark:!bg-red-950/40 dark:text-red-300'
+                              : ''
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-slate-100 font-bold text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                              {opt.id}
+                            </span>
+                            <span>{opt.text}</span>
+                          </div>
+
+                          {showResult && opt.isCorrect && (
+                            <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-emerald-500" />
+                          )}
+                          {showResult && isSelected && !opt.isCorrect && (
+                            <XCircle className="h-5 w-5 flex-shrink-0 text-red-500" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-5 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => setRevealed(!revealed)}
+                      className="text-xs font-semibold text-indigo-600 hover:underline dark:text-cyan-300"
+                    >
+                      {revealed ? 'Hide Clinical Reasoning' : 'Reveal Clinical Reasoning & Pearls →'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={fetchCaseStudy}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" /> Next Case
+                    </button>
+                  </div>
+
+                  {revealed && (
+                    <div className="mt-4 space-y-3 rounded-xl border border-emerald-300/40 bg-emerald-50/60 p-4 text-xs dark:border-emerald-500/30 dark:bg-emerald-950/30">
+                      <div>
+                        <span className="font-bold text-emerald-800 dark:text-emerald-300">
+                          Clinical Explanation:
+                        </span>{' '}
+                        <span className="text-slate-700 dark:text-slate-300">
+                          {caseStudy.explanation}
+                        </span>
+                      </div>
+
+                      {caseStudy.clinicalPearls?.length > 0 && (
+                        <div className="mt-2 border-t border-emerald-200 pt-2 dark:border-emerald-800/40">
+                          <span className="flex items-center gap-1 font-bold text-emerald-800 dark:text-emerald-300">
+                            <Lightbulb className="h-3.5 w-3.5" /> MUST 301 Exam Pearls:
+                          </span>
+                          <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700 dark:text-slate-300">
+                            {caseStudy.clinicalPearls.map((pearl: string, idx: number) => (
+                              <li key={idx}>{pearl}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab 2: Syllabus Summarizer */}
+      {activeTab === 'summary' && (
+        <div className="mt-6 space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500">Quick Topics:</span>
+              {[
+                { label: 'E. coli & Acute Pyelonephritis', mod: 'URS' as ModuleName },
+                { label: 'Proteus & Struvite Stones', mod: 'URS' as ModuleName },
+                { label: 'Meningococcal Meningitis', mod: 'CNS' as ModuleName },
+                { label: 'Treponema & Syphilis', mod: 'REP' as ModuleName },
+              ].map((chip) => (
+                <button
+                  key={chip.label}
+                  type="button"
+                  onClick={() => {
+                    setSelectedModule(chip.mod);
+                    setCustomTopic(chip.label);
+                    fetchSummary(chip.label);
+                  }}
+                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:border-indigo-400 hover:text-indigo-600 dark:border-white/10 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              disabled={summaryLoading}
+              onClick={() => fetchSummary()}
+              className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow transition hover:bg-blue-700 disabled:opacity-50"
+            >
+              {summaryLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
+              Summarize {MODULE_TITLES[selectedModule]}
+            </button>
+          </div>
+
+          {!summary && !summaryLoading && (
+            <div className="rounded-2xl border-2 border-dashed border-slate-200 p-8 text-center dark:border-white/10">
+              <BookOpen className="mx-auto h-10 w-10 text-slate-400" />
+              <p className="mt-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                Generate high-yield lecture summaries and pathogen comparison cards for {MODULE_TITLES[selectedModule]}.
+              </p>
+              <button
+                type="button"
+                onClick={() => fetchSummary()}
+                className="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
+              >
+                Summarize Now
+              </button>
+            </div>
+          )}
+
+          {summary && (
+            <div className="space-y-6">
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900/60">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-white/10">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                    {summary.topic} — {summary.moduleTitle}
+                  </h3>
+                  <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                    High Yield
+                  </span>
+                </div>
+
+                <p className="mt-3 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                  {summary.overview}
+                </p>
+
+                {/* Pathogens Table / Cards */}
+                <div className="mt-6 grid gap-4 md:grid-cols-2">
+                  {summary.keyPathogens?.map((pathogen: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className="rounded-xl border border-slate-200 bg-slate-50/70 p-4.5 dark:border-white/10 dark:bg-slate-800/40"
+                    >
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-bold italic text-base text-blue-700 dark:text-cyan-300">
+                          {pathogen.name}
+                        </h4>
+                        <span className="text-[10px] font-semibold uppercase text-slate-500">
+                          Pathogen #{idx + 1}
+                        </span>
+                      </div>
+
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        {pathogen.classification}
+                      </p>
+
+                      <div className="mt-3 space-y-2 text-xs">
+                        <div>
+                          <strong className="text-slate-700 dark:text-slate-300">Culture & Media:</strong>{' '}
+                          <span className="text-slate-600 dark:text-slate-400">{pathogen.cultureMedia}</span>
+                        </div>
+                        <div>
+                          <strong className="text-slate-700 dark:text-slate-300">Virulence:</strong>{' '}
+                          <span className="text-slate-600 dark:text-slate-400">
+                            {pathogen.virulenceFactors?.join(', ')}
+                          </span>
+                        </div>
+                        <div>
+                          <strong className="text-slate-700 dark:text-slate-300">Diseases:</strong>{' '}
+                          <span className="text-slate-600 dark:text-slate-400">{pathogen.clinicalManifestation}</span>
+                        </div>
+                        <div className="rounded-lg bg-emerald-50 px-2.5 py-1.5 dark:bg-emerald-950/40">
+                          <strong className="text-emerald-800 dark:text-emerald-300">Drug of Choice:</strong>{' '}
+                          <span className="text-emerald-700 dark:text-emerald-200">{pathogen.treatment}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Exam Traps */}
+                {summary.examTraps?.length > 0 && (
+                  <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50/60 p-4 text-xs dark:border-amber-500/30 dark:bg-amber-950/30">
+                    <h5 className="flex items-center gap-1.5 font-bold text-amber-900 dark:text-amber-300">
+                      <Lightbulb className="h-4 w-4" /> Common MUST 301 Exam Traps & Misconceptions:
+                    </h5>
+                    <ul className="mt-2 list-disc space-y-1 pl-4 text-amber-950 dark:text-amber-200">
+                      {summary.examTraps.map((trap: string, i: number) => (
+                        <li key={i}>{trap}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab 3: Intelligent Quiz Evaluator */}
+      {activeTab === 'eval' && (
+        <div className="mt-6 space-y-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900/60">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+              Intelligent Student Answer Diagnostic Tool
+            </h3>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Type or customize your clinical question and answer to receive an instant evaluation against MUST 301 grading criteria.
+            </p>
+
+            <div className="mt-4 space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Exam Question</label>
+                <textarea
+                  rows={2}
+                  value={quizQuestion}
+                  onChange={(e) => setQuizQuestion(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-3 text-xs text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Your Answer</label>
+                <textarea
+                  rows={2}
+                  value={studentAnswer}
+                  onChange={(e) => setStudentAnswer(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-3 text-xs text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Reference Benchmark Answer</label>
+                <textarea
+                  rows={2}
+                  value={correctAnswer}
+                  onChange={(e) => setCorrectAnswer(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-3 text-xs text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+
+              <button
+                type="button"
+                disabled={evalLoading}
+                onClick={runQuizEval}
+                className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow transition hover:bg-blue-700 disabled:opacity-50"
+              >
+                {evalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                Evaluate Answer with AI
+              </button>
+            </div>
+
+            {evalResult && (
+              <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-5 dark:border-white/10 dark:bg-slate-800/50">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-white/10">
+                  <div className="flex items-center gap-2">
+                    {evalResult.isCorrect ? (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                    ) : (
+                      <XCircle className="h-5 w-5 text-amber-500" />
+                    )}
+                    <span className="font-bold text-sm text-slate-900 dark:text-white">
+                      Verdict: {evalResult.verdict}
+                    </span>
+                  </div>
+                  <span className="font-mono text-sm font-bold text-blue-600 dark:text-cyan-300">
+                    Score: {evalResult.score}/100
+                  </span>
+                </div>
+
+                <p className="mt-3 text-xs font-medium text-slate-700 dark:text-slate-300">
+                  {evalResult.feedbackSummary}
+                </p>
+
+                <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  {evalResult.detailedExplanation}
+                </p>
+
+                {evalResult.keyTakeaways?.length > 0 && (
+                  <div className="mt-3 border-t border-slate-200 pt-2 text-xs dark:border-white/10">
+                    <span className="font-bold text-slate-800 dark:text-slate-200">Key Points:</span>
+                    <ul className="mt-1 list-disc space-y-0.5 pl-4 text-slate-600 dark:text-slate-400">
+                      {evalResult.keyTakeaways.map((point: string, i: number) => (
+                        <li key={i}>{point}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Sparkles, BookOpen, Layers } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { cardClass } from '@/lib/ui';
 import {
@@ -14,6 +15,8 @@ import {
   type MaterialCategory,
   type ModuleName,
 } from '@/types';
+import AdSlot from '@/components/marketing/AdSlot';
+import AILearningStudio from '@/components/ai/AILearningStudio';
 
 type Tone = 'blue' | 'emerald' | 'purple';
 
@@ -37,7 +40,6 @@ const tones: Record<Tone, { bar: string; badge: string; button: string }> = {
 
 const TYPE_ORDER = Object.keys(MATERIAL_TYPE_LABELS) as MaterialCategory[];
 
-// Files sharing a title (e.g. PDF + G1 + G2 record of one lecture) appear in one card.
 function groupByTitle(items: Material[]): [string, Material[]][] {
   const groups = new Map<string, Material[]>();
   for (const item of items) {
@@ -110,11 +112,11 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [showAIStudio, setShowAIStudio] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // public.materials has no created_at column, so order by title.
       const { data, error } = await supabase
         .from('materials')
         .select('*')
@@ -136,31 +138,102 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
   }, [moduleName]);
 
   return (
-    <main className="p-6 md:p-12">
-      <div className="mx-auto max-w-5xl space-y-10">
-        <div>
-          <Link href="/" className="text-sm font-medium text-blue-600 hover:underline dark:text-cyan-300">
-            ← Back to Dashboard
-          </Link>
-          <h1 className="mt-2 text-4xl font-extrabold text-slate-900 dark:text-white">
-            {moduleName} <span className="font-normal text-slate-400 dark:text-slate-500">· {MODULE_TITLES[moduleName]}</span>
-          </h1>
+    <main className="p-4 sm:p-6 md:p-12">
+      <div className="mx-auto max-w-5xl space-y-8">
+        {/* Module Header */}
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <Link href="/" className="text-xs font-semibold text-blue-600 hover:underline dark:text-cyan-300">
+              ← Back to Main Dashboard
+            </Link>
+            <h1 className="mt-1 text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">
+              {moduleName}{' '}
+              <span className="font-normal text-slate-400 dark:text-slate-500">
+                · {MODULE_TITLES[moduleName]}
+              </span>
+            </h1>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowAIStudio(!showAIStudio)}
+            className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-bold text-indigo-700 shadow-sm transition hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/60 dark:text-cyan-300"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            {showAIStudio ? 'Hide AI Study Studio' : `Launch ${moduleName} AI Case Lab`}
+          </button>
         </div>
 
+        {/* AI Study Studio embedded drawer */}
+        {showAIStudio && (
+          <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+            <AILearningStudio initialModule={moduleName} embedded />
+          </div>
+        )}
+
         {loadError && (
-          <div role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
+          <div role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 text-xs font-semibold text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
             Couldn&apos;t load materials right now. Please refresh in a moment.
           </div>
         )}
 
         {loading ? (
-          <p className="text-slate-500">Loading materials…</p>
+          <p className="text-slate-500 text-sm">Loading {MODULE_TITLES[moduleName]} resources…</p>
         ) : (
-          <>
-            <Section heading="Theory & Lectures" tone="blue" items={materials.filter((m) => THEORY_TYPES.includes(m.type))} emptyText="No theory materials uploaded yet." />
-            <Section heading="Practicals & OSPE" tone="emerald" items={materials.filter((m) => PRACTICAL_TYPES.includes(m.type))} emptyText="No practical materials uploaded yet." />
-            <Section heading="Exam Vault" tone="purple" items={materials.filter((m) => EXAM_TYPES.includes(m.type))} emptyText="No exam materials uploaded yet." />
-          </>
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
+            <div className="space-y-8 lg:col-span-3">
+              <Section
+                heading="Theory & Lectures"
+                tone="blue"
+                items={materials.filter((m) => THEORY_TYPES.includes(m.type))}
+                emptyText={`No theory materials uploaded yet for ${MODULE_TITLES[moduleName]}.`}
+              />
+              <Section
+                heading="Practicals & OSPE"
+                tone="emerald"
+                items={materials.filter((m) => PRACTICAL_TYPES.includes(m.type))}
+                emptyText={`No practical materials uploaded yet for ${MODULE_TITLES[moduleName]}.`}
+              />
+              <Section
+                heading="Exam Vault"
+                tone="purple"
+                items={materials.filter((m) => EXAM_TYPES.includes(m.type))}
+                emptyText={`No exam materials uploaded yet for ${MODULE_TITLES[moduleName]}.`}
+              />
+            </div>
+
+            {/* Sidebar with Medova Sponsor Widget & Quick Links */}
+            <div className="space-y-6 lg:col-span-1">
+              <AdSlot placement="sidebar" />
+
+              <div className={`${cardClass} p-5 space-y-3`}>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  {moduleName} Quick Actions
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setShowAIStudio(true)}
+                  className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-white/10 dark:bg-slate-800 dark:text-slate-200"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
+                    AI Clinical Cases
+                  </span>
+                  <span>→</span>
+                </button>
+                <Link
+                  href="/admin"
+                  className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-white/10 dark:bg-slate-800 dark:text-slate-200"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Layers className="h-3.5 w-3.5 text-blue-500" />
+                    Upload / Edit Materials
+                  </span>
+                  <span>→</span>
+                </Link>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </main>

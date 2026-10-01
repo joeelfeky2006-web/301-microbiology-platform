@@ -1,0 +1,169 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { ai } from '@/lib/gemini';
+import type { ModuleName } from '@/types';
+
+interface CaseStudyPayload {
+  module: ModuleName;
+  topic?: string;
+  difficulty?: 'beginner' | 'intermediate' | 'advanced';
+}
+
+const FALLBACK_CASES: Record<ModuleName, any> = {
+  CNS: {
+    title: 'Acute Onset Fever, Severe Headache, and Nuchal Rigidity in an 18-Year-Old College Student',
+    module: 'CNS',
+    difficulty: 'intermediate',
+    patient: {
+      demographics: '18-year-old male university freshman',
+      chiefComplaint: 'Rapid onset of fever (39.4°C), photophobia, severe throbbing headache, and neck stiffness for 18 hours.',
+      physicalExam: 'Toxic appearance, Kernig’s and Brudzinski’s signs both markedly positive. Petechial purpuric rash observed on lower extremities.',
+      labFindings: [
+        'Lumbar Puncture: Opening pressure 280 mm H2O (elevated)',
+        'CSF Appearance: Turbid, cloudy yellowish',
+        'CSF WBC: 4,500/mm³ (92% neutrophils)',
+        'CSF Protein: 220 mg/dL (markedly elevated)',
+        'CSF Glucose: 18 mg/dL (serum glucose 105 mg/dL; ratio < 0.2)',
+        'Gram Stain: Intracellular Gram-negative diplococci with adjacent indented sides (coffee-bean shape)',
+      ],
+    },
+    question: 'What is the most likely causative organism, and what is the primary virulence factor responsible for evading complement-mediated killing?',
+    options: [
+      { id: 'A', text: 'Streptococcus pneumoniae — Pneumolysin toxin', isCorrect: false },
+      { id: 'B', text: 'Neisseria meningitidis (Serogroup B/C/Y) — Antiphagocytic polysaccharide capsule and IgA1 protease', isCorrect: true },
+      { id: 'C', text: 'Listeria monocytogenes — Listeriolysin O', isCorrect: false },
+      { id: 'D', text: 'Haemophilus influenzae type b — Polyribosylribitol phosphate (PRP)', isCorrect: false },
+    ],
+    explanation: 'The classic clinical triad of acute bacterial meningitis along with petechial/purpuric rash and Gram-negative coffee-bean shaped diplococci points directly to Neisseria meningitidis (meningococcus). Its key virulence factors include the antiphagocytic polysaccharide capsule, lipooligosaccharide (LOS) endotoxin triggering septic shock and petechiae, and IgA1 protease aiding mucosal colonization.',
+    clinicalPearls: [
+      'Empirical therapy: IV Ceftriaxone or Cefotaxime + Vancomycin (plus Ampicillin if Listeria is suspected in neonates/elderly).',
+      'Prophylaxis for close household/dorm contacts: Rifampin, Ciprofloxacin, or single-dose Ceftriaxone.',
+    ],
+  },
+  URS: {
+    title: 'Dysuria, Flank Pain, and CVA Tenderness in a 24-Year-Old Female',
+    module: 'URS',
+    difficulty: 'intermediate',
+    patient: {
+      demographics: '24-year-old female, sexually active',
+      chiefComplaint: 'Burning on urination (dysuria), urinary frequency, chills, nausea, and right-sided flank pain for 2 days.',
+      physicalExam: 'Temperature 38.8°C, tachycardia (104 bpm), marked right costovertebral angle (CVA) tenderness.',
+      labFindings: [
+        'Urinalysis: Cloudy, +++ Leukocyte Esterase, ++ Nitrites, microscopic hematuria',
+        'Microscopy: >50 WBCs/HPF, White Blood Cell (WBC) casts present',
+        'Urine Culture: >100,000 CFU/mL of lactose-fermenting, indole-positive Gram-negative bacilli on MacConkey agar (pink colonies)',
+      ],
+    },
+    question: 'The presence of WBC casts indicates upper urinary tract involvement (acute pyelonephritis). Which specific virulence factor allows the causative pathogen to ascend from the bladder to the renal pelvis?',
+    options: [
+      { id: 'A', text: 'Type 1 fimbriae (mannose-sensitive adhesion to bladder uroepithelium only)', isCorrect: false },
+      { id: 'B', text: 'P fimbriae (pyelonephritis-associated pili binding digalactoside Gala(1-4)Gal on uroepithelium)', isCorrect: true },
+      { id: 'C', text: 'Urease enzyme generating alkaline ammonium ions', isCorrect: false },
+      { id: 'D', text: 'Coagulase enzyme inducing fibrinous barrier', isCorrect: false },
+    ],
+    explanation: 'Uropathogenic Escherichia coli (UPEC) is the leading cause of both cystitis and acute pyelonephritis. While Type 1 fimbriae mediate binding to bladder epithelium, P fimbriae (pyelonephritis-associated pili) recognize Gala(1-4)Gal receptors present on renal tubular and uroepithelial cells, facilitating upward ascension to the renal parenchyma causing acute pyelonephritis.',
+    clinicalPearls: [
+      'WBC casts are the hallmark differentiator between upper UTI (pyelonephritis) vs lower UTI (cystitis).',
+      'Proteus mirabilis produces urease, producing alkaline urine (pH > 7.5) and staghorn calculi (struvite stones).',
+    ],
+  },
+  REP: {
+    title: 'Painless Indurated Genital Ulcer in a 29-Year-Old Male',
+    module: 'REP',
+    difficulty: 'intermediate',
+    patient: {
+      demographics: '29-year-old male',
+      chiefComplaint: 'Noticed a single, painless ulcer on the shaft of the penis for 10 days.',
+      physicalExam: 'Circumscribed, 1.2 cm indurated ulcer with a clean base and raised, firm cartilaginous borders (chancre). Painless, non-tender bilateral inguinal lymphadenopathy.',
+      labFindings: [
+        'Standard Gram Stain: No organisms visible (cannot be visualized by light microscopy)',
+        'Darkfield Microscopy of ulcer exudate: Slender, tightly wound corkscrew-motile spirochetes',
+        'RPR / VDRL: Positive titer (1:16)',
+        'Confirmatory FTA-ABS: Reactive',
+      ],
+    },
+    question: 'What is the etiologic agent of this primary lesion, and what is the drug of choice for treatment?',
+    options: [
+      { id: 'A', text: 'Haemophilus ducreyi (Chancroid) — Oral Azithromycin', isCorrect: false },
+      { id: 'B', text: 'Treponema pallidum subsp. pallidum (Primary Syphilis) — Benzathine Penicillin G (single IM dose)', isCorrect: true },
+      { id: 'C', text: 'Herpes Simplex Virus Type 2 — Oral Acyclovir', isCorrect: false },
+      { id: 'D', text: 'Chlamydia trachomatis L1-L3 (LGV) — Doxycycline 21 days', isCorrect: false },
+    ],
+    explanation: 'A single, painless, hard indurated ulcer (Hunterian chancre) accompanied by non-tender regional lymphadenopathy is pathognomonic for Primary Syphilis caused by Treponema pallidum. Because T. pallidum lacks peptidoglycan-remodeling enzymes leading to penicillin resistance, Benzathine Penicillin G remains 100% bactericidal and the gold standard drug of choice.',
+    clinicalPearls: [
+      'Remember: "Hard & Painless = Syphilis; Soft & Painful = Chancroid (Haemophilus ducreyi)".',
+      'Watch out for the Jarisch-Herxheimer reaction (fever, chills, hypotension) hours after starting penicillin due to massive spirochetal endotoxin/antigen release.',
+    ],
+  },
+};
+
+export async function POST(req: NextRequest) {
+  try {
+    const body: CaseStudyPayload = await req.json();
+    const moduleName = body.module || 'URS';
+    const topic = body.topic || '';
+    const difficulty = body.difficulty || 'intermediate';
+
+    if (ai) {
+      const prompt = `Generate a realistic medical student microbiology case study vignette for 301 Microbiology at MUST University.
+Module: ${moduleName} (CNS: Central Nervous System, URS: Urinary System, REP: Reproductive System).
+Specific Topic / Pathogen requested: ${topic || 'High-yield common pathology for this module'}.
+Difficulty level: ${difficulty}.
+
+Return ONLY valid JSON matching this schema:
+{
+  "title": "Descriptive title of case",
+  "module": "${moduleName}",
+  "difficulty": "${difficulty}",
+  "patient": {
+    "demographics": "Age, sex, occupation",
+    "chiefComplaint": "Patient symptoms and timeline",
+    "physicalExam": "Vitals, key signs",
+    "labFindings": ["Array of lab and diagnostic findings like CSF, Urine Culture, Gram stain, Serology"]
+  },
+  "question": "Clinical multiple-choice question testing microbiology pathogen identification, virulence factor, or treatment",
+  "options": [
+    { "id": "A", "text": "Option A", "isCorrect": false },
+    { "id": "B", "text": "Option B", "isCorrect": true },
+    { "id": "C", "text": "Option C", "isCorrect": false },
+    { "id": "D", "text": "Option D", "isCorrect": false }
+  ],
+  "explanation": "Detailed clinical reasoning of why the answer is correct and why other options are wrong",
+  "clinicalPearls": ["2-3 high yield exam tips or clinical pearls for MUST 301 students"]
+}`;
+
+      try {
+        const response = await ai.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+          },
+        });
+
+        if (response.text) {
+          const parsed = JSON.parse(response.text.trim());
+          return NextResponse.json({ success: true, caseStudy: parsed, source: 'gemini' });
+        }
+      } catch (genErr) {
+        console.warn('Gemini generation fallback to local clinical case bank:', genErr);
+      }
+    }
+
+    // High quality clinical bank fallback
+    const fallbackCase = FALLBACK_CASES[moduleName] || FALLBACK_CASES.URS;
+    return NextResponse.json({
+      success: true,
+      caseStudy: {
+        ...fallbackCase,
+        title: topic ? `${fallbackCase.title} [Focus: ${topic}]` : fallbackCase.title,
+      },
+      source: 'curated_bank',
+    });
+  } catch (error: any) {
+    console.error('Case study API error:', error);
+    return NextResponse.json(
+      { error: error?.message || 'Failed to generate medical case study' },
+      { status: 500 }
+    );
+  }
+}

@@ -3,9 +3,9 @@ import "./globals.css";
 import Header from "@/components/Header";
 
 export const metadata: Metadata = {
-  title: "Micro Atlas — 301 Microbiology",
+  title: "MedAtlas Egypt — Next-Gen AI Training for Medical Students",
   description:
-    "301 Microbiology learning platform: CNS, URS, and REP modules with lectures, practical records, and exam materials.",
+    "MedAtlas Egypt: Next-Gen AI Training for Medical Students. Micro 301 — Culturing Curiosity: Central Nervous System, Urinary System, and Reproductive System modules with interactive case studies, practical records, and exam vault.",
 };
 
 // Runs before first paint so there is no light/dark flash. Light is the default.

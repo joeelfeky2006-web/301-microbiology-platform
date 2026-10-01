@@ -18,45 +18,50 @@ const INITIAL_MATERIALS: Material[] = [
     module: 'CNS',
     type: 'lec_pdf',
     title: 'CNS Lec 1: Acute Bacterial & Viral Meningitis',
-    file_url: 'https://drive.google.com',
+    file_url: 'https://drive.google.com/file/d/demo-cns-lec1/view',
     format: 'pdf',
     source_type: 'drive',
+    created_at: '2026-09-10T10:00:00Z',
   },
   {
     id: 'cns-mat-2',
     module: 'CNS',
     type: 'record_g1',
     title: 'CNS Lec 1: Acute Bacterial & Viral Meningitis',
-    file_url: 'https://drive.google.com',
+    file_url: 'https://example.com/audio/cns_lec1_g1.mp3',
     format: 'audio',
     source_type: 'drive',
+    created_at: '2026-09-10T12:00:00Z',
   },
   {
     id: 'cns-mat-3',
     module: 'CNS',
     type: 'record_g2',
     title: 'CNS Lec 1: Acute Bacterial & Viral Meningitis',
-    file_url: 'https://drive.google.com',
+    file_url: 'https://example.com/audio/cns_lec1_g2.mp3',
     format: 'audio',
     source_type: 'drive',
+    created_at: '2026-09-10T14:00:00Z',
   },
   {
     id: 'cns-mat-4',
     module: 'CNS',
     type: 'lec_pdf',
     title: 'CNS Lec 2: Chronic Meningitis & Brain Abscess',
-    file_url: 'https://drive.google.com',
+    file_url: 'https://drive.google.com/file/d/demo-cns-lec2/view',
     format: 'pdf',
     source_type: 'drive',
+    created_at: '2026-09-14T10:00:00Z',
   },
   {
     id: 'cns-mat-5',
     module: 'CNS',
     type: 'practical_pdf',
     title: 'CNS Practical: CSF Examination, Gram Stain & OSPE Slides',
-    file_url: 'https://drive.google.com',
+    file_url: 'https://drive.google.com/file/d/demo-cns-prac/view',
     format: 'pdf',
     source_type: 'drive',
+    created_at: '2026-09-18T09:00:00Z',
   },
   {
     id: 'cns-mat-6',
@@ -66,53 +71,69 @@ const INITIAL_MATERIALS: Material[] = [
     file_url: 'https://t.me/micro301_must',
     format: 'external_link',
     source_type: 'telegram',
+    created_at: '2026-09-18T11:00:00Z',
   },
   {
     id: 'cns-mat-7',
     module: 'CNS',
     type: 'midterm_qs',
     title: 'CNS Midterm Vault: High-Yield Questions & Case Vignettes',
-    file_url: 'https://drive.google.com',
+    file_url: 'https://drive.google.com/file/d/demo-cns-midterm/view',
     format: 'pdf',
     source_type: 'drive',
+    created_at: '2026-09-22T15:00:00Z',
   },
 
-  // URS Module
+  // Urinary System (URS) Module
   {
     id: 'urs-mat-1',
     module: 'URS',
     type: 'lec_pdf',
-    title: 'URS Lec 1: Urinary Tract Infections (UTI & Pyelonephritis)',
-    file_url: 'https://drive.google.com',
+    title: 'Urinary System Lec 1: Urinary Tract Infections (UTI & Pyelonephritis)',
+    file_url: 'https://drive.google.com/file/d/demo-urs-lec1/view',
     format: 'pdf',
     source_type: 'drive',
+    created_at: '2026-09-12T10:00:00Z',
   },
   {
     id: 'urs-mat-2',
     module: 'URS',
     type: 'record_g1',
-    title: 'URS Lec 1: Urinary Tract Infections (UTI & Pyelonephritis)',
-    file_url: 'https://drive.google.com',
+    title: 'Urinary System Lec 1: Urinary Tract Infections (UTI & Pyelonephritis)',
+    file_url: 'https://example.com/audio/urs_lec1_g1.mp3',
     format: 'audio',
     source_type: 'drive',
+    created_at: '2026-09-12T12:00:00Z',
   },
   {
     id: 'urs-mat-3',
     module: 'URS',
-    type: 'practical_pdf',
-    title: 'URS Practical: Urine Culture & Antibiotic Sensitivity (AST)',
-    file_url: 'https://drive.google.com',
+    type: 'lec_pdf',
+    title: 'Urinary System Lec 2: Glomerulonephritis & Post-Streptococcal Sequelae',
+    file_url: 'https://drive.google.com/file/d/demo-urs-lec2/view',
     format: 'pdf',
     source_type: 'drive',
+    created_at: '2026-09-16T10:00:00Z',
   },
   {
     id: 'urs-mat-4',
     module: 'URS',
-    type: 'final_study',
-    title: 'URS Final Exam Vault: Comprehensive High-Yield Summary',
-    file_url: 'https://drive.google.com',
+    type: 'practical_pdf',
+    title: 'Urinary System Practical: Urine Culture & Antibiotic Sensitivity (AST)',
+    file_url: 'https://drive.google.com/file/d/demo-urs-prac/view',
     format: 'pdf',
     source_type: 'drive',
+    created_at: '2026-09-20T09:00:00Z',
+  },
+  {
+    id: 'urs-mat-5',
+    module: 'URS',
+    type: 'final_study',
+    title: 'Urinary System Final Vault: High-Yield Nephropathogen Summary',
+    file_url: 'https://drive.google.com/file/d/demo-urs-final/view',
+    format: 'pdf',
+    source_type: 'drive',
+    created_at: '2026-09-24T15:00:00Z',
   },
 
   // REP Module
@@ -121,36 +142,40 @@ const INITIAL_MATERIALS: Material[] = [
     module: 'REP',
     type: 'lec_pdf',
     title: 'REP Lec 1: Sexually Transmitted Infections (Syphilis & Gonorrhea)',
-    file_url: 'https://drive.google.com',
+    file_url: 'https://drive.google.com/file/d/demo-rep-lec1/view',
     format: 'pdf',
     source_type: 'drive',
+    created_at: '2026-09-15T10:00:00Z',
   },
   {
     id: 'rep-mat-2',
     module: 'REP',
     type: 'record_g1',
     title: 'REP Lec 1: Sexually Transmitted Infections (Syphilis & Gonorrhea)',
-    file_url: 'https://drive.google.com',
+    file_url: 'https://example.com/audio/rep_lec1_g1.mp3',
     format: 'audio',
     source_type: 'drive',
+    created_at: '2026-09-15T12:00:00Z',
   },
   {
     id: 'rep-mat-3',
     module: 'REP',
     type: 'practical_pdf',
     title: 'REP Practical: Genital Swab Microscopy & Wet Mounts',
-    file_url: 'https://drive.google.com',
+    file_url: 'https://drive.google.com/file/d/demo-rep-prac/view',
     format: 'pdf',
     source_type: 'drive',
+    created_at: '2026-09-21T09:00:00Z',
   },
   {
     id: 'rep-mat-4',
     module: 'REP',
     type: 'midterm_study',
     title: 'REP Midterm Vault: High-Yield Topics & Flash Review',
-    file_url: 'https://drive.google.com',
+    file_url: 'https://drive.google.com/file/d/demo-rep-midterm/view',
     format: 'pdf',
     source_type: 'drive',
+    created_at: '2026-09-25T15:00:00Z',
   },
 ];
 
@@ -158,6 +183,14 @@ export interface QueryBuilder<T = any> {
   eq: (col: string, val: any) => QueryBuilder<T>;
   order: (col: string, opts?: { ascending?: boolean }) => QueryBuilder<T>;
   returns: <R = T>() => Promise<{ data: R | null; error: any }>;
+  then: <TResult1 = { data: T | null; error: any }, TResult2 = never>(
+    onfulfilled?: ((value: { data: T | null; error: any }) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null
+  ) => Promise<TResult1 | TResult2>;
+}
+
+export interface MutationBuilder<T = any> {
+  eq: (col: string, val: any) => MutationBuilder<T>;
   then: <TResult1 = { data: T | null; error: any }, TResult2 = never>(
     onfulfilled?: ((value: { data: T | null; error: any }) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null
@@ -184,6 +217,8 @@ export interface AppSupabaseClient {
   from: (table: string) => {
     select: (cols?: string) => QueryBuilder;
     insert: (rows: any[]) => Promise<{ data: any; error: any }>;
+    update: (updates: any) => MutationBuilder;
+    delete: () => MutationBuilder;
   };
   storage: {
     from: (bucket: string) => {
@@ -251,6 +286,7 @@ function createFallbackClient(): AppSupabaseClient {
     if (typeof window === 'undefined') return;
     try {
       localStorage.setItem('micro_atlas_materials', JSON.stringify(materials));
+      window.dispatchEvent(new Event('materials_updated'));
     } catch {
       // storage unavailable
     }
@@ -365,11 +401,74 @@ function createFallbackClient(): AppSupabaseClient {
           const items = getStoredMaterials();
           const newEntries: Material[] = rows.map((r, idx) => ({
             id: 'mat_' + Date.now() + '_' + idx,
+            created_at: new Date().toISOString(),
             ...r,
           }));
           const updated = [...items, ...newEntries];
           saveStoredMaterials(updated);
           return { data: newEntries, error: null };
+        },
+        update: (updates: any) => {
+          let filterCol: string = 'id';
+          let filterVal: any = null;
+
+          const mutationBuilder: MutationBuilder = {
+            eq: (col: string, val: any) => {
+              filterCol = col;
+              filterVal = val;
+              return mutationBuilder;
+            },
+            then: async (resolve: any, reject: any) => {
+              try {
+                const items = getStoredMaterials();
+                const idx = items.findIndex((m: any) => m[filterCol] === filterVal);
+                if (idx !== -1) {
+                  items[idx] = {
+                    ...items[idx],
+                    ...updates,
+                    updated_at: new Date().toISOString(),
+                  };
+                  saveStoredMaterials(items);
+                  return resolve({ data: items[idx], error: null });
+                }
+                return resolve({ data: null, error: new Error('Record not found') });
+              } catch (err) {
+                if (reject) reject(err);
+                else resolve({ data: null, error: err });
+              }
+            },
+          };
+
+          return mutationBuilder;
+        },
+        delete: () => {
+          let filterCol: string = 'id';
+          let filterVal: any = null;
+
+          const mutationBuilder: MutationBuilder = {
+            eq: (col: string, val: any) => {
+              filterCol = col;
+              filterVal = val;
+              return mutationBuilder;
+            },
+            then: async (resolve: any, reject: any) => {
+              try {
+                let items = getStoredMaterials();
+                const countBefore = items.length;
+                items = items.filter((m: any) => m[filterCol] !== filterVal);
+                saveStoredMaterials(items);
+                return resolve({
+                  data: { count: countBefore - items.length },
+                  error: null,
+                });
+              } catch (err) {
+                if (reject) reject(err);
+                else resolve({ data: null, error: err });
+              }
+            },
+          };
+
+          return mutationBuilder;
         },
       };
     },
