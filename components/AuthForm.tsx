@@ -88,7 +88,7 @@ export default function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
         <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">
           {isSignUp ? 'Create your account' : 'Welcome back'}
         </h1>
-        <p className="mb-6 mt-1 text-slate-500 dark:text-slate-300">
+        <p className="mb-6 mt-1 text-slate-500 dark:text-slate-400">
           {isSignUp ? 'Sign up to access modules and materials.' : 'Sign in to access modules and materials.'}
         </p>
 
@@ -155,7 +155,7 @@ export default function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-300">
+        <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
           {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
           <Link href={otherHref} className="font-semibold text-blue-600 hover:underline dark:text-cyan-300">
             {isSignUp ? 'Sign in' : 'Sign up'}

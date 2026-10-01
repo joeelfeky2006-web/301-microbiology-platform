@@ -35,7 +35,7 @@ export default function Home() {
           <h1 className="mb-4 text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white md:text-5xl">
             301 Microbiology <span className="text-blue-600 dark:text-cyan-300">Portal</span>
           </h1>
-          <p className="mx-auto max-w-2xl text-lg text-slate-600 dark:text-slate-300">
+          <p className="mx-auto max-w-2xl text-lg text-slate-600 dark:text-slate-400">
             Select a module below to access lecture PDFs, G1/G2 audio records, and practical materials.
           </p>
 
@@ -73,7 +73,7 @@ export default function Home() {
                   {mod.id}
                 </div>
                 <h2 className="mb-2 text-xl font-bold text-slate-900 dark:text-white">{MODULE_TITLES[mod.id]}</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-300">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                   {session === null ? 'Sign in to open this module' : 'View theory, practicals & exam vault'} &rarr;
                 </p>
               </div>

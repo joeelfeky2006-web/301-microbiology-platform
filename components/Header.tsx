@@ -55,7 +55,7 @@ export default function Header() {
                   Admin
                 </Link>
               )}
-              <span className="hidden max-w-[10rem] truncate text-sm text-slate-500 dark:text-slate-300 md:inline">
+              <span className="hidden max-w-[10rem] truncate text-sm text-slate-500 dark:text-slate-400 md:inline">
                 {session.user.email}
               </span>
               <button

@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import AuthForm from '@/components/AuthForm';
 
-export default function Page() {
+export default function SignInPage() {
   return (
     <Suspense fallback={null}>
       <AuthForm mode="sign-in" />

@@ -18,7 +18,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (!session) {
     return (
-      <p className="p-12 text-center text-slate-500 dark:text-slate-300">
+      <p className="p-12 text-center text-slate-500 dark:text-slate-400">
         {session === null ? 'Redirecting to sign in…' : 'Checking your session…'}
       </p>
     );

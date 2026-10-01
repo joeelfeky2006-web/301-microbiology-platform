@@ -63,23 +63,23 @@ function Section({ heading, tone, items, emptyText }: { heading: string; tone: T
       </div>
 
       {groups.length === 0 ? (
-        <p className="italic text-slate-500 dark:text-slate-300">{emptyText}</p>
+        <p className="italic text-slate-500">{emptyText}</p>
       ) : (
         <div className="grid gap-4">
           {groups.map(([title, materials]) => (
             <div key={title} className={`${cardClass} space-y-4 p-6`}>
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">{title}</h3>
-                <p className="font-mono-accent mt-0.5 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <p className="font-mono-accent mt-0.5 text-xs uppercase tracking-wider text-slate-500">
                   {materials.length} file{materials.length === 1 ? '' : 's'} available
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 border-t border-slate-200 pt-4 dark:border-slate-700 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 border-t border-slate-200 pt-4 dark:border-white/10 md:grid-cols-2 lg:grid-cols-3">
                 {materials.map((mat) => (
                   <div
                     key={mat.id}
-                    className="flex flex-col justify-between rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800"
+                    className="flex flex-col justify-between rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-900/60"
                   >
                     <span className={`font-mono-accent w-fit rounded px-2 py-0.5 text-xs font-semibold uppercase ring-1 ${t.badge}`}>
                       {MATERIAL_TYPE_LABELS[mat.type] ?? mat.type}
@@ -143,7 +143,7 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
             ← Back to Dashboard
           </Link>
           <h1 className="mt-2 text-4xl font-extrabold text-slate-900 dark:text-white">
-            {moduleName} <span className="font-normal text-slate-500 dark:text-slate-300">· {MODULE_TITLES[moduleName]}</span>
+            {moduleName} <span className="font-normal text-slate-400 dark:text-slate-500">· {MODULE_TITLES[moduleName]}</span>
           </h1>
         </div>
 
@@ -154,7 +154,7 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
         )}
 
         {loading ? (
-          <p className="text-slate-500 dark:text-slate-300">Loading materials…</p>
+          <p className="text-slate-500">Loading materials…</p>
         ) : (
           <>
             <Section heading="Theory & Lectures" tone="blue" items={materials.filter((m) => THEORY_TYPES.includes(m.type))} emptyText="No theory materials uploaded yet." />
