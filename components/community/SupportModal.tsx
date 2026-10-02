@@ -31,7 +31,7 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
   return createPortal(
     <div onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }} className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-slate-950/60 p-3 backdrop-blur-xs animate-in fade-in duration-200">
       <section role="dialog" aria-modal="true" aria-labelledby="support-modal-title" className={`${cardClass} relative my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto overscroll-contain border border-slate-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-slate-900 sm:p-6`}>
-        <header className="sticky top-0 z-10 -mx-5 -mt-5 mb-3 flex items-start justify-between gap-3 bg-white/95 p-5 pb-2 backdrop-blur dark:bg-slate-900/95 sm:-mx-6 sm:-mt-6 sm:p-6 sm:pb-2">
+        <header className="mb-3 flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-500 text-white shadow-md"><HeartHandshake className="h-5 w-5" /></span>
             <div className="min-w-0"><h3 id="support-modal-title" className="text-lg font-black text-slate-900 dark:text-white">{content.title}</h3><p className="text-xs text-slate-500 dark:text-slate-400">{content.subtitle}</p></div>

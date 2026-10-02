@@ -53,7 +53,7 @@ export default function CreditBadge({ compact = false, className = '', onOpenSup
     {modalOpen && typeof document !== 'undefined' && createPortal(
       <div onMouseDown={(event) => { if (event.target === event.currentTarget) setModalOpen(false); }} className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-slate-950/60 p-3 backdrop-blur-xs">
         <section role="dialog" aria-modal="true" aria-labelledby="credits-dialog-title" className={`${cardClass} relative my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto overscroll-contain border border-slate-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-slate-900 sm:p-6`}>
-          <header className="sticky top-0 z-10 -mx-5 -mt-5 mb-4 flex items-start justify-between gap-3 bg-white/95 p-5 pb-2 backdrop-blur dark:bg-slate-900/95 sm:-mx-6 sm:-mt-6 sm:p-6 sm:pb-2">
+          <header className="mb-4 flex items-start justify-between gap-3">
             <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-600 text-white"><Zap className="h-5 w-5 fill-current text-amber-300" /></span><div><h3 id="credits-dialog-title" className="text-lg font-black text-slate-900 dark:text-white">Student AI Credits</h3><p className="text-xs text-slate-500 dark:text-slate-400">Balances refresh from your account</p></div></div>
             <button type="button" onClick={() => setModalOpen(false)} aria-label="Close credit wallet" className="shrink-0 rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"><X className="h-4 w-4" /></button>
           </header>
