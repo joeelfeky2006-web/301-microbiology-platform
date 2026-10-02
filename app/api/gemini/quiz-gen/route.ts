@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ai } from '@/lib/gemini';
 import type { ModuleName } from '@/types';
+import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const runtime = 'nodejs';
 
@@ -52,11 +53,22 @@ function validateQuestions(value: unknown): QuizQuestion[] {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const module = body?.module as ModuleName;
-    const rawQuizText = typeof body?.raw_quiz_text === 'string' ? body.raw_quiz_text : '';
-    const aiContext = typeof body?.ai_context === 'string' ? body.ai_context : '';
-    const customPrompt = typeof body?.custom_system_prompt === 'string' ? body.custom_system_prompt : '';
+    const materialId = typeof body?.material_id === 'string' ? body.material_id : '';
+    if (!materialId) return NextResponse.json({ error: 'A lecture material id is required.' }, { status: 400 });
 
+    const supabaseAdmin = createSupabaseAdmin();
+    if (!supabaseAdmin) return NextResponse.json({ error: 'AI resource service is not configured.' }, { status: 503 });
+    const { data: material, error: materialError } = await supabaseAdmin
+      .from('materials')
+      .select('id,module,raw_quiz_text,ai_context,custom_system_prompt')
+      .eq('id', materialId)
+      .maybeSingle();
+    if (materialError || !material) return NextResponse.json({ error: 'Lecture material was not found.' }, { status: 404 });
+
+    const module = material.module as ModuleName;
+    const rawQuizText = material.raw_quiz_text || '';
+    const aiContext = material.ai_context || '';
+    const customPrompt = material.custom_system_prompt || '';
     if (!MODULES.includes(module)) return NextResponse.json({ error: 'Invalid module code.' }, { status: 400 });
     if (rawQuizText.length > MAX_SOURCE_CHARS || aiContext.length > MAX_SOURCE_CHARS || customPrompt.length > 10_000) {
       return NextResponse.json({ error: 'Quiz source exceeds the allowed size.' }, { status: 413 });
