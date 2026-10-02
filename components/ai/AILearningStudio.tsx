@@ -109,7 +109,7 @@ export default function AILearningStudio({
     try {
       const res = await fetch('/api/gemini/summarize', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authenticatedHeaders(),
         body: JSON.stringify({
           module: selectedModule,
           topic: targetTopic,
@@ -144,7 +144,7 @@ export default function AILearningStudio({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           questionId: activeQuestionId,
-          module: MODULE_TITLES[selectedModule],
+          module: selectedModule,
           question: quizQuestion,
           studentAnswer,
         }),
