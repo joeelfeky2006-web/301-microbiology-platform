@@ -79,6 +79,7 @@ export default function AdminDashboardPage() {
   // Materials state
   const [materials, setMaterials] = useState<Material[]>([]);
   const [materialsLoading, setMaterialsLoading] = useState(true);
+  const [materialsError, setMaterialsError] = useState('');
   const [filterModule, setFilterModule] = useState<'ALL' | ModuleName>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -125,6 +126,7 @@ export default function AdminDashboardPage() {
   // Load materials from Supabase
   const loadMaterials = async () => {
     setMaterialsLoading(true);
+    setMaterialsError('');
     try {
       const response = await fetch('/api/admin/materials', { headers: await authenticatedHeaders() });
       const payload = await response.json();
@@ -132,6 +134,7 @@ export default function AdminDashboardPage() {
       setMaterials((payload.materials || []) as Material[]);
     } catch (err) {
       console.error('Error fetching materials:', err);
+      setMaterialsError('Course materials could not be loaded. Check your connection and staff access, then refresh.');
     } finally {
       setMaterialsLoading(false);
     }
@@ -560,7 +563,8 @@ export default function AdminDashboardPage() {
                     {filteredMaterials.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
-                          {materialsLoading ? 'Loading materials...' : 'No course materials match your filter.'}
+                          {materialsLoading ? 'Loading materials...' : materialsError || 'No course materials match your filter.'}
+                          {!materialsLoading && materialsError && <button type="button" onClick={loadMaterials} className="ml-2 font-semibold text-blue-600 underline">Try again</button>}
                         </td>
                       </tr>
                     ) : (

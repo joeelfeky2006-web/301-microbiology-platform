@@ -6,6 +6,10 @@ begin;
 alter table public.materials add column if not exists subtitle text;
 grant select (id, module, type, title, subtitle, file_url, format, source_type)
   on public.materials to authenticated;
+-- The CMS writes course rows directly with the signed-in user's Supabase client.
+-- Existing materials RLS policies restrict these privileges to staff; deletes
+-- remain limited to super admins by materials_delete_policy.
+grant insert, update, delete on public.materials to authenticated;
 
 create table if not exists public.platform_settings (
   id integer primary key check (id = 1),

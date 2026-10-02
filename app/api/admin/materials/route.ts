@@ -22,13 +22,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Staff access is required.' }, { status: 403 });
   }
 
-  const { data: materials, error } = await admin
-    .from('materials')
-    .select('*')
-    .order('title', { ascending: true });
-  if (error) {
-    console.error(JSON.stringify({ action: 'admin-materials', material_id: null, kind: 'glitch', latency_ms: 0 }));
-    return NextResponse.json({ error: 'Could not load course materials.' }, { status: 500 });
+  const materials: Record<string, unknown>[] = [];
+  const pageSize = 500;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await admin
+      .from('materials')
+      .select('*')
+      .order('title', { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (error) {
+      console.error(JSON.stringify({ action: 'admin-materials', material_id: null, kind: 'glitch', latency_ms: 0 }));
+      return NextResponse.json({ error: 'Could not load course materials.' }, { status: 500 });
+    }
+    materials.push(...(data || []));
+    if (!data || data.length < pageSize) break;
   }
-  return NextResponse.json({ materials: materials || [] }, { headers: { 'Cache-Control': 'no-store' } });
+  return NextResponse.json({ materials }, { headers: { 'Cache-Control': 'no-store' } });
 }
