@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { PlatformSettings } from '@/types';
+import { DEFAULT_SITE_CONTENT, mergeSiteContent } from '@/lib/siteConfig';
 
 export const DEFAULT_SUPPORT_CONTENT: PlatformSettings['support_content'] = {
   title: 'Support MedAtlas Egypt',
@@ -30,6 +31,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   whatsapp_number: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '201000000000',
   registration_open: true,
   support_content: DEFAULT_SUPPORT_CONTENT,
+  site_content: DEFAULT_SITE_CONTENT,
 };
 
 let cachedSettings: PlatformSettings | null = null;
@@ -51,6 +53,7 @@ async function loadSettings(force = false): Promise<PlatformSettings> {
         support_content: row.support_content && typeof row.support_content === 'object'
           ? { ...DEFAULT_SUPPORT_CONTENT, ...row.support_content, methods: Array.isArray(row.support_content.methods) ? row.support_content.methods : DEFAULT_SUPPORT_CONTENT.methods }
           : DEFAULT_SUPPORT_CONTENT,
+        site_content: mergeSiteContent(row.site_content),
         whatsapp_number: String(row.whatsapp_number || DEFAULT_PLATFORM_SETTINGS.whatsapp_number),
       } : DEFAULT_PLATFORM_SETTINGS;
       cachedSettings = resolved;

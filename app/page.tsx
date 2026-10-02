@@ -168,7 +168,7 @@ export default function Home() {
             <motion.div variants={heroItemVariants} className="flex justify-center">
               <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50/80 px-4 py-1.5 text-xs font-bold text-blue-700 shadow-sm transition hover:border-blue-300 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-cyan-300">
                 <Sparkles className="h-3.5 w-3.5 text-blue-600 dark:text-cyan-300" />
-                <span>MedAtlas Egypt Academic Network</span>
+                <span>{settings.site_content.home.tagline}</span>
               </div>
             </motion.div>
 
@@ -177,11 +177,7 @@ export default function Home() {
               variants={heroItemVariants}
               className="text-3xl font-black tracking-tight text-slate-900 dark:text-white sm:text-4xl md:text-5xl lg:text-6xl"
             >
-              MedAtlas Egypt:{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500">
-                Next-Gen AI Training
-              </span>{' '}
-              for Medical Students.
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500">{settings.site_content.home.headline}</span>
             </motion.h1>
 
             {/* Sub-headline / Tagline with bespoke creative "301" styling */}
@@ -210,7 +206,7 @@ export default function Home() {
             <motion.div variants={heroItemVariants} className="mx-auto max-w-3xl pt-1">
               <div className="rounded-2xl border border-blue-100 bg-gradient-to-b from-blue-50/70 via-white to-slate-50/50 p-5 shadow-sm dark:border-white/10 dark:from-slate-900/90 dark:via-slate-900 dark:to-slate-950">
                 <p className="text-sm sm:text-base font-semibold text-slate-800 dark:text-slate-200 leading-relaxed">
-                  &ldquo;A time-efficient, AI-driven platform built specifically to help medical students master complex infectious diseases and excel in their exams.&rdquo;
+                  &ldquo;{settings.site_content.home.description}&rdquo;
                 </p>
 
                 {/* Academic Hook Calibration Banner */}
@@ -223,15 +219,15 @@ export default function Home() {
                 <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3 pt-3 border-t border-slate-200/80 dark:border-white/10 text-left">
                   <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
                     <Zap className="h-4 w-4 flex-shrink-0 text-amber-500" />
-                    <span>Time-Efficient High-Yield Notes</span>
+                      <span>{settings.site_content.home.features[0]}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
                     <Stethoscope className="h-4 w-4 flex-shrink-0 text-blue-600 dark:text-cyan-400" />
-                    <span>Bedside AI Case Vignettes</span>
+                      <span>{settings.site_content.home.features[1]}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
                     <Award className="h-4 w-4 flex-shrink-0 text-emerald-500" />
-                    <span>Practice with structured, step-by-step feedback</span>
+                      <span>{settings.site_content.home.features[2]}</span>
                   </div>
                 </div>
               </div>
@@ -248,13 +244,13 @@ export default function Home() {
                     href="/sign-in"
                     className="rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-700 active:scale-95"
                   >
-                    Sign in to Portal
+                    {settings.site_content.home.ctaPrimary}
                   </Link>
                   {settings.registration_open && <Link
                     href="/sign-up"
                     className="rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-sm font-bold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 active:scale-95"
                   >
-                    Create Account
+                    {settings.site_content.home.ctaSecondary}
                   </Link>}
                 </>
               )}
@@ -358,10 +354,10 @@ export default function Home() {
                               {mod.id}
                             </div>
                             <h3 className="mb-2 text-xl font-bold text-slate-900 dark:text-white">
-                              {MODULE_TITLES[mod.id]}
+                              {settings.site_content.modules[mod.id]?.label || MODULE_TITLES[mod.id]}
                             </h3>
                             <p className="text-xs text-slate-500 dark:text-slate-300 leading-relaxed">
-                              {mod.description}
+                              {settings.site_content.modules[mod.id]?.summary || mod.description}
                             </p>
 
                             {/* Mini live progress indicator on module card */}

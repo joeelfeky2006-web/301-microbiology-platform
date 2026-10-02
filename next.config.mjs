@@ -12,10 +12,10 @@ const nextConfig = {
       "object-src 'none'",
       "frame-ancestors 'none'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "style-src 'self' 'unsafe-inline'",
       `img-src 'self' data: blob: ${supabaseOrigin}`,
       `connect-src 'self' ${supabaseOrigin}`,
-      "font-src 'self' https://fonts.gstatic.com data:",
+      "font-src 'self' data:",
       "frame-src 'self' https://drive.google.com",
     ].join('; ');
     return [

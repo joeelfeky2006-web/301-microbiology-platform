@@ -1,0 +1,81 @@
+import type { SiteContent } from '@/types';
+
+/** Public, editable copy defaults. Keep credentials and security policy out of this object. */
+export const DEFAULT_SITE_CONTENT: SiteContent = {
+  brand: {
+    name: 'Micro Atlas', shortName: 'Micro Atlas', tagline: 'Your 301 Microbiology study companion',
+    description: 'Microbiology learning resources for Micro 301 students.', logo: '/logo.svg',
+    affiliation: 'Independent student-built study resource. Not an official university publication.',
+    contactEmail: 'hello@example.com', teamName: 'Micro Atlas Team', foundedYear: '2026', social: [],
+  },
+  navigation: { home: 'Home', modules: 'Modules', cns: 'CNS', urs: 'Urinary System', rep: 'Reproductive System', about: 'About', contact: 'Contact', privacy: 'Privacy', terms: 'Terms', copyright: 'Copyright & Content' },
+  navigationOrder: ['home', 'modules', 'about', 'contact'],
+  footer: { explore: 'Explore', company: 'Company', legal: 'Legal', copyright: '© {year} {owner}. All rights reserved.', disclaimer: 'For educational purposes only. This platform does not provide medical advice.' },
+  home: {
+    headline: 'Your 301 Microbiology study companion',
+    description: 'A time-efficient study platform for CNS, urinary, and reproductive microbiology, with learning materials and AI study tools.',
+    tagline: 'Independent student-built study resource', ctaPrimary: 'Sign in to Portal', ctaSecondary: 'Create Account',
+    features: ['Time-efficient high-yield notes', 'Bedside AI case vignettes', 'Structured step-by-step practice'],
+  },
+  pages: {
+    about: { title: 'About Micro Atlas', description: 'Our mission and learning resources.', lastUpdated: '2026-10-03', visible: true, sections: [
+      { heading: 'Our mission', body: 'Micro Atlas helps Micro 301 students study central nervous system, urinary, and reproductive microbiology.', visible: true },
+      { heading: 'Learning resources', body: 'The platform brings together lectures, recordings, mind maps, question-bank practice, and Dr. Atlas study tools. AI output can be inaccurate and should be checked against course materials.', visible: true },
+      { heading: 'Content and team', body: 'Resources are prepared by students and contributors. Contact the team at the address listed on the Contact page to report a content issue.', visible: true },
+      { heading: 'Affiliation', body: 'Independent student-built study resource. Not an official university publication.', visible: true },
+    ] },
+    contact: { title: 'Contact', description: 'Contact the Micro Atlas team.', lastUpdated: '2026-10-03', visible: true, sections: [
+      { heading: 'Email', body: 'For questions, content corrections, privacy requests, or copyright notices, contact {email}. We aim to reply within 2 working days.', visible: true },
+      { heading: 'Report a content error', body: 'Include the page or resource URL, the specific issue, and a reliable correction source.', visible: true },
+    ] },
+    privacy: { title: 'Privacy', description: 'How Micro Atlas handles account and platform data.', lastUpdated: '2026-10-03', visible: true, sections: [
+      { heading: 'Information in your account', body: 'Supabase Auth manages sign-in. The application uses account email and user metadata such as name and, when provided, University ID. The app does not read your password.', visible: true },
+      { heading: 'Credits and activity', body: 'The platform stores AI credit balances in its user credits records. Sponsor analytics records impressions, clicks, and coupon copies and may include the signed-in user ID when available.', visible: true },
+      { heading: 'AI features', body: 'Relevant lecture source text and the text you submit to AI study tools may be sent to Google Gemini to generate a response. Do not submit personal, confidential, or patient-identifying information. Check AI output against course materials.', visible: true },
+      { heading: 'Browser storage and persistence', body: 'Browser storage keys used by the app include theme, student_group_preference, medatlas_profile_preferences, medatlas_student_progress, and announcement-dismissed:<content-hash>. Supabase Auth stores its session using the SDK-managed browser storage key. The local fallback uses micro_atlas_session, micro_atlas_mock_accounts, and micro_atlas_materials. In that development-only fallback, entered password values are stored in browser local storage and are not hashed: never use a real password in fallback mode. With Supabase configured, Supabase Auth handles passwords. Reviewed AI chat and quiz UI code keeps prompts and responses in page state and does not write chat transcripts, answers, or reports to Supabase.', visible: true },
+      { heading: 'Requests and retention', body: 'For access, correction, or deletion requests, email {email}. Account and operational records may remain while needed to provide the service or meet applicable obligations. Contact the team for current retention details.', visible: true },
+      { heading: 'Third parties and security', body: 'Supabase provides the configured authentication, database, and storage services. Google Gemini processes requests made to AI study features. The deployment may use additional infrastructure providers; confirm the live deployment configuration before relying on this draft.', visible: true },
+      { heading: 'Access controls', body: 'The application uses authenticated sessions and database row-level policies for restricted data, alongside browser security response headers. No security control eliminates all risk; keep account credentials private and report suspected unauthorized access to {email}.', visible: true },
+      { heading: 'Age and legal review', body: 'Minimum-age wording: [TODO: obtain qualified legal review and set the appropriate age requirement]. Draft. Have a qualified lawyer review before launch (Egypt Personal Data Protection Law No. 151 of 2020).', visible: true },
+    ] },
+    terms: { title: 'Terms of Use', description: 'Terms for using Micro Atlas.', lastUpdated: '2026-10-03', visible: true, sections: [
+      { heading: 'Acceptable use and account responsibility', body: 'Use the platform lawfully for personal study. Keep your account credentials secure and do not disrupt the service, bypass access controls, or misuse other users’ information.', visible: true },
+      { heading: 'Educational use only', body: 'Content and AI features are for education, not medical advice, diagnosis, or treatment. AI responses may be incomplete or inaccurate; verify important information with authoritative course resources.', visible: true },
+      { heading: 'Content and personal study', body: 'Respect the rights of instructors and third-party authors. Platform materials are provided for personal study; do not redistribute materials without permission.', visible: true },
+      { heading: 'Sponsored content', body: 'Some placements may contain sponsored content. Sponsorship does not imply endorsement of educational claims.', visible: true },
+      { heading: 'Availability, liability, and termination', body: 'The platform may change, pause, or end features as it is developed. Use is at your discretion. Governing law: [TODO: obtain qualified legal review and specify applicable law]. Access may be suspended for misuse.', visible: true },
+      { heading: 'Contact and review', body: 'Questions: {email}. Draft. Have a qualified lawyer review before launch (Egypt Personal Data Protection Law No. 151 of 2020).', visible: true },
+    ] },
+    copyright: { title: 'Copyright & Content', description: 'Content ownership and takedown requests.', lastUpdated: '2026-10-03', visible: true, sections: [
+      { heading: 'Ownership', body: 'Course materials belong to their respective authors and instructors. Platform-authored text and design are © {owner}.', visible: true },
+      { heading: 'Student use', body: 'Platform materials are provided for personal study. Third-party sources should be attributed to their respective rights holders.', visible: true },
+      { heading: 'Takedown requests', body: 'Send requests to {email} with the material URL, rights-holder details, and an explanation of the concern.', visible: true },
+    ] },
+  },
+  modules: {
+    CNS: { label: 'Central Nervous System', summary: 'Meningitis, encephalitis, CSF analysis, and neuro-infectious syndromes.' },
+    URS: { label: 'Urinary System', summary: 'Urinary tract infections, pyelonephritis, urine culture, and nephropathogens.' },
+    REP: { label: 'Reproductive System', summary: 'Sexually transmitted infections, genital ulcers, and reproductive microbiology.' },
+  },
+  auth: { signInTitle: 'Welcome back', signInHelp: 'Sign in to continue your Micro 301 studies.', signUpTitle: 'Create your student account', signUpHelp: 'Use your email to access Micro Atlas learning resources.' },
+  campaigns: { title: 'Student support', description: 'Partner offers help support learning resources.', cta: 'Learn more', url: '', discountCode: '', disclosure: 'Sponsored content', active: false },
+};
+
+export function mergeSiteContent(value: unknown): SiteContent {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return DEFAULT_SITE_CONTENT;
+  const input = value as Partial<SiteContent>;
+  return {
+    ...DEFAULT_SITE_CONTENT, ...input,
+    brand: { ...DEFAULT_SITE_CONTENT.brand, ...input.brand, social: Array.isArray(input.brand?.social) ? input.brand.social.filter((item) => item && typeof item.label === 'string' && typeof item.url === 'string' && (() => { try { return new URL(item.url).protocol === 'https:'; } catch { return false; } })()) : [] },
+    navigation: { ...DEFAULT_SITE_CONTENT.navigation, ...input.navigation },
+    navigationOrder: Array.isArray(input.navigationOrder) ? Array.from(new Set(input.navigationOrder.filter((route): route is SiteContent['navigationOrder'][number] => ['home', 'modules', 'about', 'contact'].includes(route)))) : DEFAULT_SITE_CONTENT.navigationOrder,
+    footer: { ...DEFAULT_SITE_CONTENT.footer, ...input.footer },
+    home: { ...DEFAULT_SITE_CONTENT.home, ...input.home, features: Array.isArray(input.home?.features) ? input.home.features : DEFAULT_SITE_CONTENT.home.features },
+    pages: Object.fromEntries(Object.keys(DEFAULT_SITE_CONTENT.pages).map((key) => {
+      const pageKey = key as keyof SiteContent['pages']; const incoming = input.pages?.[pageKey];
+      return [pageKey, { ...DEFAULT_SITE_CONTENT.pages[pageKey], ...incoming, sections: Array.isArray(incoming?.sections) ? incoming.sections.filter((s) => s && typeof s.heading === 'string' && typeof s.body === 'string') : DEFAULT_SITE_CONTENT.pages[pageKey].sections }];
+    })) as SiteContent['pages'],
+    modules: { ...DEFAULT_SITE_CONTENT.modules, ...input.modules }, auth: { ...DEFAULT_SITE_CONTENT.auth, ...input.auth },
+    campaigns: { ...DEFAULT_SITE_CONTENT.campaigns, ...input.campaigns },
+  };
+}

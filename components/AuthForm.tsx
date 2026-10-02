@@ -89,8 +89,8 @@ export default function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   const otherHref = `${isSignUp ? '/sign-in' : '/sign-up'}${redirect !== '/' ? `?redirect=${encodeURIComponent(redirect)}` : ''}`;
   return <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-6">
     <div className={`${cardClass} w-full max-w-md p-8`}>
-      <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">{confirmationPending ? 'Check your email' : isSignUp ? 'Create your account' : 'Welcome back'}</h1>
-      <p className="mb-6 mt-1 text-slate-500 dark:text-slate-400">{confirmationPending ? `We sent a confirmation link to ${email}.` : isSignUp ? 'Sign up to access modules and materials.' : 'Sign in to access modules and materials.'}</p>
+      <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">{confirmationPending ? 'Check your email' : isSignUp ? settings.site_content.auth.signUpTitle : settings.site_content.auth.signInTitle}</h1>
+      <p className="mb-6 mt-1 text-slate-500 dark:text-slate-400">{confirmationPending ? `We sent a confirmation link to ${email}.` : isSignUp ? settings.site_content.auth.signUpHelp : settings.site_content.auth.signInHelp}</p>
       {!isSignUp && params.get('confirmed') === '1' && <p role="status" className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">Email confirmed. You can sign in now.</p>}
       {!isSignUp && params.get('password_reset') === '1' && <p role="status" className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">Password updated. Sign in with your new password.</p>}
       {!isSignUp && params.get('message') === 'session-expired' && <p role="status" className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">Your session expired. Sign in again to continue where you left off.</p>}

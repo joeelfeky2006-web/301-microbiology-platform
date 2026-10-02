@@ -28,3 +28,11 @@ and AI-graded quizzes.
 
 - Links to /modules/*, /ospe, /quizzes will 404 until those pages are built.
 - Copy `.env.example` to `.env.local` and fill in keys when the backend is wired.
+
+## Site content and branding
+
+- After the existing CMS/settings and `is_super_admin()` security migrations, run `supabase/site-content-settings.sql` in the Supabase SQL Editor to add the public `site_content` JSONB settings and the `site-assets` logo bucket. The app does not apply this migration automatically.
+- A super_admin can edit public copy, page sections, footer/header labels, modules, auth helper text, support payment methods, campaign details, and logo in Admin → Platform & Marketing Settings. Technical secrets and security settings remain outside the content editor.
+- The default logo is `public/logo.svg`; a super_admin can upload a replacement after applying the migration.
+- Optional file replacements: `app/icon.png` (512×512), `app/apple-icon.png` (180×180), `app/favicon.ico` (48×48), and `public/logo.png` (square, at least 256×256; transparent preferred). If replacing `app/icon.svg` with `app/icon.png`, remove `app/icon.svg` to avoid competing icon metadata.
+- Set `NEXT_PUBLIC_SITE_URL` to the canonical public origin for metadata, sitemap, and robots URLs. It falls back to `http://localhost:3000` for local development.

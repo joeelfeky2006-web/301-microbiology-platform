@@ -3,7 +3,7 @@ import { usePathname } from 'next/navigation';
 import { useSettings } from '@/lib/useSettings';
 import { useRole } from '@/lib/useRole';
 
-const allowed = ['/sign-in', '/forgot-password', '/reset-password', '/admin'];
+const allowed = ['/sign-in', '/sign-up', '/forgot-password', '/reset-password', '/admin', '/about', '/contact', '/privacy', '/terms', '/copyright'];
 export default function MaintenanceGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || '/';
   const { settings, loading: settingsLoading } = useSettings();

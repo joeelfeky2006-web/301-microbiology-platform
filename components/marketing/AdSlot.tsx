@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { cardClass } from '@/lib/ui';
 import type { AdCampaign } from '@/types';
+import { useSettings } from '@/lib/useSettings';
 
 export const REVIVE_CAMPAIGN: AdCampaign = {
   id: 'revive-mw-micro301',
@@ -78,12 +79,14 @@ export default function AdSlot({
   className = '',
   onActionClick,
 }: AdSlotProps) {
+  const { settings } = useSettings();
   const [copied, setCopied] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   // Determine active campaign
-  const activeCampaign: AdCampaign =
-    campaign ??
+  const activeCampaign: AdCampaign = settings.site_content.campaigns.active
+    ? { id: 'admin-campaign', brand: settings.site_content.brand.shortName, title: settings.site_content.campaigns.title, badge: settings.site_content.campaigns.disclosure, tagline: settings.site_content.campaigns.description, description: settings.site_content.campaigns.description, discountCode: settings.site_content.campaigns.discountCode || undefined, ctaText: settings.site_content.campaigns.cta, ctaUrl: settings.site_content.campaigns.url, active: true, variant: 'revive' }
+    : campaign ??
     (variant === 'academic'
       ? ACADEMIC_PREP_CAMPAIGN
       : variant === 'medova'

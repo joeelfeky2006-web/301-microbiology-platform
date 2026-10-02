@@ -31,6 +31,7 @@ import { useRole, clearRoleCache } from '@/lib/useRole';
 import { DEFAULT_PLATFORM_SETTINGS, invalidateSettingsCache, useSettings } from '@/lib/useSettings';
 import { PRIMARY_ADMIN_EMAIL } from '@/lib/admin';
 import PublishMaterial from '@/components/admin/PublishMaterial';
+import SiteContentEditor from '@/components/admin/SiteContentEditor';
 import { cardClass, inputClass, labelClass } from '@/lib/ui';
 import { authenticatedHeaders } from '@/lib/authHeaders';
 import {
@@ -111,6 +112,7 @@ export default function AdminDashboardPage() {
   const { settings: liveSettings, refresh: refreshSettings } = useSettings();
   const [settings, setSettings] = useState<PlatformSettings>(DEFAULT_PLATFORM_SETTINGS);
   const [settingsSaved, setSettingsSaved] = useState(false);
+  const [siteContentValid, setSiteContentValid] = useState(true);
 
   // Role simulation for admin preview
   const currentUserEmail = session?.user?.email ?? '';
@@ -309,6 +311,16 @@ export default function AdminDashboardPage() {
   // Handle Save Settings
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!siteContentValid) { alert('Fix the highlighted site content format errors before saving.'); return; }
+    const site = settings.site_content;
+    const validHttps = (value: string) => { if (!value) return true; try { return new URL(value).protocol === 'https:'; } catch { return false; } };
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(site.brand.contactEmail)) { alert('Enter a valid contact email.'); return; }
+    if (!validHttps(site.campaigns.url) || site.brand.social.some((link) => !validHttps(link.url)) || settings.support_content.methods.some((method) => method.action === 'link' && !validHttps(method.link_url))) { alert('Campaign, social, and payment links must use HTTPS.'); return; }
+    if (site.campaigns.active && !site.campaigns.url) { alert('An active campaign needs an HTTPS destination URL.'); return; }
+    if (!(site.brand.logo.startsWith('/') && !site.brand.logo.startsWith('//')) && !validHttps(site.brand.logo)) { alert('The logo must be a same-site path or an HTTPS URL.'); return; }
+    for (const page of Object.values(site.pages)) {
+      if (page.title.length > 160 || page.description.length > 320 || page.sections.some((section) => section.heading.length > 160 || section.body.length > 5000)) { alert('Page content exceeds the allowed length.'); return; }
+    }
     const { error } = await supabase.from('platform_settings').update({
       announcement_text: settings.announcement_text,
       announcement_active: settings.announcement_active,
@@ -316,6 +328,7 @@ export default function AdminDashboardPage() {
       whatsapp_number: settings.whatsapp_number,
       registration_open: settings.registration_open,
       support_content: settings.support_content,
+      site_content: settings.site_content,
       updated_at: new Date().toISOString(),
     }).eq('id', 1);
     if (error) { alert('Could not save platform settings. Please check your permissions.'); return; }
@@ -330,6 +343,10 @@ export default function AdminDashboardPage() {
     setSettings((current) => ({ ...current, support_content: { ...current.support_content, [key]: value } }));
   };
 
+  const updateSiteContent = (site_content: PlatformSettings['site_content']) => {
+    setSettings((current) => ({ ...current, site_content }));
+  };
+
   // Filtered materials
   const filteredMaterials = useMemo(() => {
     return materials.filter((m) => {
@@ -341,6 +358,7 @@ export default function AdminDashboardPage() {
       return matchesMod && matchesSearch;
     });
   }, [materials, filterModule, searchQuery]);
+  const settingsDirty = JSON.stringify(settings) !== JSON.stringify(liveSettings);
 
   // Statistics
   const stats = useMemo(() => {
@@ -992,6 +1010,9 @@ export default function AdminDashboardPage() {
                     Platform settings updated successfully!
                   </div>
                 )}
+                {settingsDirty && <p role="status" className="mb-3 rounded-lg bg-amber-50 p-2 text-xs font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">Unsaved settings changes</p>}
+
+                <SiteContentEditor value={settings.site_content} onChange={updateSiteContent} onValidityChange={setSiteContentValid} />
 
                 <form onSubmit={handleSaveSettings} className="space-y-4">
                   <div>
@@ -1047,7 +1068,7 @@ export default function AdminDashboardPage() {
                       </div>
                       {settings.support_content.methods.map((method, index) => (
                         <div key={method.id} className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
-                          <div className="flex items-center justify-between"><b className="text-xs">Method {index + 1}</b><button type="button" onClick={() => setSettings((current) => ({ ...current, support_content: { ...current.support_content, methods: current.support_content.methods.filter((item) => item.id !== method.id) } }))} className="text-xs font-bold text-rose-600">Remove</button></div>
+                          <div className="flex items-center justify-between"><b className="text-xs">Method {index + 1}</b><div className="flex items-center gap-3"><button type="button" disabled={index === 0} aria-label="Move payment method up" onClick={() => setSettings((current) => { const methods = [...current.support_content.methods]; [methods[index - 1], methods[index]] = [methods[index], methods[index - 1]]; return { ...current, support_content: { ...current.support_content, methods } }; })} className="text-xs disabled:opacity-40">↑</button><button type="button" disabled={index === settings.support_content.methods.length - 1} aria-label="Move payment method down" onClick={() => setSettings((current) => { const methods = [...current.support_content.methods]; [methods[index + 1], methods[index]] = [methods[index], methods[index + 1]]; return { ...current, support_content: { ...current.support_content, methods } }; })} className="text-xs disabled:opacity-40">↓</button><label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={method.active !== false} onChange={e => setSettings(current => ({ ...current, support_content: { ...current.support_content, methods: current.support_content.methods.map(item => item.id === method.id ? { ...item, active: e.target.checked } : item) } }))} />Enabled</label><button type="button" onClick={() => setSettings((current) => ({ ...current, support_content: { ...current.support_content, methods: current.support_content.methods.filter((item) => item.id !== method.id) } }))} className="text-xs font-bold text-rose-600">Remove</button></div></div>
                           <input aria-label="Payment method title" placeholder="Title" value={method.title} onChange={(e) => setSettings((current) => ({ ...current, support_content: { ...current.support_content, methods: current.support_content.methods.map((item) => item.id === method.id ? { ...item, title: e.target.value } : item) } }))} className={inputClass} />
                           <input aria-label="Payment details" placeholder="Displayed details" value={method.display} onChange={(e) => setSettings((current) => ({ ...current, support_content: { ...current.support_content, methods: current.support_content.methods.map((item) => item.id === method.id ? { ...item, display: e.target.value } : item) } }))} className={inputClass} />
                           <div className="grid gap-2 sm:grid-cols-2">
@@ -1091,7 +1112,8 @@ export default function AdminDashboardPage() {
                   <div className="border-t border-slate-200 pt-4 dark:border-white/10">
                     <button
                       type="submit"
-                      className="w-full rounded-xl bg-blue-600 py-3 text-xs font-bold text-white shadow hover:bg-blue-700"
+                      disabled={!settingsDirty || !siteContentValid}
+                      className="w-full rounded-xl bg-blue-600 py-3 text-xs font-bold text-white shadow hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Save Settings
                     </button>

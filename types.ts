@@ -106,7 +106,22 @@ export interface PlatformSettings {
   whatsapp_number: string;
   registration_open: boolean;
   support_content: SupportContent;
+  site_content: SiteContent;
   updated_at?: string;
+}
+
+export interface SiteSection { heading: string; body: string; visible: boolean }
+export interface SitePageContent { title: string; description: string; lastUpdated: string; visible: boolean; sections: SiteSection[] }
+export interface SiteContent {
+  brand: { name: string; shortName: string; tagline: string; description: string; logo: string; affiliation: string; contactEmail: string; teamName: string; foundedYear: string; social: { label: string; url: string }[] };
+  navigation: { home: string; modules: string; cns: string; urs: string; rep: string; about: string; contact: string; privacy: string; terms: string; copyright: string };
+  navigationOrder: ('home' | 'modules' | 'about' | 'contact')[];
+  footer: { explore: string; company: string; legal: string; copyright: string; disclaimer: string };
+  home: { headline: string; description: string; tagline: string; ctaPrimary: string; ctaSecondary: string; features: string[] };
+  pages: { about: SitePageContent; contact: SitePageContent; privacy: SitePageContent; terms: SitePageContent; copyright: SitePageContent };
+  modules: Record<ModuleName, { label: string; summary: string }>;
+  auth: { signInTitle: string; signInHelp: string; signUpTitle: string; signUpHelp: string };
+  campaigns: { title: string; description: string; cta: string; url: string; discountCode: string; disclosure: string; active: boolean };
 }
 
 export interface SupportPaymentMethod {
@@ -116,6 +131,7 @@ export interface SupportPaymentMethod {
   display: string;
   action: 'copy' | 'link';
   link_url: string;
+  active?: boolean;
 }
 
 export interface SupportContent {
