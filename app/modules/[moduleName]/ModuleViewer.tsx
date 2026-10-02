@@ -171,7 +171,7 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
     (async () => {
       const { data, error } = await supabase
         .from('materials')
-        .select('*')
+        .select('id,module,type,title,file_url,format,source_type')
         .eq('module', moduleName)
         .order('title', { ascending: true })
         .returns<Material[]>();
