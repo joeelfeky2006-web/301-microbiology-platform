@@ -4,7 +4,7 @@ import type { NextRequest } from 'next/server';
 type Authorization = { userId: string } | { response: Response };
 
 export async function authenticate(request: NextRequest): Promise<Authorization> {
-  const token = request.headers.get('authorization')?.replace(/^Bearer\\s+/i, '');
+  const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!token || !url || !anonKey) return { response: Response.json({ error: 'Sign in is required.' }, { status: 401 }) };
@@ -23,7 +23,7 @@ export async function authorizeAndSpend(request: NextRequest, cost: number): Pro
   if ('response' in auth) return auth;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  const token = request.headers.get('authorization')!.replace(/^Bearer\\s+/i, '');
+  const token = request.headers.get('authorization')!.replace(/^Bearer\s+/i, '');
   const client = createClient(url, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: { headers: { Authorization: `Bearer ${token}` } },
