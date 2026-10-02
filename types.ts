@@ -4,6 +4,11 @@ export type GroupSection = "G1" | "G2";
 export type UserRole = "super_admin" | "editor" | "student";
 
 export type MaterialCategory =
+  | "mindmap"
+  | "audio_recording"
+  | "reference"
+  | "external_link"
+  | "qbank"
   | "lec_pdf"
   | "record_g1"
   | "record_g2"
@@ -34,11 +39,16 @@ export const MODULE_TITLES: Record<ModuleName, string> = {
 };
 
 /** Single source of truth for categories: used by the module page, viewer and admin form. */
-export const THEORY_TYPES: MaterialCategory[] = ["lec_pdf", "record_g1", "record_g2"];
+export const THEORY_TYPES: MaterialCategory[] = ["lec_pdf", "record_g1", "record_g2", "mindmap", "audio_recording", "reference", "external_link"];
 export const PRACTICAL_TYPES: MaterialCategory[] = ["practical_pdf", "practical_record", "ospe_simulation"];
-export const EXAM_TYPES: MaterialCategory[] = ["midterm_study", "midterm_qs", "final_study", "final_qs"];
+export const EXAM_TYPES: MaterialCategory[] = ["midterm_study", "midterm_qs", "final_study", "final_qs", "qbank"];
 
 export const MATERIAL_TYPE_LABELS: Record<MaterialCategory, string> = {
+  mindmap: "Mind map",
+  audio_recording: "Audio recording",
+  reference: "Reference",
+  external_link: "External link",
+  qbank: "Question bank",
   lec_pdf: "Lecture PDF",
   record_g1: "Record G1",
   record_g2: "Record G2",
@@ -56,6 +66,7 @@ export interface Material {
   module: ModuleName;
   type: MaterialCategory;
   title: string;
+  subtitle?: string | null;
   file_url: string;
   /** Present in the database (default 'external_link'). */
   format?: MaterialFormat;
@@ -88,12 +99,13 @@ export interface UserProfile {
 }
 
 export interface PlatformSettings {
-  siteName: string;
-  announcement: string;
-  showAnnouncement: boolean;
-  maintenanceMode: boolean;
-  allowRegistrations: boolean;
-  supportWhatsApp: string;
+  id: 1;
+  announcement_text: string;
+  announcement_active: boolean;
+  maintenance_mode: boolean;
+  whatsapp_number: string;
+  registration_open: boolean;
+  updated_at?: string;
 }
 
 export interface AdCampaign {

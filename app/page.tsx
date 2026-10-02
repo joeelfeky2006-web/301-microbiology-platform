@@ -28,6 +28,7 @@ import DrAtlasChatbot from '@/components/ai/DrAtlasChatbot';
 import ModuleProgressTracker from '@/components/dashboard/ModuleProgressTracker';
 import SupportModal from '@/components/community/SupportModal';
 import { useModuleProgress } from '@/lib/progress';
+import { useSettings } from '@/lib/useSettings';
 
 const modules: {
   id: ModuleName;
@@ -91,6 +92,7 @@ const heroItemVariants: Variants = {
 };
 
 export default function Home() {
+  const { settings } = useSettings();
   const session = useSession();
   const displayName =
     (session?.user?.user_metadata?.name as string | undefined) || session?.user?.email || '';
@@ -127,7 +129,7 @@ export default function Home() {
       try {
         const { data, error } = await supabase
           .from('materials')
-          .select('id,module,type,title,file_url,format,source_type')
+          .select('id,module,type,title,subtitle,file_url,format,source_type')
           .order('title', { ascending: true })
           .returns<Material[]>();
         if (!cancelled && !error && data) {
@@ -229,7 +231,7 @@ export default function Home() {
                   </div>
                   <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
                     <Award className="h-4 w-4 flex-shrink-0 text-emerald-500" />
-                    <span>BRS &amp; Guyton Reference Prep</span>
+                    <span>Levinson Medical Microbiology, First Aid (USMLE), &amp; MUST Standards</span>
                   </div>
                 </div>
               </div>
@@ -248,12 +250,12 @@ export default function Home() {
                   >
                     Sign in to Portal
                   </Link>
-                  <Link
+                  {settings.registration_open && <Link
                     href="/sign-up"
                     className="rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-sm font-bold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 active:scale-95"
                   >
                     Create Account
-                  </Link>
+                  </Link>}
                 </>
               )}
               {session && (

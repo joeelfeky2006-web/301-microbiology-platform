@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Header from "@/components/Header";
+import AnnouncementBanner from "@/components/AnnouncementBanner";
+import MaintenanceGate from "@/components/MaintenanceGate";
 
 export const metadata: Metadata = {
   title: "MedAtlas Egypt — Next-Gen AI Training for Medical Students",
@@ -21,7 +23,8 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-slate-50 text-slate-900 antialiased dark:bg-lab-950 dark:text-slate-100">
         <Header />
-        {children}
+        <AnnouncementBanner />
+        <MaintenanceGate>{children}</MaintenanceGate>
       </body>
     </html>
   );

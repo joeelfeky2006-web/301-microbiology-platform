@@ -219,7 +219,11 @@ export interface AppSupabaseClient {
       password: string;
     }) => Promise<{ data: { user: any; session: any }; error: any }>;
     signOut: () => Promise<{ error: any }>;
+    resend: (args: { type: 'signup'; email: string }) => Promise<{ data: any; error: any }>;
+    resetPasswordForEmail: (email: string, options?: { redirectTo?: string }) => Promise<{ data: any; error: any }>;
+    updateUser: (attributes: { password?: string }) => Promise<{ data: any; error: any }>;
   };
+  rpc: (fn: string, args?: Record<string, unknown>) => Promise<{ data: any; error: any }>;
   from: (table: string) => {
     select: (cols?: string) => QueryBuilder;
     insert: (rows: any[]) => Promise<{ data: any; error: any }>;
@@ -413,7 +417,11 @@ function createFallbackClient(): AppSupabaseClient {
         setStoredSession(null);
         return { error: null };
       },
+      resend: async () => ({ data: null, error: new Error('Email confirmation is unavailable in local mock mode.') }),
+      resetPasswordForEmail: async () => ({ data: null, error: new Error('Password recovery is unavailable in local mock mode.') }),
+      updateUser: async () => ({ data: null, error: new Error('Password recovery is unavailable in local mock mode.') }),
     },
+    rpc: async () => ({ data: null, error: new Error('Database RPC is unavailable in local mock mode.') }),
     from: (_table: string) => {
       return {
         select: (_cols = '*') => {

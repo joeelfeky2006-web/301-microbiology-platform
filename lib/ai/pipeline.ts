@@ -5,6 +5,7 @@ import type { AIAction } from './actions';
 import { authenticate, authorizeAndSpend, refundCredit } from '@/lib/apiAuth';
 import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { aiError } from './messages';
+import { loadLectureSource } from './loadSource';
 
 export type AIBody = Record<string, unknown>;
 export type LoadedMaterial = { id: string; module: string; title?: string | null; ai_context?: string | null; raw_quiz_text?: string | null; custom_system_prompt?: string | null };
@@ -24,7 +25,7 @@ export async function loadMaterial(id: unknown) {
   if (!admin) return { response: aiError('glitch', 503) };
   const { data, error } = await admin.from('materials').select('id,module,title,ai_context,raw_quiz_text,custom_system_prompt').eq('id', id).maybeSingle();
   if (error || !data) return { response: aiError('glitch', 404) };
-  return { material: data as LoadedMaterial };
+  return { material: await loadLectureSource(admin, data as LoadedMaterial) };
 }
 
 export async function beginAction(request: NextRequest, action: AIAction) {

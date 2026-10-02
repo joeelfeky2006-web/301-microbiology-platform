@@ -39,9 +39,9 @@ export const ACADEMIC_PREP_CAMPAIGN: AdCampaign = {
   brand: 'Academic & Clinical Prep',
   title: 'Clinical Vignette Case Studies & Medical References',
   badge: 'High-Yield Prep',
-  tagline: 'BRS Physiology, Guyton & Hall, and Board-Style Simulations',
+  tagline: 'Levinson Microbiology, First Aid, and Board-Style Simulations',
   description:
-    'Bridge preclinical microbiology with clinical bedside diagnostic reasoning. Includes high-yield reference correlations (BRS Physiology, Guyton & Hall) and automated AI evaluation.',
+    'Bridge preclinical microbiology with clinical bedside diagnostic reasoning. Includes high-yield correlations from Levinson Medical Microbiology, First Aid (USMLE), and MUST Standards, plus automated AI evaluation.',
   ctaText: 'Start Practicing',
   ctaUrl: '#ai-studio',
   active: true,
@@ -332,7 +332,7 @@ export default function AdSlot({
 
   // ==========================================
   // INLINE VARIANT 2: Academic & Clinical Prep
-  // Academic focus with clinical icons, references (BRS, Guyton)
+  // Academic focus with clinical icons and MUST-aligned references
   // ==========================================
   return (
     <div
@@ -347,7 +347,7 @@ export default function AdSlot({
             </span>
             <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
               <BookOpen className="h-3 w-3" />
-              BRS Physiology &amp; Guyton Aligned
+              Levinson Medical Microbiology &amp; MUST Aligned
             </span>
           </div>
 
@@ -355,7 +355,7 @@ export default function AdSlot({
             Clinical Vignette Case Studies &amp; Medical Reference Prep
           </h3>
           <p className="max-w-2xl text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-            Correlate complex infectious disease pathophysiology with classical board references (BRS Physiology, Guyton &amp; Hall, and First Aid). Practice multi-step clinical diagnostic vignettes with instant AI-driven answer critique.
+            Correlate infectious disease concepts with Levinson Medical Microbiology, First Aid (USMLE), and MUST Standards. Practice multi-step clinical diagnostic vignettes with instant AI-driven answer critique.
           </p>
 
           <div className="flex flex-wrap items-center gap-2 pt-1">

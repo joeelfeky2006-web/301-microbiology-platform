@@ -148,6 +148,8 @@ function Section({
                         </button>
                       </div>
 
+                      {mat.subtitle && <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">{mat.subtitle}</p>}
+
                       {mat.format === 'audio' && <audio controls preload="none" src={mat.file_url} className="mt-3 w-full" />}
 
                       <a
@@ -202,7 +204,7 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
     (async () => {
       const { data, error } = await supabase
         .from('materials')
-        .select('id,module,type,title,file_url,format,source_type')
+        .select('id,module,type,title,subtitle,file_url,format,source_type')
         .eq('module', moduleName)
         .order('title', { ascending: true })
         .returns<Material[]>();

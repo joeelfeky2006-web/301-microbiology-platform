@@ -1,7 +1,9 @@
-// Set NEXT_PUBLIC_WHATSAPP_NUMBER in .env.local (digits only, with country code, e.g. 201012345678).
-const number = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '201000000000').replace(/\D/g, '');
+'use client';
+import { useSettings } from '@/lib/useSettings';
 
 export default function WhatsAppButton() {
+  const { settings } = useSettings();
+  const number = (settings.whatsapp_number || '').replace(/\D/g, '');
   const href = `https://wa.me/${number}?text=${encodeURIComponent('Hello, I need some info about the 301 Microbiology portal.')}`;
 
   return (

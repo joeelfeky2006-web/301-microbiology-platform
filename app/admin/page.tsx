@@ -26,17 +26,10 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/useSession';
-import {
-  getUserRole,
-  isSuperAdmin,
-  isEditor,
-  canAccessAdmin,
-  canDeleteMaterials,
-  getStoredUserRoles,
-  setUserRole,
-  getPlatformSettings,
-  savePlatformSettings,
-} from '@/lib/admin';
+import { useRole, clearRoleCache } from '@/lib/useRole';
+import { DEFAULT_PLATFORM_SETTINGS, invalidateSettingsCache, useSettings } from '@/lib/useSettings';
+import { PRIMARY_ADMIN_EMAIL } from '@/lib/admin';
+import PublishMaterial from '@/components/admin/PublishMaterial';
 import { cardClass, inputClass, labelClass } from '@/lib/ui';
 import { authenticatedHeaders } from '@/lib/authHeaders';
 import {
@@ -76,8 +69,6 @@ function categoryOptions(types: MaterialCategory[]) {
   ));
 }
 
-const SHOW_UNFINISHED_TABS = false;
-
 export default function AdminDashboardPage() {
   const session = useSession();
   const router = useRouter();
@@ -114,13 +105,15 @@ export default function AdminDashboardPage() {
   const [newRoleChoice, setNewRoleChoice] = useState<UserRole>('editor');
 
   // Platform settings state
-  const [settings, setSettings] = useState<PlatformSettings>(getPlatformSettings());
+  const { role: currentRole, loading: roleLoading } = useRole();
+  const { settings: liveSettings, refresh: refreshSettings } = useSettings();
+  const [settings, setSettings] = useState<PlatformSettings>(DEFAULT_PLATFORM_SETTINGS);
   const [settingsSaved, setSettingsSaved] = useState(false);
 
   // Role simulation for admin preview
   const currentUserEmail = session?.user?.email ?? '';
-  const currentRole = getUserRole(currentUserEmail);
-  const userIsSuperAdmin = isSuperAdmin(currentUserEmail);
+  const userIsSuperAdmin = currentRole === 'super_admin';
+  const canAccessPortal = currentRole === 'super_admin' || currentRole === 'editor';
 
   // Redirect if not signed in or not allowed
   useEffect(() => {
@@ -145,12 +138,17 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
-    if (session && canAccessAdmin(session.user.email)) {
+    if (session && canAccessPortal) {
       loadMaterials();
-      setUserRolesMap(getStoredUserRoles());
-      setSettings(getPlatformSettings());
+      setSettings(liveSettings);
+      if (userIsSuperAdmin) {
+        supabase.rpc('admin_list_users').then(({ data }) => {
+          const users = Array.isArray(data) ? data : [];
+          setUserRolesMap(Object.fromEntries(users.map((u: any) => [String(u.email).toLowerCase(), u.role as UserRole])));
+        });
+      }
     }
-  }, [session]);
+  }, [session, canAccessPortal, liveSettings, userIsSuperAdmin]);
 
   // Handle Material Upload
   const handlePublish = async (e: React.FormEvent) => {
@@ -225,20 +223,26 @@ export default function AdminDashboardPage() {
     setEditStatus({ loading: true, message: 'Saving changes...', type: 'info' });
     try {
       const source = detectSource(editingMaterial.file_url) || editingMaterial.source_type;
-      const { error } = await supabase
-        .from('materials')
-        .update({
+      const changes = {
           title: editingMaterial.title.trim(),
           module: editingMaterial.module,
           type: editingMaterial.type,
           format: editingMaterial.format,
           source_type: source,
           file_url: editingMaterial.file_url.trim(),
+          subtitle: editingMaterial.subtitle?.trim() || null,
           ai_context: editingMaterial.ai_context?.trim() || null,
           raw_quiz_text: editingMaterial.raw_quiz_text?.trim() || null,
           custom_system_prompt: editingMaterial.custom_system_prompt?.trim() || null,
-        })
-        .eq('id', editingMaterial.id);
+        };
+      const original = materials.find((m) => m.id === editingMaterial.id);
+      const renamed = editingMaterial.title.trim() !== (original?.title ?? '');
+      if (renamed) {
+        const { error: renameError } = await supabase.from('materials').update({ title: editingMaterial.title.trim() })
+          .eq('module', original?.module ?? editingMaterial.module).eq('title', original?.title ?? editingMaterial.title);
+        if (renameError) throw renameError;
+      }
+      const { error } = await supabase.from('materials').update(changes).eq('id', editingMaterial.id);
 
       if (error) throw error;
 
@@ -247,7 +251,7 @@ export default function AdminDashboardPage() {
         setEditingMaterial(null);
         setEditStatus({ loading: false, message: '', type: '' });
       }, 1000);
-      loadMaterials();
+      await loadMaterials();
     } catch (err: any) {
       setEditStatus({ loading: false, message: err?.message || 'Failed to update material', type: 'error' });
     }
@@ -255,7 +259,7 @@ export default function AdminDashboardPage() {
 
   // Handle Material Deletion (Super Admin only)
   const handleDeleteMaterial = async (id: string, itemTitle: string) => {
-    if (!canDeleteMaterials(currentUserEmail)) {
+    if (!userIsSuperAdmin) {
       alert('Access Restricted: Only Super Admins are authorized to delete materials.');
       return;
     }
@@ -273,25 +277,38 @@ export default function AdminDashboardPage() {
       }
       const { error } = await supabase.from('materials').delete().eq('id', id);
       if (error) throw error;
-      setMaterials((prev) => prev.filter((m) => m.id !== id));
+      await loadMaterials();
     } catch (err: any) {
       alert(`Deletion failed: ${err?.message || 'Unknown error'}`);
     }
   };
 
   // Handle Role Assignment
-  const handleAssignRole = (e: React.FormEvent) => {
+  const handleAssignRole = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newRoleEmail.trim()) return;
-    setUserRole(newRoleEmail.trim(), newRoleChoice);
-    setUserRolesMap(getStoredUserRoles());
+    const { error } = await supabase.rpc('admin_set_role', { p_email: newRoleEmail.trim(), p_role: newRoleChoice });
+    if (error) { alert('Could not update that role. Check the email and your permissions.'); return; }
+    clearRoleCache();
+    const { data } = await supabase.rpc('admin_list_users');
+    setUserRolesMap(Object.fromEntries((Array.isArray(data) ? data : []).map((u: any) => [String(u.email).toLowerCase(), u.role as UserRole])));
     setNewRoleEmail('');
   };
 
   // Handle Save Settings
-  const handleSaveSettings = (e: React.FormEvent) => {
+  const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    savePlatformSettings(settings);
+    const { error } = await supabase.from('platform_settings').update({
+      announcement_text: settings.announcement_text,
+      announcement_active: settings.announcement_active,
+      maintenance_mode: settings.maintenance_mode,
+      whatsapp_number: settings.whatsapp_number,
+      registration_open: settings.registration_open,
+      updated_at: new Date().toISOString(),
+    }).eq('id', 1);
+    if (error) { alert('Could not save platform settings. Please check your permissions.'); return; }
+    invalidateSettingsCache();
+    await refreshSettings();
     setSettingsSaved(true);
     setTimeout(() => setSettingsSaved(false), 2500);
   };
@@ -318,7 +335,7 @@ export default function AdminDashboardPage() {
     };
   }, [materials]);
 
-  if (!session) {
+  if (!session || roleLoading) {
     return (
       <main className="flex min-h-[60vh] items-center justify-center p-6">
         <div className="flex items-center gap-3 text-slate-500">
@@ -329,7 +346,7 @@ export default function AdminDashboardPage() {
     );
   }
 
-  if (!canAccessAdmin(currentUserEmail)) {
+  if (!canAccessPortal) {
     return (
       <main className="p-6 md:p-12">
         <div className={`${cardClass} mx-auto max-w-xl p-8 text-center`}>
@@ -448,7 +465,7 @@ export default function AdminDashboardPage() {
             Publish &amp; Upload
           </button>
 
-          {SHOW_UNFINISHED_TABS && (
+          {userIsSuperAdmin && (
             <>
               <button
                 type="button"
@@ -623,15 +640,7 @@ export default function AdminDashboardPage() {
                                   <Trash2 className="h-3.5 w-3.5" />
                                   Delete
                                 </button>
-                              ) : (
-                                <span
-                                  title="Destructive deletion requires Super Admin privileges"
-                                  className="flex cursor-not-allowed items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-400 dark:border-white/5 dark:bg-slate-800/50"
-                                >
-                                  <Lock className="h-3 w-3" />
-                                  Delete
-                                </span>
-                              )}
+                              ) : null}
                             </div>
                           </td>
                         </tr>
@@ -645,7 +654,8 @@ export default function AdminDashboardPage() {
         )}
 
         {/* TAB 2: Publish & Upload Center */}
-        {activeTab === 'publish' && (
+        {activeTab === 'publish' && <PublishMaterial materials={materials} onPublished={loadMaterials} />}
+        {false && activeTab === 'publish' && (
           <div className={`${cardClass} max-w-3xl mx-auto p-8`}>
             <div className="mb-6 border-b border-slate-200 pb-4 dark:border-white/10">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">
@@ -885,20 +895,23 @@ export default function AdminDashboardPage() {
                                 : 'Read portal access'}
                             </td>
                             <td className="px-4 py-3 text-right">
-                              {email !== currentUserEmail && (
+                              {email !== PRIMARY_ADMIN_EMAIL ? (
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    const next: UserRole =
-                                      role === 'super_admin' ? 'editor' : role === 'editor' ? 'student' : 'editor';
-                                    setUserRole(email, next);
-                                    setUserRolesMap(getStoredUserRoles());
+                                    const next: UserRole = role === 'super_admin' ? 'editor' : role === 'editor' ? 'student' : 'editor';
+                                    supabase.rpc('admin_set_role', { p_email: email, p_role: next }).then(async ({ error }) => {
+                                      if (error) { alert('Could not update that role.'); return; }
+                                      clearRoleCache();
+                                      const { data } = await supabase.rpc('admin_list_users');
+                                      setUserRolesMap(Object.fromEntries((Array.isArray(data) ? data : []).map((u: any) => [String(u.email).toLowerCase(), u.role as UserRole])));
+                                    });
                                   }}
                                   className="text-[11px] text-blue-600 hover:underline dark:text-cyan-300"
                                 >
-                                  Cycle Role
+                                  Change role
                                 </button>
-                              )}
+                              ) : <span className="text-[11px] text-slate-400">Owner locked</span>}
                             </td>
                           </tr>
                         ))}
@@ -964,21 +977,15 @@ export default function AdminDashboardPage() {
 
                 <form onSubmit={handleSaveSettings} className="space-y-4">
                   <div>
-                    <label className={labelClass}>Site Platform Title</label>
-                    <input
-                      type="text"
-                      value={settings.siteName}
-                      onChange={(e) => setSettings({ ...settings, siteName: e.target.value })}
-                      className={inputClass}
-                    />
+                    <label className={labelClass}>Announcement text</label>
                   </div>
 
                   <div>
                     <label className={labelClass}>Student Announcement Banner Text</label>
                     <textarea
                       rows={2}
-                      value={settings.announcement}
-                      onChange={(e) => setSettings({ ...settings, announcement: e.target.value })}
+                      value={settings.announcement_text}
+                      onChange={(e) => setSettings({ ...settings, announcement_text: e.target.value })}
                       className={inputClass}
                     />
                   </div>
@@ -987,8 +994,8 @@ export default function AdminDashboardPage() {
                     <input
                       type="checkbox"
                       id="showAnnouncement"
-                      checked={settings.showAnnouncement}
-                      onChange={(e) => setSettings({ ...settings, showAnnouncement: e.target.checked })}
+                      checked={settings.announcement_active}
+                      onChange={(e) => setSettings({ ...settings, announcement_active: e.target.checked })}
                       className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500"
                     />
                     <label htmlFor="showAnnouncement" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -1000,8 +1007,8 @@ export default function AdminDashboardPage() {
                     <label className={labelClass}>Official WhatsApp Support Number (Digits with Country Code)</label>
                     <input
                       type="text"
-                      value={settings.supportWhatsApp}
-                      onChange={(e) => setSettings({ ...settings, supportWhatsApp: e.target.value })}
+                      value={settings.whatsapp_number}
+                      onChange={(e) => setSettings({ ...settings, whatsapp_number: e.target.value })}
                       placeholder="201000000000"
                       className={inputClass}
                     />
@@ -1011,13 +1018,18 @@ export default function AdminDashboardPage() {
                     <input
                       type="checkbox"
                       id="allowRegistrations"
-                      checked={settings.allowRegistrations}
-                      onChange={(e) => setSettings({ ...settings, allowRegistrations: e.target.checked })}
+                      checked={settings.registration_open}
+                      onChange={(e) => setSettings({ ...settings, registration_open: e.target.checked })}
                       className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500"
                     />
                     <label htmlFor="allowRegistrations" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                       Allow open student registrations via Sign-up page
                     </label>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <input type="checkbox" id="maintenanceMode" checked={settings.maintenance_mode} onChange={(e) => setSettings({ ...settings, maintenance_mode: e.target.checked })} className="h-4 w-4 rounded text-blue-600" />
+                    <label htmlFor="maintenanceMode" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Enable maintenance mode for students</label>
                   </div>
 
                   <div className="border-t border-slate-200 pt-4 dark:border-white/10">
@@ -1077,6 +1089,11 @@ export default function AdminDashboardPage() {
                     }
                     className={inputClass}
                   />
+                </div>
+
+                <div>
+                  <label className={labelClass}>Subtitle</label>
+                  <input type="text" maxLength={240} value={editingMaterial.subtitle ?? ''} onChange={(e) => setEditingMaterial({ ...editingMaterial, subtitle: e.target.value })} className={inputClass} />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
