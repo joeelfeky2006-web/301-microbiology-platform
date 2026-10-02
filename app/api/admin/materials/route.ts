@@ -3,6 +3,8 @@ import { authenticate } from '@/lib/apiAuth';
 import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 
 export async function GET(request: NextRequest) {
   const identity = await authenticate(request);

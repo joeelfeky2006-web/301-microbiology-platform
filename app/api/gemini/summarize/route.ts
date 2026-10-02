@@ -1,194 +1,40 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { ai, GEMINI_MODEL } from '@/lib/gemini';
-import { authorizeAndSpend } from '@/lib/apiAuth';
-import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { MODULE_TITLES, type ModuleName } from '@/types';
+import 'server-only';
+import { NextRequest } from 'next/server';
+import { authenticate, authorizeAndSpend, refundCredit } from '@/lib/apiAuth';
+import { loadMaterial, generateJson, noStoreJson } from '@/lib/ai/pipeline';
+import { AI_MESSAGES, aiError } from '@/lib/ai/messages';
+import { MODULE_RULES, SAFETY_RULES, dataBlock } from '@/lib/ai/modulePrompts';
 
-interface SummarizePayload {
-  module: ModuleName;
-  topic: string;
-  focusArea?: string;
-  material_id?: string;
-  raw_feed?: string;
-}
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 
-// In-memory summary cache (0 token cost, 0 latency for repeated student queries)
-const summaryCache = new Map<string, any>();
+const schema = { type: 'OBJECT', properties: { topic: { type: 'STRING' }, overview: { type: 'STRING' }, keyPathogens: { type: 'ARRAY', items: { type: 'OBJECT', properties: { name: { type: 'STRING' }, classification: { type: 'STRING' }, cultureMedia: { type: 'STRING' }, virulenceFactors: { type: 'ARRAY', items: { type: 'STRING' } }, clinicalManifestation: { type: 'STRING' }, treatment: { type: 'STRING' } }, required: ['name', 'classification', 'cultureMedia', 'virulenceFactors', 'clinicalManifestation', 'treatment'] } }, diagnosticAlgorithms: { type: 'ARRAY', items: { type: 'STRING' } }, examTraps: { type: 'ARRAY', items: { type: 'STRING' } } }, required: ['topic', 'overview', 'keyPathogens', 'diagnosticAlgorithms', 'examTraps'] };
 
-function safeJsonParse(rawText: string): any {
-  let cleaned = rawText.trim();
-  if (cleaned.startsWith('```json')) {
-    cleaned = cleaned.slice(7);
-  } else if (cleaned.startsWith('```')) {
-    cleaned = cleaned.slice(3);
-  }
-  if (cleaned.endsWith('```')) {
-    cleaned = cleaned.slice(0, -3);
-  }
-  return JSON.parse(cleaned.trim());
-}
-
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
+  const started = Date.now();
+  const auth = await authenticate(request);
+  if ('response' in auth) return auth.response;
+  let body: any;
+  try { body = await request.json(); } catch { return aiError('glitch', 400); }
+  if (typeof body?.material_id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.material_id) || (body.topic !== undefined && (typeof body.topic !== 'string' || body.topic.length > 500))) return aiError('glitch', 400);
+  const loaded = await loadMaterial(body.material_id);
+  if ('response' in loaded) return loaded.response;
+  const source = `${loaded.material.ai_context || ''}\n${loaded.material.raw_quiz_text || ''}`.trim();
+  if (!source) return noStoreJson({ kind: 'fallback' });
+  const access = await authorizeAndSpend(request, 'summarize');
+  if ('response' in access) return access.response;
   try {
-    const body: SummarizePayload = await req.json();
-    const moduleName = body.module || 'URS';
-    const topic = body.topic || 'Core High-Yield Microorganisms';
-    const moduleFullName = MODULE_TITLES[moduleName] || 'Medical Microbiology';
-
-    let lectureFeedContext = (body.raw_feed || '').trim();
-    let lectureFeedTitle = '';
-
-    if (body.material_id) {
-      const admin = createSupabaseAdmin();
-      if (admin) {
-        const { data: material } = await admin
-          .from('materials')
-          .select('title,ai_context,raw_quiz_text,custom_system_prompt')
-          .eq('id', body.material_id)
-          .maybeSingle();
-
-        if (material) {
-          lectureFeedTitle = material.title || '';
-          const parts = [
-            material.ai_context ? `Lecture Knowledge Context:\n${material.ai_context}` : '',
-            material.raw_quiz_text ? `Lecture Core Focus & Practice Material:\n${material.raw_quiz_text}` : '',
-            material.custom_system_prompt ? `Professor Instructions:\n${material.custom_system_prompt}` : '',
-          ].filter(Boolean);
-
-          if (parts.length > 0) {
-            lectureFeedContext = (lectureFeedContext ? lectureFeedContext + '\n\n' : '') + parts.join('\n\n');
-          }
-        }
-      }
-    }
-
-    const access = await authorizeAndSpend(req, 1);
-    if ('response' in access) return access.response;
-
-    // 1. Check in-memory cache if no custom feed is passed
-    const hasCustomFeed = Boolean(lectureFeedContext.trim());
-    const cacheKey = `${moduleName}_${topic.toLowerCase().trim()}`;
-    if (!hasCustomFeed && summaryCache.has(cacheKey)) {
-      return NextResponse.json({
-        success: true,
-        summary: summaryCache.get(cacheKey),
-        source: 'cached_edge',
-      });
-    }
-
-    if (ai) {
-      const prompt = `You are a medical microbiology professor for MUST 301 Medical Microbiology (${moduleFullName}).
-Calibrate this syllabus summary specifically on Review of Medical Microbiology & Immunology (Levinson), First Aid (USMLE Step 1), and MUST 301 exam standards.
-Provide a high-yield, exam-focused syllabus summary on: "${topic || lectureFeedTitle}".
-${
-  hasCustomFeed
-    ? `\n--- RAW LECTURE FEED & KNOWLEDGE CONTEXT (${lectureFeedTitle ? `Lecture: ${lectureFeedTitle}` : 'Course Feed'}) ---
-${lectureFeedContext.slice(0, 35_000)}
-
-CRITICAL INSTRUCTION: Summarize and extract key medical microbiology points directly from this raw lecture feed, ensuring all professor emphases, specific media, virulence factors, and diagnostic algorithms from the feed are prominently featured.\n`
-    : ''
-}
-Include:
-1. Executive summary of pathology
-2. Key pathogens with morphology, staining, culture media (MacConkey, Blood, Chocolate, Thayer-Martin, etc.)
-3. Critical virulence factors and toxins
-4. Diagnostic hallmarks (Gold standards, rapid tests, serology)
-5. Treatment of choice & empirical guidelines
-6. Common exam pitfalls and tricky multiple-choice distractors
-
-Return ONLY valid JSON matching this schema:
-{
-  "module": "${moduleName}",
-  "moduleTitle": "${moduleFullName}",
-  "topic": "${topic || lectureFeedTitle}",
-  "overview": "Short executive paragraph explaining clinical significance",
-  "keyPathogens": [
-    {
-      "name": "Pathogen scientific name",
-      "classification": "Gram-positive cocci in clusters, etc.",
-      "cultureMedia": "Specific agar and colonial characteristics",
-      "virulenceFactors": ["Capsule", "Endotoxin", "Exotoxins"],
-      "clinicalManifestation": "Diseases produced",
-      "treatment": "First-line antibiotic/drug"
-    }
-  ],
-  "diagnosticAlgorithms": ["Step 1...", "Step 2..."],
-  "examTraps": ["Common exam mistake students make on MUST 301 exams..."]
-};`;
-
-      try {
-        const response = await ai.models.generateContent({
-          model: GEMINI_MODEL,
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-          },
-        });
-
-        if (response.text) {
-          const parsed = safeJsonParse(response.text);
-          summaryCache.set(cacheKey, parsed);
-          return NextResponse.json({ success: true, summary: parsed, source: 'gemini' });
-        }
-      } catch (err: any) {
-        console.warn('Gemini summarize fallback:', err?.message || err);
-      }
-    }
-
-    // Curated high yield fallback summary
-    const fallbackSummary = {
-      module: moduleName,
-      moduleTitle: moduleFullName,
-      topic: topic,
-      overview: `High-yield syllabus review for ${moduleFullName} (301 Microbiology). Calibrated on Levinson Medical Microbiology & First Aid. Emphasizing differential diagnosis, distinctive colonial morphology, selective growth media, and primary mechanisms of antimicrobial resistance.`,
-      keyPathogens: [
-        {
-          name: moduleName === 'URS' ? 'Escherichia coli (UPEC)' : moduleName === 'CNS' ? 'Neisseria meningitidis' : 'Treponema pallidum',
-          classification: moduleName === 'URS' ? 'Gram-negative bacillus, facultative anaerobe' : moduleName === 'CNS' ? 'Gram-negative coffee-bean diplococci' : 'Spirochete, motile axial filaments',
-          cultureMedia: moduleName === 'URS' ? 'MacConkey agar (pink colonies, lactose+), EMB agar (green metallic sheen)' : moduleName === 'CNS' ? 'Thayer-Martin agar (VPN: Vancomycin, Polymyxin, Nystatin), Chocolate agar' : 'Cannot be cultured on artificial media; darkfield microscopy',
-          virulenceFactors: [
-            moduleName === 'URS' ? 'P fimbriae (pyelonephritis)' : moduleName === 'CNS' ? 'Antiphagocytic polysaccharide capsule' : 'Endoflagella, outer membrane proteins',
-            moduleName === 'URS' ? 'Type 1 pili (cystitis)' : moduleName === 'CNS' ? 'LOS endotoxin (petechial purpura)' : 'Hyaluronidase',
-          ],
-          clinicalManifestation: moduleName === 'URS' ? 'Uncomplicated cystitis, acute pyelonephritis, catheter-associated UTI' : moduleName === 'CNS' ? 'Acute meningococcal meningitis, Waterhouse-Friderichsen syndrome' : 'Primary chancre, Secondary rash/condylomata lata, Tertiary neurosyphilis/gummas',
-          treatment: moduleName === 'URS' ? 'Nitrofurantoin / TMP-SMX (cystitis); Ceftriaxone / Fluoroquinolones (pyelonephritis)' : moduleName === 'CNS' ? 'IV Ceftriaxone (Rifampin for close contacts prophylaxis)' : 'Benzathine Penicillin G (IM single dose for primary)',
-        },
-        {
-          name: moduleName === 'URS' ? 'Proteus mirabilis' : moduleName === 'CNS' ? 'Streptococcus pneumoniae' : 'Neisseria gonorrhoeae',
-          classification: moduleName === 'URS' ? 'Gram-negative bacillus, swarming motility' : moduleName === 'CNS' ? 'Gram-positive lancet-shaped diplococci, alpha-hemolytic' : 'Gram-negative intracellular diplococci',
-          cultureMedia: moduleName === 'URS' ? 'Swarming motility on non-inhibitory blood agar; urease positive (turns pink on Christensen urea agar)' : moduleName === 'CNS' ? 'Blood agar (alpha-hemolytic green zone), Optochin sensitive, bile soluble' : 'Thayer-Martin selective media',
-          virulenceFactors: [
-            moduleName === 'URS' ? 'Abundant Urease enzyme' : moduleName === 'CNS' ? 'Capsular polysaccharide (>90 serotypes)' : 'Pili with extensive antigenic variation',
-            moduleName === 'URS' ? 'Staghorn calculi formation' : moduleName === 'CNS' ? 'Pneumolysin and IgA protease' : 'Opa proteins, IgA protease',
-          ],
-          clinicalManifestation: moduleName === 'URS' ? 'UTI with alkaline urine (pH > 7.5), struvite staghorn stones' : moduleName === 'CNS' ? 'Most common community-acquired bacterial meningitis in adults' : 'Purulent urethritis, cervicitis, PID, septic arthritis',
-          treatment: moduleName === 'URS' ? 'Fluoroquinolones or Cephalosporins' : moduleName === 'CNS' ? 'IV Ceftriaxone + Vancomycin' : 'Ceftriaxone 500mg IM + Doxycycline (if Chlamydia not ruled out)',
-        },
-      ],
-      diagnosticAlgorithms: [
-        'Collect specimen prior to starting antimicrobial therapy whenever clinically stable.',
-        'Initial Gram stain / microscopic screening for immediate directional clue.',
-        'Inoculate selective media (MacConkey / Thayer-Martin / Chocolate agar) based on anatomic site.',
-        'Perform automated or disk-diffusion Kirby-Bauer antimicrobial susceptibility testing (AST).',
-      ],
-      examTraps: [
-        'Confusing Proteus mirabilis (urease-positive, swarming) with E. coli (urease-negative, lactose-fermenting).',
-        'Forgetting that Listeria monocytogenes causes meningitis in neonates and elderly >50 and requires Ampicillin addition.',
-        'Differentiating painful genital ulcers (Chancroid - H. ducreyi) from painless hard ulcers (Syphilis - T. pallidum).',
-      ],
-    };
-
-    return NextResponse.json({
-      success: true,
-      summary: fallbackSummary,
-      source: 'curated_bank',
-      notice: 'AI Study Studio is currently cooling down due to high demand. Serving calibrated offline syllabus summary.',
-    });
+    const module = loaded.material.module;
+    const topic = typeof body.topic === 'string' ? body.topic.slice(0, 500) : loaded.material.title || 'Lecture summary';
+    const parsed = await generateJson(`You are Dr. Atlas. ${SAFETY_RULES}\n${MODULE_RULES[module] || ''}\nCreate an exam-focused summary only from the source. Do not invent facts absent from it; identify thin areas briefly. Topic: ${dataBlock('STUDENT INPUT', topic)} ${dataBlock('SOURCE MATERIAL', source)} ${loaded.material.custom_system_prompt ? dataBlock('ADMIN OVERLAY', loaded.material.custom_system_prompt) : ''}`, schema);
+    if (!Array.isArray(parsed.keyPathogens) || !Array.isArray(parsed.examTraps) || !Array.isArray(parsed.diagnosticAlgorithms)) throw new Error('shape');
+    console.info(JSON.stringify({ action: 'summarize', material_id: loaded.material.id, kind: 'ok', latency_ms: Date.now() - started }));
+    return noStoreJson({ success: true, summary: { ...parsed, module, moduleTitle: module } });
   } catch (error: any) {
-    console.error('Summarize API error:', error);
-    return NextResponse.json(
-      { error: error?.message || 'Failed to generate syllabus summary' },
-      { status: 500 }
-    );
+    await refundCredit(request, 'summarize');
+    const busy = /429|RESOURCE_EXHAUSTED|rate.?limit/i.test(String(error?.message || error));
+    console.info(JSON.stringify({ action: 'summarize', material_id: loaded.material.id, kind: busy ? 'busy' : 'glitch', latency_ms: Date.now() - started }));
+    return noStoreJson({ ok: false, kind: busy ? 'busy' : 'glitch', message: busy ? AI_MESSAGES.busy : AI_MESSAGES.glitch }, 503);
   }
 }

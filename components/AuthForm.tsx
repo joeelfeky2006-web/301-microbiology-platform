@@ -52,7 +52,7 @@ export default function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
           password,
           options: {
             data: { name: name.trim(), group_section: group },
-            emailRedirectTo: `${window.location.origin}/sign-in`,
+            emailRedirectTo: `${(process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, '')}/sign-in`,
           },
         });
         if (err) throw err;

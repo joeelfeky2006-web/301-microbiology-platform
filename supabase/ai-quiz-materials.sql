@@ -84,6 +84,11 @@ create policy "materials_student_select_policy" on public.materials
 revoke select on public.materials from public, anon, authenticated;
 grant select (id, module, type, title, file_url, format, source_type)
   on public.materials to authenticated;
+-- The unauthenticated health probe may read only an identifier, never course content.
+drop policy if exists "materials_health_id_select" on public.materials;
+create policy "materials_health_id_select" on public.materials
+  for select to anon using (true);
+grant select (id) on public.materials to anon;
 
 grant insert (ai_context, raw_quiz_text, custom_system_prompt)
   on public.materials to authenticated;

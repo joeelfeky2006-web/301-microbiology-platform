@@ -34,6 +34,7 @@ drop policy if exists "user_credits_select_self" on public.user_credits;
 create policy "user_credits_select_self" on public.user_credits
   for select to authenticated
   using (auth.uid() = user_id);
+grant select on public.user_credits to authenticated;
 
 -- ------------------------------------------------------------------------------
 -- 2. Atomic Stored Procedure: deduct_user_credit

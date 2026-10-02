@@ -19,9 +19,8 @@ import { cardClass } from '@/lib/ui';
 import { supabase } from '@/lib/supabase';
 import { authenticatedHeaders } from '@/lib/authHeaders';
 import { MODULE_TITLES, type ModuleName, type Material } from '@/types';
-import { useUserCredits, ACTION_COSTS } from '@/lib/credits';
-import CreditBadge from '@/components/credits/CreditBadge';
 import AiDisclaimer from '@/components/ai/AiDisclaimer';
+import MaterialQuiz from '@/components/quiz/MaterialQuiz';
 
 interface AILearningStudioProps {
   initialModule?: ModuleName;
@@ -37,8 +36,8 @@ export default function AILearningStudio({
   const [difficulty, setDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('intermediate');
   const [customTopic, setCustomTopic] = useState('');
   const [creditNotice, setCreditNotice] = useState<string | null>(null);
+  const [retrySeconds, setRetrySeconds] = useState(0);
 
-  const { credits, deductCredits, refundCredits } = useUserCredits();
 
   // Case Study State
   const [caseStudy, setCaseStudy] = useState<any>(null);
@@ -51,21 +50,18 @@ export default function AILearningStudio({
   const [summaryLoading, setSummaryLoading] = useState(false);
 
   // Quiz Eval State (Server-Graded to prevent network answer leakage)
-  const [activeQuestionId, setActiveQuestionId] = useState<string>('urs-q1');
-  const [quizQuestion, setQuizQuestion] = useState(
-    'A 22-year-old student presents with painful dysuria and cloudy urine. Culture on MacConkey agar shows pink colonies with rapid lactose fermentation and positive indole test. What is the organism, and what pili facilitate ascent?'
-  );
-  const [studentAnswer, setStudentAnswer] = useState(
-    'E. coli (UPEC) using P-fimbriae to reach the renal pelvis'
-  );
-  const [evalResult, setEvalResult] = useState<any>(null);
-  const [evalLoading, setEvalLoading] = useState(false);
 
   // Lecture Raw Feed State
   const [moduleMaterials, setModuleMaterials] = useState<Material[]>([]);
   const [selectedMaterialId, setSelectedMaterialId] = useState<string>('');
   const [rawFeedText, setRawFeedText] = useState<string>('');
   const [useCustomRawFeed, setUseCustomRawFeed] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!retrySeconds) return;
+    const timer = window.setTimeout(() => setRetrySeconds((value) => Math.max(0, value - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [retrySeconds]);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,11 +88,9 @@ export default function AILearningStudio({
 
   const fetchCaseStudy = async () => {
     setCreditNotice(null);
-    const deduction = deductCredits('case_study');
-    if (!deduction.success) {
-      setCreditNotice(
-        `AI Credit Limit Reached (Cost: 3 credits). Daily balance: ${deduction.remainingDaily}/${credits.dailyLimit} credits. Free tier cooling down to ensure fair access for all 700 students. Please review the static Lecture Notes and PDFs.`
-      );
+    if (retrySeconds > 0) return;
+    if (!selectedMaterialId || useCustomRawFeed) {
+      setCreditNotice('Choose a lecture with AI context to generate a case study.');
       return;
     }
 
@@ -108,20 +102,24 @@ export default function AILearningStudio({
         method: 'POST',
         headers: await authenticatedHeaders(),
         body: JSON.stringify({
-          module: selectedModule,
           topic: customTopic.trim() || undefined,
           difficulty,
-          material_id: useCustomRawFeed ? undefined : selectedMaterialId || undefined,
-          raw_feed: useCustomRawFeed && rawFeedText.trim() ? rawFeedText.trim() : undefined,
+          material_id: selectedMaterialId,
         }),
       });
       const data = await res.json();
+      if (res.status === 401) { window.location.assign('/sign-in'); return; }
+      window.dispatchEvent(new Event('credits_updated'));
+      if (data.kind === 'busy') setRetrySeconds(60);
       if (data.caseStudy) {
         setCaseStudy(data.caseStudy);
+      } else if (data.kind === 'fallback') {
+        setCreditNotice('This lecture does not have AI context yet.');
+      } else if (data.message) {
+        setCreditNotice(data.message);
       }
-    } catch (err) {
-      console.error(err);
-      refundCredits(ACTION_COSTS.case_study);
+    } catch {
+      setCreditNotice("Dr. Atlas is catching his breath. Let's give it another try in a moment!");
     } finally {
       setCaseLoading(false);
     }
@@ -129,11 +127,9 @@ export default function AILearningStudio({
 
   const fetchSummary = async (topicToUse?: string) => {
     setCreditNotice(null);
-    const deduction = deductCredits('summary');
-    if (!deduction.success) {
-      setCreditNotice(
-        `AI Credit Limit Reached (Cost: 1 credit). Daily balance: ${deduction.remainingDaily}/${credits.dailyLimit} credits. Resets at midnight UTC.`
-      );
+    if (retrySeconds > 0) return;
+    if (!selectedMaterialId || useCustomRawFeed) {
+      setCreditNotice('Choose a lecture with AI context or question bank to create a summary.');
       return;
     }
 
@@ -144,55 +140,25 @@ export default function AILearningStudio({
         method: 'POST',
         headers: await authenticatedHeaders(),
         body: JSON.stringify({
-          module: selectedModule,
           topic: targetTopic,
-          material_id: useCustomRawFeed ? undefined : selectedMaterialId || undefined,
-          raw_feed: useCustomRawFeed && rawFeedText.trim() ? rawFeedText.trim() : undefined,
+          material_id: selectedMaterialId,
         }),
       });
       const data = await res.json();
+      if (res.status === 401) { window.location.assign('/sign-in'); return; }
+      window.dispatchEvent(new Event('credits_updated'));
+      if (data.kind === 'busy') setRetrySeconds(60);
       if (data.summary) {
         setSummary(data.summary);
+      } else if (data.kind === 'fallback') {
+        setCreditNotice('This lecture does not have AI context or a question bank yet.');
+      } else if (data.message) {
+        setCreditNotice(data.message);
       }
-    } catch (err) {
-      console.error(err);
-      refundCredits(ACTION_COSTS.summary);
+    } catch {
+      setCreditNotice("Dr. Atlas is catching his breath. Let's give it another try in a moment!");
     } finally {
       setSummaryLoading(false);
-    }
-  };
-
-  const runQuizEval = async () => {
-    setCreditNotice(null);
-    const deduction = deductCredits('mcq');
-    if (!deduction.success) {
-      setCreditNotice(
-        `AI Credit Limit Reached (Cost: 2 credits). Daily balance: ${deduction.remainingDaily}/${credits.dailyLimit} credits. Resets at midnight UTC.`
-      );
-      return;
-    }
-
-    setEvalLoading(true);
-    try {
-      const res = await fetch('/api/gemini/quiz-eval', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          questionId: activeQuestionId,
-          module: selectedModule,
-          question: quizQuestion,
-          studentAnswer,
-        }),
-      });
-      const data = await res.json();
-      if (data.evaluation) {
-        setEvalResult(data.evaluation);
-      }
-    } catch (err) {
-      console.error(err);
-      refundCredits(ACTION_COSTS.mcq);
-    } finally {
-      setEvalLoading(false);
     }
   };
 
@@ -227,7 +193,6 @@ export default function AILearningStudio({
 
         {/* Module Switcher & Live Credits */}
         <div className="flex flex-wrap items-center gap-2">
-          <CreditBadge compact />
           {(['URS', 'CNS', 'REP'] as ModuleName[]).map((mod) => (
             <button
               key={mod}
@@ -265,6 +230,7 @@ export default function AILearningStudio({
           </button>
         </div>
       )}
+      {retrySeconds > 0 && <p className="mt-3 text-xs font-semibold text-amber-700 dark:text-amber-300">Try again in {retrySeconds}s.</p>}
 
       {/* Tabs */}
       <div className="mt-6 flex border-b border-slate-200 dark:border-white/10">
@@ -318,15 +284,15 @@ export default function AILearningStudio({
                   Lecture Raw Feed Source:
                 </span>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Calibrate clinical case study directly on real MUST 301 lecture materials or raw professor feed
+                  Generate a case strictly from admin-provided lecture context
                 </span>
               </div>
               <button
                 type="button"
-                onClick={() => setUseCustomRawFeed(!useCustomRawFeed)}
-                className="text-[11px] font-bold text-blue-600 hover:underline dark:text-cyan-300"
+                disabled
+                className="text-[11px] font-bold text-slate-400"
               >
-                {useCustomRawFeed ? '← Choose from uploaded module lectures' : '+ Paste custom raw lecture feed / notes'}
+                Admin-managed lecture source
               </button>
             </div>
 
@@ -337,7 +303,7 @@ export default function AILearningStudio({
                   onChange={(e) => setSelectedMaterialId(e.target.value)}
                   className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 >
-                  <option value="">Full {MODULE_TITLES[selectedModule]} Syllabus (All Lectures)</option>
+                  <option value="">Choose a lecture with AI context</option>
                   {moduleMaterials.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.title} {m.ai_context ? '✦ (AI Context Connected)' : ''}
@@ -400,7 +366,7 @@ export default function AILearningStudio({
 
             <button
               type="button"
-              disabled={caseLoading}
+              disabled={caseLoading || retrySeconds > 0 || !selectedMaterialId}
               onClick={fetchCaseStudy}
               className="flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-700 disabled:opacity-50"
             >
@@ -603,15 +569,15 @@ export default function AILearningStudio({
                   Lecture Raw Feed Source:
                 </span>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Summarize key diagnostic hallmarks &amp; algorithms directly from lecture materials or raw feed
+                Summarize key diagnostic hallmarks and algorithms from a selected lecture
                 </span>
               </div>
               <button
                 type="button"
-                onClick={() => setUseCustomRawFeed(!useCustomRawFeed)}
-                className="text-[11px] font-bold text-blue-600 hover:underline dark:text-cyan-300"
+                disabled
+                className="text-[11px] font-bold text-slate-400"
               >
-                {useCustomRawFeed ? '← Choose from uploaded module lectures' : '+ Paste custom raw lecture feed / notes'}
+                Admin-managed lecture source
               </button>
             </div>
 
@@ -622,7 +588,7 @@ export default function AILearningStudio({
                   onChange={(e) => setSelectedMaterialId(e.target.value)}
                   className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 >
-                  <option value="">Full {MODULE_TITLES[selectedModule]} Syllabus</option>
+                  <option value="">Choose a lecture with AI context</option>
                   {moduleMaterials.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.title} {m.ai_context ? '✦ (AI Context Connected)' : ''}
@@ -669,7 +635,7 @@ export default function AILearningStudio({
                   onClick={() => {
                     setSelectedModule(chip.mod);
                     setCustomTopic(chip.label);
-                    fetchSummary(chip.label);
+                    setSelectedMaterialId('');
                   }}
                   className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:border-indigo-400 hover:text-indigo-600 dark:border-white/10 dark:bg-slate-800 dark:text-slate-300"
                 >
@@ -680,7 +646,7 @@ export default function AILearningStudio({
 
             <button
               type="button"
-              disabled={summaryLoading}
+              disabled={summaryLoading || retrySeconds > 0 || !selectedMaterialId}
               onClick={() => fetchSummary()}
               className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow transition hover:bg-blue-700 disabled:opacity-50"
             >
@@ -698,6 +664,7 @@ export default function AILearningStudio({
               <button
                 type="button"
                 onClick={() => fetchSummary()}
+                disabled={!selectedMaterialId || retrySeconds > 0}
                 className="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
               >
                 Summarize Now
@@ -784,133 +751,12 @@ export default function AILearningStudio({
         </div>
       )}
 
-      {/* Tab 3: Intelligent Quiz Evaluator */}
+      {/* Tab 3: Lecture question bank */}
       {activeTab === 'eval' && (
-        <div className="mt-6 space-y-6">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900/60">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-              Intelligent Student Answer Diagnostic Tool
-            </h3>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Type or customize your clinical question and answer to receive an instant evaluation against MUST 301 grading criteria.
-            </p>
-
-            <div className="mt-4 space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Exam Question</label>
-                  <div className="flex items-center gap-1.5 text-[11px]">
-                    <span className="text-slate-400">Presets:</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveQuestionId('urs-q1');
-                        setQuizQuestion('A 22-year-old student presents with painful dysuria and cloudy urine. Culture on MacConkey agar shows pink colonies with rapid lactose fermentation and positive indole test. What is the organism, and what pili facilitate ascent?');
-                        setStudentAnswer('');
-                        setEvalResult(null);
-                      }}
-                      className="rounded bg-slate-100 px-1.5 py-0.5 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
-                    >
-                      URS
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveQuestionId('cns-q1');
-                        setQuizQuestion('An 18-year-old college student presents with high fever, neck stiffness, and a petechial rash. CSF analysis reveals opening pressure 280 mm H2O, WBC 4500 (90% PMNs), high protein, and low glucose. Gram stain shows intracellular Gram-negative diplococci. What is the organism and the primary capsule virulence factor?');
-                        setStudentAnswer('');
-                        setEvalResult(null);
-                      }}
-                      className="rounded bg-slate-100 px-1.5 py-0.5 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
-                    >
-                      CNS
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveQuestionId('rep-q1');
-                        setQuizQuestion('A 29-year-old male presents with a single, painless, hard indurated ulcer on the penis and bilateral non-tender lymphadenopathy. Darkfield microscopy reveals slender, corkscrew motile spirochetes. What is the pathogen, and what is the drug of choice?');
-                        setStudentAnswer('');
-                        setEvalResult(null);
-                      }}
-                      className="rounded bg-slate-100 px-1.5 py-0.5 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
-                    >
-                      REP
-                    </button>
-                  </div>
-                </div>
-                <textarea
-                  rows={2}
-                  value={quizQuestion}
-                  onChange={(e) => {
-                    setQuizQuestion(e.target.value);
-                    setActiveQuestionId('');
-                  }}
-                  className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-3 text-xs text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Your Clinical Answer (Graded against authoritative server benchmark)</label>
-                <textarea
-                  rows={3}
-                  value={studentAnswer}
-                  onChange={(e) => setStudentAnswer(e.target.value)}
-                  placeholder="Type your differential diagnosis, causative organism, and virulence factors..."
-                  className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-3 text-xs text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                />
-              </div>
-
-              <button
-                type="button"
-                disabled={evalLoading || !studentAnswer.trim()}
-                onClick={runQuizEval}
-                className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow transition hover:bg-blue-700 disabled:opacity-50"
-              >
-                {evalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                Submit &amp; Evaluate Answer with AI
-              </button>
-            </div>
-
-            {evalResult && (
-              <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-5 dark:border-white/10 dark:bg-slate-800/50">
-                <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-white/10">
-                  <div className="flex items-center gap-2">
-                    {evalResult.isCorrect ? (
-                      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                    ) : (
-                      <XCircle className="h-5 w-5 text-amber-500" />
-                    )}
-                    <span className="font-bold text-sm text-slate-900 dark:text-white">
-                      Verdict: {evalResult.verdict}
-                    </span>
-                  </div>
-                  <span className="font-mono text-sm font-bold text-blue-600 dark:text-cyan-300">
-                    Score: {evalResult.score}/100
-                  </span>
-                </div>
-
-                <p className="mt-3 text-xs font-medium text-slate-700 dark:text-slate-300">
-                  {evalResult.feedbackSummary}
-                </p>
-
-                <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                  {evalResult.detailedExplanation}
-                </p>
-
-                {evalResult.keyTakeaways?.length > 0 && (
-                  <div className="mt-3 border-t border-slate-200 pt-2 text-xs dark:border-white/10">
-                    <span className="font-bold text-slate-800 dark:text-slate-200">Key Points:</span>
-                    <ul className="mt-1 list-disc space-y-0.5 pl-4 text-slate-600 dark:text-slate-400">
-                      {evalResult.keyTakeaways.map((point: string, i: number) => (
-                        <li key={i}>{point}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+        <div className="mt-6 space-y-4">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Lecture Question Bank</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Questions and answer keys come from the selected lecture’s admin-supplied question bank.</p>
+          {selectedMaterialId ? <MaterialQuiz material={moduleMaterials.find((item) => item.id === selectedMaterialId)!} /> : <p className="rounded-xl border border-dashed p-5 text-sm text-slate-600 dark:text-slate-300">Select a lecture above to practice its question bank.</p>}
         </div>
       )}
     </section>

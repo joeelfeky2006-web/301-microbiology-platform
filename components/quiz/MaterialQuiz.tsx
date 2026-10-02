@@ -10,10 +10,8 @@ type Question = {
   id: string;
   question: string;
   options: { id: 'A'|'B'|'C'|'D'; text: string }[];
-  correctAnswer: 'A'|'B'|'C'|'D';
-  explanation: string;
 };
-type Report = { module: ModuleName; score: number; isCorrect: boolean; feedback: string; diagnosticFocus: string; strengths: string[]; weaknesses: string[]; studyRecommendations: string[] };
+type Report = { module: ModuleName; score: number; isCorrect: boolean; feedback: string; diagnosticFocus: string; strengths: string[]; weaknesses: string[]; studyRecommendations: string[]; perQuestion?: { question_id: string; correct_answer: string; is_correct: boolean }[] };
 
 function printReport(report: Report, question: Question) {
   try {
@@ -27,6 +25,7 @@ function printReport(report: Report, question: Question) {
       const main = doc.createElement('main');
       const h1 = doc.createElement('h1'); h1.textContent = 'MedAtlas Egypt · Quiz Feedback'; main.append(h1);
       const title = doc.createElement('h2'); title.textContent = report.module + ' diagnostic report'; main.append(title);
+      const note = doc.createElement('p'); note.textContent = 'Not saved. Print or save it now.'; main.append(note);
       const q = doc.createElement('p'); q.textContent = question.question; main.append(q);
       const score = doc.createElement('p'); score.textContent = `Result: ${report.isCorrect ? 'Correct' : 'Review needed'} · ${report.score}%`; main.append(score);
       for (const [heading, value] of [['Feedback', report.feedback], ['Diagnostic focus', report.diagnosticFocus]] as const) {
@@ -57,19 +56,28 @@ export default function MaterialQuiz({ material }: { material: Material }) {
   const [questions, setQuestions] = useState<Question[] | null>(null);
   const [available, setAvailable] = useState<boolean | null>(null);
   const [index, setIndex] = useState(0);
-  const [selected, setSelected] = useState<Question['correctAnswer'] | ''>('');
+  const [selected, setSelected] = useState<Question['options'][number]['id'] | ''>('');
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [retrySeconds, setRetrySeconds] = useState(0);
+
+  useEffect(() => {
+    if (!retrySeconds) return;
+    const timer = window.setTimeout(() => setRetrySeconds((value) => Math.max(0, value - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [retrySeconds]);
 
   useEffect(() => {
     let cancelled = false;
     const checkAvailability = async () => {
       try {
         const headers = await authenticatedHeaders();
-        const response = await fetch('/api/gemini/quiz-gen?material_id=' + encodeURIComponent(material.id), { headers });
+        const response = await fetch('/api/quiz/bank?material_id=' + encodeURIComponent(material.id), { headers });
         const data = await response.json();
-        if (!cancelled) setAvailable(Boolean(data.available));
+        if (response.status === 401) { window.location.assign('/sign-in'); return; }
+        if (!cancelled && data.kind === 'fallback') { setQuestions([]); setAvailable(false); }
+        else if (!cancelled) setAvailable(Array.isArray(data.questions));
       } catch {
         if (!cancelled) {
           setAvailable(true);
@@ -84,17 +92,16 @@ export default function MaterialQuiz({ material }: { material: Material }) {
   const load = async () => {
     setLoading(true); setError('');
     try {
-      const response = await fetch('/api/gemini/quiz-gen', {
-        method: 'POST', headers: await authenticatedHeaders(),
-        body: JSON.stringify({
-          material_id: material.id,
-        }),
-      });
+      const headers = await authenticatedHeaders();
+      const response = await fetch('/api/quiz/bank?material_id=' + encodeURIComponent(material.id), { headers });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Could not load practice questions.');
+      if (response.status === 401) { window.location.assign('/sign-in'); return; }
+      window.dispatchEvent(new Event('credits_updated'));
+      if (!response.ok) { setError(typeof data.message === 'string' ? data.message : 'Practice questions are temporarily unavailable.'); return; }
+      if (data.kind === 'fallback') { setQuestions([]); return; }
       setQuestions(Array.isArray(data.questions) ? data.questions : []);
       setIndex(0); setSelected(''); setReport(null);
-    } catch (e) { setError(e instanceof Error ? e.message : 'Could not load practice questions.'); }
+    } catch { setError('Practice questions are temporarily unavailable.'); }
     finally { setLoading(false); }
   };
 
@@ -107,14 +114,19 @@ export default function MaterialQuiz({ material }: { material: Material }) {
       const response = await fetch('/api/gemini/quiz-eval', {
         method: 'POST', headers,
         body: JSON.stringify({
-          material_id: material.id, module: material.module, topic: material.title,
-          question: question.question, correctAnswer: question.correctAnswer, selectedAnswer: selected,
+          material_id: material.id, answers: [{ qid: question.id, choice: selected }],
         }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Could not evaluate this answer.');
+      if (response.status === 401) { window.location.assign('/sign-in'); return; }
+      if (!response.ok) {
+        if (data.kind === 'busy') setRetrySeconds(60);
+        setError(typeof data.message === 'string' ? data.message : 'Dr. Atlas is catching his breath. Let’s give it another try in a moment!');
+        if (data.report) setReport(data.report);
+        return;
+      }
       setReport(data.report);
-    } catch (e) { setError(e instanceof Error ? e.message : 'Could not evaluate this answer.'); }
+    } catch { setError('Dr. Atlas is catching his breath. Let’s give it another try in a moment!'); }
     finally { setLoading(false); }
   };
 
@@ -139,13 +151,14 @@ export default function MaterialQuiz({ material }: { material: Material }) {
               <span><strong>{option.id}.</strong> {option.text}</span>
             </label>
           ))}
-          {!report ? <button type="button" onClick={submit} disabled={!selected || loading} className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{loading ? 'Evaluating…' : 'Submit answer'}</button> : (
+          {!report ? <button type="button" onClick={submit} disabled={!selected || loading || retrySeconds > 0} className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{loading ? 'Evaluating…' : retrySeconds > 0 ? `Try again in ${retrySeconds}s` : 'Submit answer'}</button> : (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950/30">
               <p className="font-bold">{report.isCorrect ? 'Correct' : 'Keep reviewing'} · {report.score}%</p>
               <p className="mt-2 text-sm">{report.feedback}</p>
               <p className="mt-2 text-xs"><strong>Diagnostic focus:</strong> {report.diagnosticFocus}</p>
-              <p className="mt-2 text-xs"><strong>Explanation:</strong> {question.explanation}</p>
-              <button type="button" onClick={() => printReport(report, question)} className="mt-3 inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold"><Printer className="h-4 w-4" /> Print / Save as PDF</button>
+            <p className="mt-2 text-xs font-semibold">Not saved. Print or save it now.</p>
+            {report.perQuestion?.[0] && <p className="mt-2 text-xs"><strong>Answer key:</strong> {report.perQuestion[0].correct_answer}</p>}
+            <button type="button" onClick={() => printReport(report, question)} className="mt-3 inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold"><Printer className="h-4 w-4" /> Print / Save as PDF</button>
               {index + 1 < questions!.length && <button type="button" onClick={() => { setIndex(index + 1); setSelected(''); setReport(null); }} className="ml-2 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white">Next question</button>}
             </div>
           )}

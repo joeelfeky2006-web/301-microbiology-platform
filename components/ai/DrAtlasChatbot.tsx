@@ -19,6 +19,7 @@ import {
 import { cardClass } from '@/lib/ui';
 import { authenticatedHeaders } from '@/lib/authHeaders';
 import AiDisclaimer from '@/components/ai/AiDisclaimer';
+import { supabase } from '@/lib/supabase';
 
 interface Message {
   id: string;
@@ -40,6 +41,9 @@ export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolea
   const [isDismissed, setIsDismissed] = useState(false);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [materials, setMaterials] = useState<{ id: string; title: string }[]>([]);
+  const [materialId, setMaterialId] = useState('');
+  const [retrySeconds, setRetrySeconds] = useState(0);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome-msg',
@@ -50,6 +54,24 @@ export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolea
   ]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    supabase.from('materials').select('id,title').order('title', { ascending: true }).then(({ data }) => {
+      if (!cancelled && data) {
+        const rows = data as unknown as { id: string; title: string }[];
+        setMaterials(rows);
+        setMaterialId(rows[0]?.id || '');
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!retrySeconds) return;
+    const timer = window.setTimeout(() => setRetrySeconds((value) => Math.max(0, value - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [retrySeconds]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -63,7 +85,11 @@ export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolea
 
   const handleSend = async (messageText?: string) => {
     const textToSend = (messageText || input).trim();
-    if (!textToSend || isLoading) return;
+    if (!textToSend || isLoading || retrySeconds > 0) return;
+    if (!materialId) {
+      setMessages((prev) => [...prev, { id: 'msg-bank-' + Date.now(), role: 'model', text: 'Choose a lecture before asking Dr. Atlas.', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+      return;
+    }
 
     const userMessage: Message = {
       id: 'msg-' + Date.now(),
@@ -89,12 +115,24 @@ export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolea
         headers: await authenticatedHeaders(),
         body: JSON.stringify({
           message: textToSend,
+          material_id: materialId,
           history: apiHistory.slice(0, -1), // previous turns
           taskComplexity: textToSend.length > 120 ? 'complex' : 'general',
         }),
       });
 
       const data = await res.json();
+      if (res.status === 401) { window.location.assign('/sign-in'); return; }
+      window.dispatchEvent(new Event('credits_updated'));
+      if (!res.ok) {
+        if (data.kind === 'busy') setRetrySeconds(60);
+        setMessages((prev) => [...prev, { id: 'msg-err-' + Date.now(), role: 'model', text: typeof data.message === 'string' ? data.message : "Dr. Atlas is catching his breath. Let's give it another try in a moment!", timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+        return;
+      }
+      if (data.kind === 'fallback' && typeof data.message === 'string') {
+        setMessages((prev) => [...prev, { id: 'msg-fallback-' + Date.now(), role: 'model', text: data.message, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+        return;
+      }
       const replyText = data.reply || "I'm reviewing your clinical query. Please try asking again.";
 
       const aiMessage: Message = {
@@ -105,12 +143,11 @@ export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolea
       };
 
       setMessages((prev) => [...prev, aiMessage]);
-    } catch (err) {
-      console.error(err);
+    } catch {
       const errorMessage: Message = {
         id: 'msg-err-' + Date.now(),
         role: 'model',
-        text: 'Sorry, I encountered a temporary connection issue. Please try again.',
+        text: "Dr. Atlas is catching his breath. Let's give it another try in a moment!",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -337,6 +374,14 @@ export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolea
 
             {/* Input Bar */}
             <div className="border-t border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-slate-900">
+              <label className="mb-2 block text-xs font-semibold text-slate-600 dark:text-slate-300">
+                Lecture source
+                <select value={materialId} onChange={(event) => setMaterialId(event.target.value)} className="ml-2 max-w-[75%] rounded-lg border bg-white px-2 py-1 text-xs dark:bg-slate-800">
+                  <option value="">Select a lecture</option>
+                  {materials.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+                </select>
+              </label>
+              {retrySeconds > 0 && <p className="mb-2 text-xs text-amber-700 dark:text-amber-300">Try again in {retrySeconds}s.</p>}
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -353,7 +398,7 @@ export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolea
                 />
                 <button
                   type="submit"
-                  disabled={!input.trim() || isLoading}
+                  disabled={!input.trim() || isLoading || !materialId || retrySeconds > 0}
                   className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-40 active:scale-95"
                 >
                   <Send className="h-4 w-4" />

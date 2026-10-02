@@ -10,6 +10,10 @@ const isConfigured =
   typeof supabaseAnonKey === 'string' &&
   supabaseAnonKey.trim().length > 10;
 
+if (!isConfigured && (process.env.NODE_ENV === 'production' || process.env.VERCEL)) {
+  throw new Error('Supabase environment variables are required in production. Configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+}
+
 /** Standard RFC4122 UUID v4 generator for both browser and Node runtimes */
 export function generateUUID(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
