@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ai } from '@/lib/gemini';
+import { authorizeAndSpend } from '@/lib/apiAuth';
 import type { ModuleName } from '@/types';
 
 interface CaseStudyPayload {
@@ -118,6 +119,9 @@ export async function POST(req: NextRequest) {
     const moduleName = body.module || 'URS';
     const topic = body.topic || '';
     const difficulty = body.difficulty || 'intermediate';
+
+    const access = await authorizeAndSpend(req, 3);
+    if ('response' in access) return access.response;
 
     // 1. Check in-memory edge cache (Saves Gemini token burn & rate limits)
     const cacheKey = `${moduleName}_${(topic || 'core').toLowerCase().trim()}_${difficulty}`;

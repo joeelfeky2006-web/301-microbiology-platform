@@ -16,6 +16,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { cardClass } from '@/lib/ui';
+import { authenticatedHeaders } from '@/lib/authHeaders';
 import { MODULE_TITLES, type ModuleName } from '@/types';
 import { useUserCredits, ACTION_COSTS } from '@/lib/credits';
 import CreditBadge from '@/components/credits/CreditBadge';
@@ -74,7 +75,7 @@ export default function AILearningStudio({
     try {
       const res = await fetch('/api/gemini/case-study', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authenticatedHeaders(),
         body: JSON.stringify({
           module: selectedModule,
           topic: customTopic.trim() || undefined,
@@ -108,7 +109,7 @@ export default function AILearningStudio({
     try {
       const res = await fetch('/api/gemini/summarize', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authenticatedHeaders(),
         body: JSON.stringify({
           module: selectedModule,
           topic: targetTopic,
@@ -143,7 +144,7 @@ export default function AILearningStudio({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           questionId: activeQuestionId,
-          module: MODULE_TITLES[selectedModule],
+          module: selectedModule,
           question: quizQuestion,
           studentAnswer,
         }),

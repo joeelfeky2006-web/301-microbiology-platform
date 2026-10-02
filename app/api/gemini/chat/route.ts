@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ai } from '@/lib/gemini';
+import { authorizeAndSpend } from '@/lib/apiAuth';
 
 interface ChatMessage {
   role: 'user' | 'model';
@@ -93,6 +94,9 @@ export async function POST(req: NextRequest) {
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: 'Message text is required' }, { status: 400 });
     }
+
+    const access = await authorizeAndSpend(req, 1);
+    if ('response' in access) return access.response;
 
     // Select recommended model:
     // gemini-3.1-pro-preview for complex tasks, gemini-3.5-flash for general tasks, gemini-3.1-flash-lite for fast tasks.
