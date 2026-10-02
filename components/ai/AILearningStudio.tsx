@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Sparkles,
   BookOpen,
@@ -16,8 +16,9 @@ import {
   FileText,
 } from 'lucide-react';
 import { cardClass } from '@/lib/ui';
+import { supabase } from '@/lib/supabase';
 import { authenticatedHeaders } from '@/lib/authHeaders';
-import { MODULE_TITLES, type ModuleName } from '@/types';
+import { MODULE_TITLES, type ModuleName, type Material } from '@/types';
 import { useUserCredits, ACTION_COSTS } from '@/lib/credits';
 import CreditBadge from '@/components/credits/CreditBadge';
 import AiDisclaimer from '@/components/ai/AiDisclaimer';
@@ -60,6 +61,35 @@ export default function AILearningStudio({
   const [evalResult, setEvalResult] = useState<any>(null);
   const [evalLoading, setEvalLoading] = useState(false);
 
+  // Lecture Raw Feed State
+  const [moduleMaterials, setModuleMaterials] = useState<Material[]>([]);
+  const [selectedMaterialId, setSelectedMaterialId] = useState<string>('');
+  const [rawFeedText, setRawFeedText] = useState<string>('');
+  const [useCustomRawFeed, setUseCustomRawFeed] = useState<boolean>(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadModuleMaterials() {
+      try {
+        const { data } = await supabase
+          .from('materials')
+          .select('id,module,type,title,ai_context,raw_quiz_text')
+          .eq('module', selectedModule)
+          .order('title', { ascending: true });
+        if (!cancelled && data) {
+          setModuleMaterials(data as unknown as Material[]);
+        }
+      } catch (e) {
+        console.warn('Failed to load module materials for AI feed:', e);
+      }
+    }
+    loadModuleMaterials();
+    setSelectedMaterialId('');
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedModule]);
+
   const fetchCaseStudy = async () => {
     setCreditNotice(null);
     const deduction = deductCredits('case_study');
@@ -81,6 +111,8 @@ export default function AILearningStudio({
           module: selectedModule,
           topic: customTopic.trim() || undefined,
           difficulty,
+          material_id: useCustomRawFeed ? undefined : selectedMaterialId || undefined,
+          raw_feed: useCustomRawFeed && rawFeedText.trim() ? rawFeedText.trim() : undefined,
         }),
       });
       const data = await res.json();
@@ -114,6 +146,8 @@ export default function AILearningStudio({
         body: JSON.stringify({
           module: selectedModule,
           topic: targetTopic,
+          material_id: useCustomRawFeed ? undefined : selectedMaterialId || undefined,
+          raw_feed: useCustomRawFeed && rawFeedText.trim() ? rawFeedText.trim() : undefined,
         }),
       });
       const data = await res.json();
@@ -275,6 +309,66 @@ export default function AILearningStudio({
       {/* Tab 1: Case Studies */}
       {activeTab === 'case' && (
         <div className="mt-6 space-y-6">
+          {/* Lecture Raw Feed Input / Selector */}
+          <div className="rounded-2xl border border-indigo-200/80 bg-white p-4 dark:border-indigo-900/60 dark:bg-slate-900/70 shadow-xs space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-blue-600 dark:text-cyan-400" />
+                <span className="text-xs font-bold text-slate-900 dark:text-white">
+                  Lecture Raw Feed Source:
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Calibrate clinical case study directly on real MUST 301 lecture materials or raw professor feed
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setUseCustomRawFeed(!useCustomRawFeed)}
+                className="text-[11px] font-bold text-blue-600 hover:underline dark:text-cyan-300"
+              >
+                {useCustomRawFeed ? '← Choose from uploaded module lectures' : '+ Paste custom raw lecture feed / notes'}
+              </button>
+            </div>
+
+            {!useCustomRawFeed ? (
+              <div className="flex flex-wrap items-center gap-2.5">
+                <select
+                  value={selectedMaterialId}
+                  onChange={(e) => setSelectedMaterialId(e.target.value)}
+                  className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                >
+                  <option value="">Full {MODULE_TITLES[selectedModule]} Syllabus (All Lectures)</option>
+                  {moduleMaterials.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.title} {m.ai_context ? '✦ (AI Context Connected)' : ''}
+                    </option>
+                  ))}
+                </select>
+                {selectedMaterialId && (
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                    Lecture Context Linked
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <textarea
+                  rows={3}
+                  value={rawFeedText}
+                  onChange={(e) => setRawFeedText(e.target.value)}
+                  placeholder="Paste raw lecture transcription, professor emphases, or slide points here (e.g. 'Dr. Mohamed emphasized that in CNS infections, Neisseria endotoxin triggers petechial lesions while Streptococcus pneumoniae causes rusty sputum...')"
+                  className="w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 text-xs text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+                {rawFeedText.trim() && (
+                  <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    ✓ Custom lecture feed active ({rawFeedText.length} characters) — AI will construct cases directly from this feed.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="flex flex-col gap-3 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4 dark:border-white/5 dark:bg-slate-800/40 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
@@ -500,6 +594,66 @@ export default function AILearningStudio({
       {/* Tab 2: Syllabus Summarizer */}
       {activeTab === 'summary' && (
         <div className="mt-6 space-y-6">
+          {/* Lecture Raw Feed Input / Selector */}
+          <div className="rounded-2xl border border-indigo-200/80 bg-white p-4 dark:border-indigo-900/60 dark:bg-slate-900/70 shadow-xs space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-blue-600 dark:text-cyan-400" />
+                <span className="text-xs font-bold text-slate-900 dark:text-white">
+                  Lecture Raw Feed Source:
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Summarize key diagnostic hallmarks &amp; algorithms directly from lecture materials or raw feed
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setUseCustomRawFeed(!useCustomRawFeed)}
+                className="text-[11px] font-bold text-blue-600 hover:underline dark:text-cyan-300"
+              >
+                {useCustomRawFeed ? '← Choose from uploaded module lectures' : '+ Paste custom raw lecture feed / notes'}
+              </button>
+            </div>
+
+            {!useCustomRawFeed ? (
+              <div className="flex flex-wrap items-center gap-2.5">
+                <select
+                  value={selectedMaterialId}
+                  onChange={(e) => setSelectedMaterialId(e.target.value)}
+                  className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                >
+                  <option value="">Full {MODULE_TITLES[selectedModule]} Syllabus</option>
+                  {moduleMaterials.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.title} {m.ai_context ? '✦ (AI Context Connected)' : ''}
+                    </option>
+                  ))}
+                </select>
+                {selectedMaterialId && (
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                    Lecture Feed Active
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <textarea
+                  rows={3}
+                  value={rawFeedText}
+                  onChange={(e) => setRawFeedText(e.target.value)}
+                  placeholder="Paste lecture transcription or professor review points to generate an exam-calibrated syllabus summary..."
+                  className="w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 text-xs text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+                {rawFeedText.trim() && (
+                  <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    ✓ Custom feed active ({rawFeedText.length} chars) — summary will extract key facts from this raw feed.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-semibold text-slate-500">Quick Topics:</span>

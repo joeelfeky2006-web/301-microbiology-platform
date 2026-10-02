@@ -100,6 +100,17 @@ export default function Home() {
   const { stats } = useModuleProgress(materials);
   const [supportModalOpen, setSupportModalOpen] = useState(false);
 
+  const [userGroup, setUserGroup] = useState<string>('G1');
+
+  useEffect(() => {
+    if (session?.user?.user_metadata?.group_section) {
+      setUserGroup(session.user.user_metadata.group_section);
+    } else if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('student_group_preference');
+      if (stored) setUserGroup(stored);
+    }
+  }, [session]);
+
   // Clean dashboard view tab: 'modules' (default, uncluttered) | 'progress' | 'ai-studio'
   const [activeTab, setActiveTab] = useState<'modules' | 'progress' | 'ai-studio'>('modules');
 
@@ -140,7 +151,7 @@ export default function Home() {
       {/* Top Partner Sponsor Banner */}
       <AdSlot placement="banner" variant="revive" />
 
-      <main className="p-4 sm:p-6 md:p-12 overflow-hidden">
+      <main className="p-4 sm:p-6 md:p-12 pb-28 sm:pb-32 overflow-hidden">
         <div className="mx-auto max-w-5xl space-y-10">
           {/* ======================================================== */}
           {/* REBRANDED HERO HEADER (Framed with Smooth Motion)        */}
@@ -246,10 +257,13 @@ export default function Home() {
                 </>
               )}
               {session && (
-                <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-2 text-xs font-semibold text-slate-700 shadow-sm dark:border-white/10 dark:bg-slate-800 dark:text-slate-300">
+                <div className="flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-2 text-xs font-semibold text-slate-700 shadow-sm dark:border-white/10 dark:bg-slate-800 dark:text-slate-300">
                   <span className="flex h-2 w-2 rounded-full bg-emerald-500" />
                   <span>
                     Signed in as <strong className="text-blue-600 dark:text-cyan-300">{displayName}</strong>
+                  </span>
+                  <span className="rounded-md bg-blue-100 px-2 py-0.5 text-[10px] font-extrabold text-blue-800 dark:bg-cyan-950/80 dark:text-cyan-300 ring-1 ring-blue-300 dark:ring-cyan-800">
+                    Cohort {userGroup}
                   </span>
                 </div>
               )}

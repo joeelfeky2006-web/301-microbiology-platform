@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ai, GEMINI_MODEL } from '@/lib/gemini';
 import { authorizeAndSpend } from '@/lib/apiAuth';
+import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { MODULE_TITLES, type ModuleName } from '@/types';
 
 interface SummarizePayload {
   module: ModuleName;
   topic: string;
   focusArea?: string;
+  material_id?: string;
+  raw_feed?: string;
 }
 
 // In-memory summary cache (0 token cost, 0 latency for repeated student queries)
@@ -32,12 +35,40 @@ export async function POST(req: NextRequest) {
     const topic = body.topic || 'Core High-Yield Microorganisms';
     const moduleFullName = MODULE_TITLES[moduleName] || 'Medical Microbiology';
 
+    let lectureFeedContext = (body.raw_feed || '').trim();
+    let lectureFeedTitle = '';
+
+    if (body.material_id) {
+      const admin = createSupabaseAdmin();
+      if (admin) {
+        const { data: material } = await admin
+          .from('materials')
+          .select('title,ai_context,raw_quiz_text,custom_system_prompt')
+          .eq('id', body.material_id)
+          .maybeSingle();
+
+        if (material) {
+          lectureFeedTitle = material.title || '';
+          const parts = [
+            material.ai_context ? `Lecture Knowledge Context:\n${material.ai_context}` : '',
+            material.raw_quiz_text ? `Lecture Core Focus & Practice Material:\n${material.raw_quiz_text}` : '',
+            material.custom_system_prompt ? `Professor Instructions:\n${material.custom_system_prompt}` : '',
+          ].filter(Boolean);
+
+          if (parts.length > 0) {
+            lectureFeedContext = (lectureFeedContext ? lectureFeedContext + '\n\n' : '') + parts.join('\n\n');
+          }
+        }
+      }
+    }
+
     const access = await authorizeAndSpend(req, 1);
     if ('response' in access) return access.response;
 
-    // 1. Check in-memory cache
+    // 1. Check in-memory cache if no custom feed is passed
+    const hasCustomFeed = Boolean(lectureFeedContext.trim());
     const cacheKey = `${moduleName}_${topic.toLowerCase().trim()}`;
-    if (summaryCache.has(cacheKey)) {
+    if (!hasCustomFeed && summaryCache.has(cacheKey)) {
       return NextResponse.json({
         success: true,
         summary: summaryCache.get(cacheKey),
@@ -48,7 +79,15 @@ export async function POST(req: NextRequest) {
     if (ai) {
       const prompt = `You are a medical microbiology professor for MUST 301 Medical Microbiology (${moduleFullName}).
 Calibrate this syllabus summary specifically on Review of Medical Microbiology & Immunology (Levinson), First Aid (USMLE Step 1), and MUST 301 exam standards.
-Provide a high-yield, exam-focused syllabus summary on: "${topic}".
+Provide a high-yield, exam-focused syllabus summary on: "${topic || lectureFeedTitle}".
+${
+  hasCustomFeed
+    ? `\n--- RAW LECTURE FEED & KNOWLEDGE CONTEXT (${lectureFeedTitle ? `Lecture: ${lectureFeedTitle}` : 'Course Feed'}) ---
+${lectureFeedContext.slice(0, 35_000)}
+
+CRITICAL INSTRUCTION: Summarize and extract key medical microbiology points directly from this raw lecture feed, ensuring all professor emphases, specific media, virulence factors, and diagnostic algorithms from the feed are prominently featured.\n`
+    : ''
+}
 Include:
 1. Executive summary of pathology
 2. Key pathogens with morphology, staining, culture media (MacConkey, Blood, Chocolate, Thayer-Martin, etc.)
@@ -61,7 +100,7 @@ Return ONLY valid JSON matching this schema:
 {
   "module": "${moduleName}",
   "moduleTitle": "${moduleFullName}",
-  "topic": "${topic}",
+  "topic": "${topic || lectureFeedTitle}",
   "overview": "Short executive paragraph explaining clinical significance",
   "keyPathogens": [
     {
@@ -75,7 +114,7 @@ Return ONLY valid JSON matching this schema:
   ],
   "diagnosticAlgorithms": ["Step 1...", "Step 2..."],
   "examTraps": ["Common exam mistake students make on MUST 301 exams..."]
-}`;
+};`;
 
       try {
         const response = await ai.models.generateContent({

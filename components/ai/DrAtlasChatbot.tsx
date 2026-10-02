@@ -37,6 +37,7 @@ const QUICK_PROMPTS = [
 export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolean }) {
   const [isOpen, setIsOpen] = useState(embedded);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -129,39 +130,80 @@ export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolea
     ]);
   };
 
-  // Render floating button if closed and not embedded
-  if (!isOpen && !embedded) {
+  // Ultra-compact edge pill if student dismissed the main floating button
+  if (isDismissed && !embedded && !isOpen) {
     return (
       <button
         type="button"
-        onClick={() => setIsOpen(true)}
-        aria-label="Open Dr. Atlas AI Tutor"
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 px-4 py-3 text-xs font-black text-white shadow-xl shadow-blue-500/30 transition-all hover:scale-105 active:scale-95"
+        onClick={() => {
+          setIsDismissed(false);
+          setIsOpen(true);
+        }}
+        aria-label="Restore Dr. Atlas AI Tutor"
+        title="Open Dr. Atlas AI Tutor"
+        className="fixed bottom-4 right-3 z-40 flex items-center gap-1.5 rounded-full border border-blue-400/40 bg-blue-600/90 px-3 py-1.5 text-[11px] font-bold text-white shadow-lg backdrop-blur-sm transition-all hover:scale-105 active:scale-95"
       >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20">
-          <Stethoscope className="h-4 w-4" />
-        </span>
-        <span className="font-sans font-bold">Ask Dr. Atlas AI</span>
-        <span className="rounded-full bg-cyan-400 px-1.5 py-0.5 text-[9px] font-black uppercase text-slate-950">
-          Tutor
-        </span>
+        <Sparkles className="h-3 w-3 text-cyan-300" />
+        <span>AI Tutor</span>
       </button>
     );
   }
 
+  // Render floating button if closed and not embedded
+  if (!isOpen && !embedded) {
+    return (
+      <div className="fixed bottom-4 right-4 z-40 flex items-center rounded-full shadow-lg shadow-blue-500/25 sm:bottom-6 sm:right-6 animate-in fade-in duration-200">
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          aria-label="Open Dr. Atlas AI Tutor"
+          className="flex items-center gap-2 rounded-l-full bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 py-2.5 pl-3.5 pr-2.5 text-xs font-bold text-white transition-all hover:brightness-105 active:scale-95"
+        >
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
+            <Stethoscope className="h-3.5 w-3.5" />
+          </span>
+          <span>Ask AI Tutor</span>
+          <span className="rounded-full bg-cyan-400 px-1.5 py-0.2 text-[9px] font-black uppercase text-slate-950">
+            301
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsDismissed(true);
+          }}
+          title="Dismiss / hide to view features behind"
+          aria-label="Hide AI Tutor button"
+          className="flex h-[38px] w-7 items-center justify-center rounded-r-full bg-indigo-700 text-white/80 hover:bg-indigo-800 hover:text-white transition"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={
-        embedded
-          ? 'w-full'
-          : `fixed bottom-4 right-4 z-50 w-[94vw] max-w-md sm:bottom-6 sm:right-6 transition-all duration-300 ${
-              isMinimized ? 'h-14' : 'h-[580px] max-h-[85vh]'
-            }`
-      }
-    >
+    <>
+      {!embedded && isOpen && !isMinimized && (
+        <div
+          onClick={() => setIsOpen(false)}
+          className="fixed inset-0 z-40 bg-slate-950/20 backdrop-blur-[1px] sm:hidden"
+          aria-hidden="true"
+        />
+      )}
       <div
-        className={`${cardClass} flex h-full flex-col overflow-hidden border border-indigo-200 bg-white shadow-2xl dark:border-indigo-900/60 dark:bg-slate-900`}
+        className={
+          embedded
+            ? 'w-full'
+            : `fixed bottom-4 right-4 z-50 w-[94vw] max-w-md sm:bottom-6 sm:right-6 transition-all duration-300 ${
+                isMinimized ? 'h-14' : 'h-[580px] max-h-[85vh]'
+              }`
+        }
       >
+        <div
+          className={`${cardClass} flex h-full flex-col overflow-hidden border border-indigo-200 bg-white shadow-2xl dark:border-indigo-900/60 dark:bg-slate-900`}
+        >
         {/* Header */}
         <div className="flex flex-shrink-0 items-center justify-between border-b border-slate-200 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 px-4 py-3 text-white dark:border-white/10">
           <div className="flex items-center gap-2.5">
@@ -321,7 +363,8 @@ export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolea
             </div>
           </>
         )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

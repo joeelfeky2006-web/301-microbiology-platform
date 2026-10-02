@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Sparkles, BookOpen, Layers, CheckCircle2, Circle, Check } from 'lucide-react';
+import { Sparkles, BookOpen, Layers, CheckCircle2, Circle, Check, Users2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { cardClass } from '@/lib/ui';
 import {
@@ -106,9 +106,23 @@ function Section({
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <span className={`font-mono-accent w-fit rounded px-2 py-0.5 text-xs font-semibold uppercase ring-1 ${t.badge}`}>
-                          {MATERIAL_TYPE_LABELS[mat.type] ?? mat.type}
-                        </span>
+                        {mat.type === 'record_g1' ? (
+                          <span className="font-mono-accent inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-bold uppercase ring-1 bg-emerald-100 text-emerald-800 ring-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-300 dark:ring-emerald-700/80">
+                            🎧 G1 Audio · Group 1
+                          </span>
+                        ) : mat.type === 'record_g2' ? (
+                          <span className="font-mono-accent inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-bold uppercase ring-1 bg-purple-100 text-purple-800 ring-purple-300 dark:bg-purple-950/80 dark:text-cyan-300 dark:ring-purple-700/80">
+                            🎧 G2 Audio · Group 2
+                          </span>
+                        ) : mat.type === 'lec_pdf' ? (
+                          <span className="font-mono-accent inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-bold uppercase ring-1 bg-blue-100 text-blue-800 ring-blue-300 dark:bg-blue-950/80 dark:text-blue-300 dark:ring-blue-700/80">
+                            📄 Lecture PDF
+                          </span>
+                        ) : (
+                          <span className={`font-mono-accent w-fit rounded px-2 py-0.5 text-xs font-semibold uppercase ring-1 ${t.badge}`}>
+                            {MATERIAL_TYPE_LABELS[mat.type] ?? mat.type}
+                          </span>
+                        )}
 
                         {/* Completion Toggle Button */}
                         <button
@@ -162,9 +176,26 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [showAIStudio, setShowAIStudio] = useState(false);
+  const [selectedCohort, setSelectedCohort] = useState<'ALL' | 'G1' | 'G2'>('ALL');
 
   const { isComplete, toggle, stats } = useModuleProgress(materials);
   const currentModStats = stats.byModule[moduleName];
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('student_group_preference');
+      if (stored === 'G1' || stored === 'G2') {
+        setSelectedCohort(stored);
+      }
+      const handleGroupChange = (e: any) => {
+        if (e.detail === 'G1' || e.detail === 'G2') {
+          setSelectedCohort(e.detail);
+        }
+      };
+      window.addEventListener('student_group_changed', handleGroupChange);
+      return () => window.removeEventListener('student_group_changed', handleGroupChange);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -252,11 +283,59 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
         ) : (
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
             <div className="space-y-8 lg:col-span-3">
+              {/* Student Cohort Selector Bar (G1 / G2) */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-blue-200/80 bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-blue-50/80 p-4 dark:border-blue-900/50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 shadow-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow-xs">
+                    <Users2 className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                      Student Cohort Tracks: G1 &amp; G2
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Filter audio lecture recordings for your section (Group 1 vs Group 2)
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-800">
+                  {(['ALL', 'G1', 'G2'] as const).map((grp) => (
+                    <button
+                      key={grp}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCohort(grp);
+                        if (typeof window !== 'undefined' && grp !== 'ALL') {
+                          localStorage.setItem('student_group_preference', grp);
+                        }
+                      }}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-black transition-all ${
+                        selectedCohort === grp
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'
+                      }`}
+                    >
+                      {grp === 'ALL' ? 'All (G1 + G2)' : `Group ${grp}`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <Section
                 heading="Theory & Lectures"
                 tone="blue"
-                items={materials.filter((m) => THEORY_TYPES.includes(m.type))}
-                emptyText={`No theory materials uploaded yet for ${MODULE_TITLES[moduleName]}.`}
+                items={materials.filter((m) => {
+                  if (!THEORY_TYPES.includes(m.type)) return false;
+                  if (selectedCohort === 'G1' && m.type === 'record_g2') return false;
+                  if (selectedCohort === 'G2' && m.type === 'record_g1') return false;
+                  return true;
+                })}
+                emptyText={
+                  selectedCohort !== 'ALL'
+                    ? `No theory materials uploaded for Group ${selectedCohort} yet in ${MODULE_TITLES[moduleName]}.`
+                    : `No theory materials uploaded yet for ${MODULE_TITLES[moduleName]}.`
+                }
                 isComplete={isComplete}
                 onToggleComplete={toggle}
               />

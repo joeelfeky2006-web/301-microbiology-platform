@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ai, GEMINI_MODEL } from '@/lib/gemini';
 import { authorizeAndSpend } from '@/lib/apiAuth';
+import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
 import type { ModuleName } from '@/types';
 
 interface CaseStudyPayload {
   module: ModuleName;
   topic?: string;
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  material_id?: string;
+  raw_feed?: string;
 }
 
 // In-memory cache for high-demand clinical cases (0 tokens, 0 latency)
@@ -120,12 +123,40 @@ export async function POST(req: NextRequest) {
     const topic = body.topic || '';
     const difficulty = body.difficulty || 'intermediate';
 
+    let lectureFeedContext = (body.raw_feed || '').trim();
+    let lectureFeedTitle = '';
+
+    if (body.material_id) {
+      const admin = createSupabaseAdmin();
+      if (admin) {
+        const { data: material } = await admin
+          .from('materials')
+          .select('title,ai_context,raw_quiz_text,custom_system_prompt')
+          .eq('id', body.material_id)
+          .maybeSingle();
+
+        if (material) {
+          lectureFeedTitle = material.title || '';
+          const parts = [
+            material.ai_context ? `Lecture Knowledge Context:\n${material.ai_context}` : '',
+            material.raw_quiz_text ? `Lecture Core Focus & Practice Material:\n${material.raw_quiz_text}` : '',
+            material.custom_system_prompt ? `Professor Instructions:\n${material.custom_system_prompt}` : '',
+          ].filter(Boolean);
+
+          if (parts.length > 0) {
+            lectureFeedContext = (lectureFeedContext ? lectureFeedContext + '\n\n' : '') + parts.join('\n\n');
+          }
+        }
+      }
+    }
+
     const access = await authorizeAndSpend(req, 3);
     if ('response' in access) return access.response;
 
-    // 1. Check in-memory edge cache (Saves Gemini token burn & rate limits)
+    // 1. Check in-memory edge cache only if no custom feed is provided
+    const hasCustomFeed = Boolean(lectureFeedContext.trim());
     const cacheKey = `${moduleName}_${(topic || 'core').toLowerCase().trim()}_${difficulty}`;
-    if (caseCache.has(cacheKey)) {
+    if (!hasCustomFeed && caseCache.has(cacheKey)) {
       return NextResponse.json({
         success: true,
         caseStudy: caseCache.get(cacheKey),
@@ -136,9 +167,16 @@ export async function POST(req: NextRequest) {
     if (ai) {
       const prompt = `Generate a realistic medical student microbiology case study vignette for MUST 301 Medical Microbiology, calibrated on Levinson (Review of Medical Microbiology & Immunology) and First Aid (USMLE Step 1).
 Module: ${moduleName} (CNS: Central Nervous System, URS: Urinary System, REP: Reproductive System).
-Specific Topic / Pathogen requested: ${topic || 'High-yield common pathology for this module'}.
+Specific Topic / Pathogen requested: ${topic || lectureFeedTitle || 'High-yield common pathology for this module'}.
 Difficulty level: ${difficulty}.
+${
+  hasCustomFeed
+    ? `\n--- RAW LECTURE FEED & KNOWLEDGE CONTEXT (${lectureFeedTitle ? `Lecture: ${lectureFeedTitle}` : 'Course Feed'}) ---
+${lectureFeedContext.slice(0, 35_000)}
 
+CRITICAL INSTRUCTION: You MUST ground this case study directly in the specific clinical facts, pathogens, diagnostic criteria, virulence factors, and professor emphases provided in the above raw lecture feed.\n`
+    : ''
+}
 Return ONLY valid JSON matching this schema:
 {
   "title": "Descriptive title of case",
