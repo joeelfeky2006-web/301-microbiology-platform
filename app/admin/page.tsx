@@ -94,6 +94,9 @@ export default function AdminDashboardPage() {
   const [type, setType] = useState<MaterialCategory>('lec_pdf');
   const [format, setFormat] = useState<MaterialFormat>('external_link');
   const [externalUrl, setExternalUrl] = useState('');
+  const [aiContext, setAiContext] = useState('');
+  const [rawQuizText, setRawQuizText] = useState('');
+  const [customSystemPrompt, setCustomSystemPrompt] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [publishStatus, setPublishStatus] = useState<Status>({ loading: false, message: '', type: '' });
@@ -187,6 +190,9 @@ export default function AdminDashboardPage() {
         source_type: source,
         file_url: finalFileUrl,
         author_email: currentUserEmail,
+        ai_context: aiContext.trim() || null,
+        raw_quiz_text: rawQuizText.trim() || null,
+        custom_system_prompt: customSystemPrompt.trim() || null,
       };
 
       const { error: dbError } = await supabase.from('materials').insert([newRecord]);
@@ -199,6 +205,9 @@ export default function AdminDashboardPage() {
       });
       setTitle('');
       setExternalUrl('');
+      setAiContext('');
+      setRawQuizText('');
+      setCustomSystemPrompt('');
       setFile(null);
       setFileInputKey((k) => k + 1);
       loadMaterials();
@@ -227,6 +236,9 @@ export default function AdminDashboardPage() {
           format: editingMaterial.format,
           source_type: source,
           file_url: editingMaterial.file_url.trim(),
+          ai_context: editingMaterial.ai_context?.trim() || null,
+          raw_quiz_text: editingMaterial.raw_quiz_text?.trim() || null,
+          custom_system_prompt: editingMaterial.custom_system_prompt?.trim() || null,
         })
         .eq('id', editingMaterial.id);
 
@@ -733,6 +745,23 @@ export default function AdminDashboardPage() {
                 </div>
               )}
 
+              <div className="space-y-4 rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4 dark:border-indigo-900/50 dark:bg-indigo-950/20">
+                <div>
+                  <label className={labelClass} title="Paste raw lecture notes, summaries, or reference text here. Gemini uses this as its primary knowledge base.">Knowledge Resource (AI Context)</label>
+                  <textarea rows={6} value={aiContext} onChange={(e) => setAiContext(e.target.value)} className={inputClass} placeholder="Paste lecture notes, references, and high-yield concepts..." />
+                  <p className="mt-1 text-[11px] text-slate-500">Paste raw lecture notes, summaries, or reference text here. Gemini uses this as its primary knowledge base.</p>
+                </div>
+                <div>
+                  <label className={labelClass} title="Paste raw text questions, choice options, and explanation keys here.">Raw Quiz Bank &amp; Explanations</label>
+                  <textarea rows={6} value={rawQuizText} onChange={(e) => setRawQuizText(e.target.value)} className={inputClass} placeholder="Paste questions, A-D options, answer keys, and explanations..." />
+                  <p className="mt-1 text-[11px] text-slate-500">Paste raw text questions, choice options, and explanation keys here.</p>
+                </div>
+                <div>
+                  <label className={labelClass}>Custom AI System Prompt (Optional)</label>
+                  <textarea rows={3} value={customSystemPrompt} onChange={(e) => setCustomSystemPrompt(e.target.value)} className={inputClass} placeholder="Optional lecture-specific instructions for the AI..." />
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={publishStatus.loading}
@@ -1106,6 +1135,21 @@ export default function AdminDashboardPage() {
                     }
                     className={inputClass}
                   />
+                </div>
+
+                <div>
+                  <label className={labelClass} title="Paste raw lecture notes, summaries, or reference text here. Gemini uses this as its primary knowledge base.">Knowledge Resource (AI Context)</label>
+                  <textarea rows={5} value={editingMaterial.ai_context ?? ''} onChange={(e) => setEditingMaterial({ ...editingMaterial, ai_context: e.target.value })} className={inputClass} />
+                  <p className="mt-1 text-[11px] text-slate-500">Paste raw lecture notes, summaries, or reference text here. Gemini uses this as its primary knowledge base.</p>
+                </div>
+                <div>
+                  <label className={labelClass} title="Paste raw text questions, choice options, and explanation keys here.">Raw Quiz Bank &amp; Explanations</label>
+                  <textarea rows={5} value={editingMaterial.raw_quiz_text ?? ''} onChange={(e) => setEditingMaterial({ ...editingMaterial, raw_quiz_text: e.target.value })} className={inputClass} />
+                  <p className="mt-1 text-[11px] text-slate-500">Paste raw text questions, choice options, and explanation keys here.</p>
+                </div>
+                <div>
+                  <label className={labelClass}>Custom AI System Prompt (Optional)</label>
+                  <textarea rows={3} value={editingMaterial.custom_system_prompt ?? ''} onChange={(e) => setEditingMaterial({ ...editingMaterial, custom_system_prompt: e.target.value })} className={inputClass} />
                 </div>
 
                 <div className="flex justify-end gap-2 border-t border-slate-200 pt-4 dark:border-white/10">
