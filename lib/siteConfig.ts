@@ -3,32 +3,32 @@ import type { SiteContent } from '@/types';
 /** Public, editable copy defaults. Keep credentials and security policy out of this object. */
 export const DEFAULT_SITE_CONTENT: SiteContent = {
   brand: {
-    name: 'Micro Atlas', shortName: 'Micro Atlas', tagline: 'Your 301 Microbiology study companion',
-    description: 'Microbiology learning resources for Micro 301 students.', logo: '/logo.svg',
+    name: 'MedAtlas Egypt', shortName: 'MedAtlas Egypt', tagline: 'AI Clinical Lab',
+    description: 'MedAtlas Egypt: Next-Gen AI Training for Medical Students. Micro 301 — Culturing Curiosity, with interactive case studies, practical records, and exam-focused learning.', logo: '/logo.svg',
     affiliation: 'Independent student-built study resource. Not an official university publication.',
-    contactEmail: 'hello@example.com', teamName: 'Micro Atlas Team', foundedYear: '2026', social: [],
+    contactEmail: 'hello@example.com', teamName: 'MedAtlas Egypt Team', foundedYear: '2026', social: [],
   },
   navigation: { home: 'Home', modules: 'Modules', cns: 'CNS', urs: 'Urinary System', rep: 'Reproductive System', about: 'About', contact: 'Contact', privacy: 'Privacy', terms: 'Terms', copyright: 'Copyright & Content' },
   navigationOrder: ['home', 'modules', 'about', 'contact'],
   footer: { explore: 'Explore', company: 'Company', legal: 'Legal', copyright: '© {year} {owner}. All rights reserved.', disclaimer: 'For educational purposes only. This platform does not provide medical advice.' },
   home: {
-    headline: 'Your 301 Microbiology study companion',
-    description: 'A time-efficient study platform for CNS, urinary, and reproductive microbiology, with learning materials and AI study tools.',
-    tagline: 'Independent student-built study resource', ctaPrimary: 'Sign in to Portal', ctaSecondary: 'Create Account',
-    features: ['Time-efficient high-yield notes', 'Bedside AI case vignettes', 'Structured step-by-step practice'],
+    headline: 'MedAtlas Egypt: Next-Gen AI Training for Medical Students.',
+    description: 'A time-efficient, AI-driven platform built specifically to help medical students master complex infectious diseases and excel in their exams.',
+    tagline: 'MedAtlas Egypt Academic Network', ctaPrimary: 'Sign in to Portal', ctaSecondary: 'Create Account',
+    features: ['Time-Efficient High-Yield Notes', 'Bedside AI Case Vignettes', 'Practice with structured, step-by-step feedback'],
   },
   pages: {
-    about: { title: 'About Micro Atlas', description: 'Our mission and learning resources.', lastUpdated: '2026-10-03', visible: true, sections: [
-      { heading: 'Our mission', body: 'Micro Atlas helps Micro 301 students study central nervous system, urinary, and reproductive microbiology.', visible: true },
+    about: { title: 'About MedAtlas Egypt', description: 'Our mission and learning resources.', lastUpdated: '2026-10-03', visible: true, sections: [
+      { heading: 'Our mission', body: 'MedAtlas Egypt helps Micro 301 students study central nervous system, urinary, and reproductive microbiology.', visible: true },
       { heading: 'Learning resources', body: 'The platform brings together lectures, recordings, mind maps, question-bank practice, and Dr. Atlas study tools. AI output can be inaccurate and should be checked against course materials.', visible: true },
       { heading: 'Content and team', body: 'Resources are prepared by students and contributors. Contact the team at the address listed on the Contact page to report a content issue.', visible: true },
       { heading: 'Affiliation', body: 'Independent student-built study resource. Not an official university publication.', visible: true },
     ] },
-    contact: { title: 'Contact', description: 'Contact the Micro Atlas team.', lastUpdated: '2026-10-03', visible: true, sections: [
+    contact: { title: 'Contact', description: 'Contact the MedAtlas Egypt team.', lastUpdated: '2026-10-03', visible: true, sections: [
       { heading: 'Email', body: 'For questions, content corrections, privacy requests, or copyright notices, contact {email}. We aim to reply within 2 working days.', visible: true },
       { heading: 'Report a content error', body: 'Include the page or resource URL, the specific issue, and a reliable correction source.', visible: true },
     ] },
-    privacy: { title: 'Privacy', description: 'How Micro Atlas handles account and platform data.', lastUpdated: '2026-10-03', visible: true, sections: [
+    privacy: { title: 'Privacy', description: 'How MedAtlas Egypt handles account and platform data.', lastUpdated: '2026-10-03', visible: true, sections: [
       { heading: 'Information in your account', body: 'Supabase Auth manages sign-in. The application uses account email and user metadata such as name and, when provided, University ID. The app does not read your password.', visible: true },
       { heading: 'Credits and activity', body: 'The platform stores AI credit balances in its user credits records. Sponsor analytics records impressions, clicks, and coupon copies and may include the signed-in user ID when available.', visible: true },
       { heading: 'AI features', body: 'Relevant lecture source text and the text you submit to AI study tools may be sent to Google Gemini to generate a response. Do not submit personal, confidential, or patient-identifying information. Check AI output against course materials.', visible: true },
@@ -38,7 +38,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
       { heading: 'Access controls', body: 'The application uses authenticated sessions and database row-level policies for restricted data, alongside browser security response headers. No security control eliminates all risk; keep account credentials private and report suspected unauthorized access to {email}.', visible: true },
       { heading: 'Age and legal review', body: 'Minimum-age wording: [TODO: obtain qualified legal review and set the appropriate age requirement]. Draft. Have a qualified lawyer review before launch (Egypt Personal Data Protection Law No. 151 of 2020).', visible: true },
     ] },
-    terms: { title: 'Terms of Use', description: 'Terms for using Micro Atlas.', lastUpdated: '2026-10-03', visible: true, sections: [
+    terms: { title: 'Terms of Use', description: 'Terms for using MedAtlas Egypt.', lastUpdated: '2026-10-03', visible: true, sections: [
       { heading: 'Acceptable use and account responsibility', body: 'Use the platform lawfully for personal study. Keep your account credentials secure and do not disrupt the service, bypass access controls, or misuse other users’ information.', visible: true },
       { heading: 'Educational use only', body: 'Content and AI features are for education, not medical advice, diagnosis, or treatment. AI responses may be incomplete or inaccurate; verify important information with authoritative course resources.', visible: true },
       { heading: 'Content and personal study', body: 'Respect the rights of instructors and third-party authors. Platform materials are provided for personal study; do not redistribute materials without permission.', visible: true },
@@ -57,7 +57,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     URS: { label: 'Urinary System', summary: 'Urinary tract infections, pyelonephritis, urine culture, and nephropathogens.' },
     REP: { label: 'Reproductive System', summary: 'Sexually transmitted infections, genital ulcers, and reproductive microbiology.' },
   },
-  auth: { signInTitle: 'Welcome back', signInHelp: 'Sign in to continue your Micro 301 studies.', signUpTitle: 'Create your student account', signUpHelp: 'Use your email to access Micro Atlas learning resources.' },
+  auth: { signInTitle: 'Welcome back', signInHelp: 'Sign in to continue your MedAtlas Egypt studies.', signUpTitle: 'Create your student account', signUpHelp: 'Use your email to access MedAtlas Egypt learning resources.' },
   campaigns: { title: 'Student support', description: 'Partner offers help support learning resources.', cta: 'Learn more', url: '', discountCode: '', disclosure: 'Sponsored content', active: false },
 };
 
