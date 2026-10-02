@@ -32,7 +32,7 @@ export async function authorizeAndSpend(request: NextRequest, action: AIAction):
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
   if (!isAIAction(action)) return { response: aiError('glitch', 400) };
-  const { data, error } = await client.rpc('deduct_user_credit', { p_user_id: auth.userId, p_cost: ACTION_COSTS[action] });
+  const { data, error } = await client.rpc('deduct_user_credit', { p_user_id: auth.userId, p_cost: ACTION_COSTS[action], p_action: action });
   if (error) {
     console.error(JSON.stringify({ action: 'credit', material_id: null, kind: 'glitch', latency_ms: 0 }));
     return { response: aiError('glitch', 503) };
@@ -51,6 +51,10 @@ export async function refundCredit(request: NextRequest, action: AIAction): Prom
     auth: { persistSession: false, autoRefreshToken: false },
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
-  const { error } = await client.rpc('refund_user_credit', { p_cost: ACTION_COSTS[action] });
-  return !error;
+  const { data, error } = await client.rpc('refund_user_credit', { p_cost: ACTION_COSTS[action], p_action: action });
+  if (error || data !== true) {
+    console.error(JSON.stringify({ action, kind: 'refund_failed', message: error?.message || 'Refund RPC returned false' }));
+    return false;
+  }
+  return true;
 }
