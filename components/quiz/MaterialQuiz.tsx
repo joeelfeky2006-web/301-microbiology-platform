@@ -57,10 +57,7 @@ export default function MaterialQuiz({ material }: { material: Material }) {
       const response = await fetch('/api/gemini/quiz-gen', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          module: material.module,
-          raw_quiz_text: material.raw_quiz_text || '',
-          ai_context: material.ai_context || '',
-          custom_system_prompt: material.custom_system_prompt || '',
+          material_id: material.id,
         }),
       });
       const data = await response.json();
@@ -79,9 +76,8 @@ export default function MaterialQuiz({ material }: { material: Material }) {
       const response = await fetch('/api/gemini/quiz-eval', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          module: material.module, topic: material.title,
+          material_id: material.id, module: material.module, topic: material.title,
           question: question.question, correctAnswer: question.correctAnswer, selectedAnswer: selected,
-          ai_context: material.ai_context || '', custom_system_prompt: material.custom_system_prompt || '',
         }),
       });
       const data = await response.json();
