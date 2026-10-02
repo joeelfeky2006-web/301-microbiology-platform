@@ -105,7 +105,31 @@ export interface PlatformSettings {
   maintenance_mode: boolean;
   whatsapp_number: string;
   registration_open: boolean;
+  support_content: SupportContent;
   updated_at?: string;
+}
+
+export interface SupportPaymentMethod {
+  id: string;
+  title: string;
+  value: string;
+  display: string;
+  action: 'copy' | 'link';
+  link_url: string;
+}
+
+export interface SupportContent {
+  title: string;
+  subtitle: string;
+  description: string;
+  benefit_one: string;
+  benefit_two: string;
+  payment_heading: string;
+  methods: SupportPaymentMethod[];
+  copy_label: string;
+  copied_label: string;
+  link_label: string;
+  footer: string;
 }
 
 export interface AdCampaign {

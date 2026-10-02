@@ -307,6 +307,7 @@ export default function AdminDashboardPage() {
       maintenance_mode: settings.maintenance_mode,
       whatsapp_number: settings.whatsapp_number,
       registration_open: settings.registration_open,
+      support_content: settings.support_content,
       updated_at: new Date().toISOString(),
     }).eq('id', 1);
     if (error) { alert('Could not save platform settings. Please check your permissions.'); return; }
@@ -315,6 +316,10 @@ export default function AdminDashboardPage() {
     await refreshSettings();
     setSettingsSaved(true);
     setTimeout(() => setSettingsSaved(false), 2500);
+  };
+
+  const updateSupportContent = (key: keyof PlatformSettings['support_content'], value: string) => {
+    setSettings((current) => ({ ...current, support_content: { ...current.support_content, [key]: value } }));
   };
 
   // Filtered materials
@@ -1007,6 +1012,44 @@ export default function AdminDashboardPage() {
                       Display announcement banner on top of portal
                     </label>
                   </div>
+
+                  <section className="space-y-4 rounded-xl border border-slate-200 p-4 dark:border-white/10">
+                    <div>
+                      <h3 className="font-bold text-slate-900 dark:text-white">Support &amp; payment modal</h3>
+                      <p className="mt-1 text-xs text-slate-500">Edit its text and add, remove, or link payment options.</p>
+                    </div>
+                    {([
+                      ['title', 'Modal title'], ['subtitle', 'Subtitle'], ['description', 'Description'],
+                      ['benefit_one', 'First benefit'], ['benefit_two', 'Second benefit'], ['payment_heading', 'Payment section heading'],
+                      ['copy_label', 'Copy button text'], ['copied_label', 'Copied confirmation text'], ['link_label', 'Link button text'], ['footer', 'Footer text'],
+                    ] as const).map(([key, label]) => (
+                      <label key={key} className="block">
+                        <span className={labelClass}>{label}</span>
+                        {key === 'description' || key === 'footer' ? (
+                          <textarea rows={key === 'description' ? 3 : 2} value={settings.support_content[key]} onChange={(e) => updateSupportContent(key, e.target.value)} className={inputClass} />
+                        ) : (
+                          <input value={settings.support_content[key]} onChange={(e) => updateSupportContent(key, e.target.value)} className={inputClass} />
+                        )}
+                      </label>
+                    ))}
+                    <div className="space-y-3 border-t border-slate-200 pt-4 dark:border-white/10">
+                      <div className="flex items-center justify-between gap-3">
+                        <h4 className="text-sm font-bold">Payment methods and links</h4>
+                        <button type="button" onClick={() => setSettings((current) => ({ ...current, support_content: { ...current.support_content, methods: [...current.support_content.methods, { id: crypto.randomUUID(), title: 'New payment method', value: '', display: '', action: 'copy', link_url: '' }] } }))} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white">Add method</button>
+                      </div>
+                      {settings.support_content.methods.map((method, index) => (
+                        <div key={method.id} className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
+                          <div className="flex items-center justify-between"><b className="text-xs">Method {index + 1}</b><button type="button" onClick={() => setSettings((current) => ({ ...current, support_content: { ...current.support_content, methods: current.support_content.methods.filter((item) => item.id !== method.id) } }))} className="text-xs font-bold text-rose-600">Remove</button></div>
+                          <input aria-label="Payment method title" placeholder="Title" value={method.title} onChange={(e) => setSettings((current) => ({ ...current, support_content: { ...current.support_content, methods: current.support_content.methods.map((item) => item.id === method.id ? { ...item, title: e.target.value } : item) } }))} className={inputClass} />
+                          <input aria-label="Payment details" placeholder="Displayed details" value={method.display} onChange={(e) => setSettings((current) => ({ ...current, support_content: { ...current.support_content, methods: current.support_content.methods.map((item) => item.id === method.id ? { ...item, display: e.target.value } : item) } }))} className={inputClass} />
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <select aria-label="Payment action" value={method.action} onChange={(e) => setSettings((current) => ({ ...current, support_content: { ...current.support_content, methods: current.support_content.methods.map((item) => item.id === method.id ? { ...item, action: e.target.value as 'copy' | 'link' } : item) } }))} className={inputClass}><option value="copy">Copy details</option><option value="link">Open link</option></select>
+                            <input aria-label={method.action === 'link' ? 'Payment link URL' : 'Text copied'} placeholder={method.action === 'link' ? 'https:// payment link' : 'Text copied when clicked'} value={method.action === 'link' ? method.link_url : method.value} onChange={(e) => setSettings((current) => ({ ...current, support_content: { ...current.support_content, methods: current.support_content.methods.map((item) => item.id === method.id ? method.action === 'link' ? { ...item, link_url: e.target.value } : { ...item, value: e.target.value } : item) } }))} className={inputClass} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
 
                   <div>
                     <label className={labelClass}>Official WhatsApp Support Number (Digits with Country Code)</label>

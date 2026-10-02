@@ -18,8 +18,11 @@ create table if not exists public.platform_settings (
   maintenance_mode boolean not null default false,
   whatsapp_number text not null default '',
   registration_open boolean not null default true,
+  support_content jsonb not null default '{"title":"Support MedAtlas Egypt","subtitle":"Micro 301 Student Hosting & AI Token Fund","description":"MedAtlas Egypt is an independent student academic initiative built specifically for 3rd-year MUST medical students. Your voluntary contribution helps keep AI tools and course resources available.","benefit_one":"AI Token Compute","benefit_two":"High-Speed DB & CDN","payment_heading":"Student Payment Channels","methods":[{"id":"instapay","title":"InstaPay (Egypt)","value":"medatlas.egypt@instapay","display":"medatlas.egypt@instapay","action":"copy","link_url":""},{"id":"vodafone","title":"Vodafone Cash","value":"01099887766","display":"010 9988 7766","action":"copy","link_url":""},{"id":"fawry","title":"Fawry Service / Smart Wallet","value":"9900223311","display":"Ref: 9900 2233 11","action":"copy","link_url":""}],"copy_label":"Copy","copied_label":"Copied","footer":"Thank you for supporting your colleagues at MUST Medical School!"}'::jsonb,
   updated_at timestamptz not null default now()
 );
+
+alter table public.platform_settings add column if not exists support_content jsonb not null default '{}'::jsonb;
 
 insert into public.platform_settings (id) values (1) on conflict (id) do nothing;
 alter table public.platform_settings enable row level security;

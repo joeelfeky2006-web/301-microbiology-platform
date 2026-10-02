@@ -185,7 +185,7 @@ export default function AILearningStudio({
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <div className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-800 dark:bg-indigo-950/50 dark:text-cyan-300 ring-1 ring-indigo-200 dark:ring-indigo-900/60">
               <BookOpen className="h-3 w-3 text-indigo-600 dark:text-cyan-400" />
-              <span>Calibrated on Levinson Medical Microbiology, First Aid (USMLE Step 1), &amp; MUST 301 Standards</span>
+              <span>Focused microbiology learning with structured AI feedback</span>
             </div>
             <AiDisclaimer className="rounded-lg bg-amber-50 px-2.5 py-1 font-semibold text-amber-800 ring-1 ring-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-900/60" />
           </div>

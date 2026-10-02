@@ -4,6 +4,24 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { PlatformSettings } from '@/types';
 
+export const DEFAULT_SUPPORT_CONTENT: PlatformSettings['support_content'] = {
+  title: 'Support MedAtlas Egypt',
+  subtitle: 'Micro 301 Student Hosting & AI Token Fund',
+  description: 'MedAtlas Egypt is an independent student academic initiative built specifically for 3rd-year MUST medical students. Your voluntary contribution helps keep AI tools and course resources available.',
+  benefit_one: 'AI Token Compute',
+  benefit_two: 'High-Speed DB & CDN',
+  payment_heading: 'Student Payment Channels',
+  methods: [
+    { id: 'instapay', title: 'InstaPay (Egypt)', value: 'medatlas.egypt@instapay', display: 'medatlas.egypt@instapay', action: 'copy', link_url: '' },
+    { id: 'vodafone', title: 'Vodafone Cash', value: '01099887766', display: '010 9988 7766', action: 'copy', link_url: '' },
+    { id: 'fawry', title: 'Fawry Service / Smart Wallet', value: '9900223311', display: 'Ref: 9900 2233 11', action: 'copy', link_url: '' },
+  ],
+  copy_label: 'Copy',
+  copied_label: 'Copied',
+  link_label: 'Open',
+  footer: 'Thank you for supporting your colleagues at MUST Medical School!',
+};
+
 export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   id: 1,
   announcement_text: '',
@@ -11,6 +29,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   maintenance_mode: false,
   whatsapp_number: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '201000000000',
   registration_open: true,
+  support_content: DEFAULT_SUPPORT_CONTENT,
 };
 
 let cachedSettings: PlatformSettings | null = null;
@@ -29,6 +48,9 @@ async function loadSettings(force = false): Promise<PlatformSettings> {
         ...DEFAULT_PLATFORM_SETTINGS,
         ...row,
         id: 1,
+        support_content: row.support_content && typeof row.support_content === 'object'
+          ? { ...DEFAULT_SUPPORT_CONTENT, ...row.support_content, methods: Array.isArray(row.support_content.methods) ? row.support_content.methods : DEFAULT_SUPPORT_CONTENT.methods }
+          : DEFAULT_SUPPORT_CONTENT,
         whatsapp_number: String(row.whatsapp_number || DEFAULT_PLATFORM_SETTINGS.whatsapp_number),
       } : DEFAULT_PLATFORM_SETTINGS;
       cachedSettings = resolved;

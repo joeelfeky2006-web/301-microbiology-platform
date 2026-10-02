@@ -37,11 +37,11 @@ export const REVIVE_CAMPAIGN: AdCampaign = {
 export const ACADEMIC_PREP_CAMPAIGN: AdCampaign = {
   id: 'academic-clinical-prep-301',
   brand: 'Academic & Clinical Prep',
-  title: 'Clinical Vignette Case Studies & Medical References',
+  title: 'Clinical Vignette Case Studies',
   badge: 'High-Yield Prep',
-  tagline: 'Levinson Microbiology, First Aid, and Board-Style Simulations',
+  tagline: 'High-yield topics and board-style simulations',
   description:
-    'Bridge preclinical microbiology with clinical bedside diagnostic reasoning. Includes high-yield correlations from Levinson Medical Microbiology, First Aid (USMLE), and MUST Standards, plus automated AI evaluation.',
+    'Bridge preclinical microbiology with clinical bedside diagnostic reasoning through focused case practice and automated AI evaluation.',
   ctaText: 'Start Practicing',
   ctaUrl: '#ai-studio',
   active: true,
@@ -347,15 +347,15 @@ export default function AdSlot({
             </span>
             <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
               <BookOpen className="h-3 w-3" />
-              Levinson Medical Microbiology &amp; MUST Aligned
+              Focused Microbiology Practice
             </span>
           </div>
 
           <h3 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white md:text-xl">
-            Clinical Vignette Case Studies &amp; Medical Reference Prep
+              Clinical Vignette Case Studies &amp; Diagnostic Practice
           </h3>
           <p className="max-w-2xl text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-            Correlate infectious disease concepts with Levinson Medical Microbiology, First Aid (USMLE), and MUST Standards. Practice multi-step clinical diagnostic vignettes with instant AI-driven answer critique.
+            Practice multi-step clinical diagnostic vignettes with instant AI-driven answer critique.
           </p>
 
           <div className="flex flex-wrap items-center gap-2 pt-1">
