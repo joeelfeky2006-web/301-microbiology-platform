@@ -52,12 +52,13 @@ export async function POST(request: NextRequest) {
     }
     if (!answerKey) return NextResponse.json({ error: 'A verified answer key is required.' }, { status: 400 });
 
-    const access = await authorizeAndSpend(request, 1);
-    if ('response' in access) return access.response;
-
     const studentAnswer = typeof body?.selectedAnswer === 'string'
       ? body.selectedAnswer.slice(0, 2000)
       : typeof body?.studentAnswer === 'string' ? body.studentAnswer.slice(0, 2000) : '';
+    if (!studentAnswer.trim()) return NextResponse.json({ error: 'A student answer is required.' }, { status: 400 });
+
+    const access = await authorizeAndSpend(request, 1);
+    if ('response' in access) return access.response;
     const correct = studentAnswer.trim().toUpperCase() === answerKey.trim().toUpperCase();
     const aiContext = storedContext.slice(0, 40_000);
     const diagnosticFocus = DIAGNOSTIC_FOCUS[module];
