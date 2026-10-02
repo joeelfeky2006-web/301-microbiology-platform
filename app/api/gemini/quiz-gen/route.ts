@@ -66,6 +66,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const identity = await authenticate(request);
+    if ('response' in identity) return identity.response;
     const materialId = typeof body?.material_id === 'string' ? body.material_id : '';
     if (!materialId) return NextResponse.json({ error: 'A lecture material id is required.' }, { status: 400 });
 
