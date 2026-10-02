@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ai } from '@/lib/gemini';
 import type { ModuleName } from '@/types';
+import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const runtime = 'nodejs';
 
@@ -20,12 +21,28 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     let module = body?.module as ModuleName;
-    if (body?.questionId && SERVER_ANSWER_KEYS[body.questionId]) module = SERVER_ANSWER_KEYS[body.questionId].module;
+    let storedContext = '';
+    let storedPrompt = '';
+    let storedTitle = '';
+    if (typeof body?.material_id === 'string') {
+      const admin = createSupabaseAdmin();
+      if (!admin) return NextResponse.json({ error: 'AI resource service is not configured.' }, { status: 503 });
+      const { data: material, error } = await admin.from('materials')
+        .select('module,title,ai_context,custom_system_prompt')
+        .eq('id', body.material_id).maybeSingle();
+      if (error || !material) return NextResponse.json({ error: 'Lecture material was not found.' }, { status: 404 });
+      module = material.module as ModuleName;
+      storedContext = material.ai_context || '';
+      storedPrompt = material.custom_system_prompt || '';
+      storedTitle = material.title || '';
+    } else if (body?.questionId && SERVER_ANSWER_KEYS[body.questionId]) {
+      module = SERVER_ANSWER_KEYS[body.questionId].module;
+    }
     if (!MODULES.includes(module)) return NextResponse.json({ error: 'A valid module code is required.' }, { status: 400 });
 
     let question = typeof body?.question === 'string' ? body.question.slice(0, 5000) : '';
     let answerKey = typeof body?.correctAnswer === 'string' ? body.correctAnswer.slice(0, 1000) : '';
-    let topic = typeof body?.topic === 'string' ? body.topic.slice(0, 200) : '';
+    let topic = typeof body?.topic === 'string' ? body.topic.slice(0, 200) : storedTitle;
     if (body?.questionId && SERVER_ANSWER_KEYS[body.questionId]) {
       const key = SERVER_ANSWER_KEYS[body.questionId];
       question = key.question; answerKey = key.correctAnswer; topic = key.topic;
@@ -36,7 +53,7 @@ export async function POST(request: NextRequest) {
       ? body.selectedAnswer.slice(0, 2000)
       : typeof body?.studentAnswer === 'string' ? body.studentAnswer.slice(0, 2000) : '';
     const correct = studentAnswer.trim().toUpperCase() === answerKey.trim().toUpperCase();
-    const aiContext = typeof body?.ai_context === 'string' ? body.ai_context.slice(0, 40_000) : '';
+    const aiContext = storedContext.slice(0, 40_000);
     const diagnosticFocus = DIAGNOSTIC_FOCUS[module];
     let feedback = correct ? 'Correct. Your answer matches the answer key.' : 'Not quite. Review the explanation and diagnostic clues below.';
 
@@ -51,7 +68,7 @@ export async function POST(request: NextRequest) {
             `Student answer: ${studentAnswer}`,
             `Answer key: ${answerKey}; correctness: ${correct}`,
             `Lecture context: ${aiContext}`,
-            `Custom prompt overlay: ${String(body?.custom_system_prompt || '').slice(0, 5000)}`,
+            `Custom prompt overlay: ${storedPrompt.slice(0, 5000)}`,
             'Return JSON: feedback string, strengths string array, weaknesses string array, studyRecommendations string array.',
           ].join('\n\n'),
           config: { responseMimeType: 'application/json' },
