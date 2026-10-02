@@ -130,11 +130,11 @@ export default function AdminDashboardPage() {
     try {
       const response = await fetch('/api/admin/materials', { headers: await authenticatedHeaders() });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || 'Could not load course materials.');
+      if (!response.ok) throw new Error(`${response.status}: ${payload.error || payload.message || 'Could not load course materials.'}`);
       setMaterials((payload.materials || []) as Material[]);
     } catch (err) {
       console.error('Error fetching materials:', err);
-      setMaterialsError('Course materials could not be loaded. Check your connection and staff access, then refresh.');
+      setMaterialsError(`Could not load course materials. ${err instanceof Error ? err.message : 'Check your connection and staff access, then refresh.'}`);
     } finally {
       setMaterialsLoading(false);
     }
