@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -152,6 +153,13 @@ export default function AdminDashboardPage() {
       }
     }
   }, [session, canAccessPortal, liveSettings, userIsSuperAdmin]);
+
+  useEffect(() => {
+    if (!editingMaterial) return;
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setEditingMaterial(null); };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [editingMaterial]);
 
   // Handle Material Upload
   const handlePublish = async (e: React.FormEvent) => {
@@ -1095,17 +1103,18 @@ export default function AdminDashboardPage() {
         )}
 
         {/* Edit Modal (if editing a material) */}
-        {editingMaterial && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-            <div className={`${cardClass} max-w-lg w-full p-6 shadow-2xl`}>
+        {editingMaterial && typeof document !== 'undefined' && createPortal(
+          <div onMouseDown={(event) => { if (event.target === event.currentTarget) setEditingMaterial(null); }} className="fixed inset-0 z-[110] flex items-start justify-center overflow-y-auto bg-slate-900/60 p-3 backdrop-blur-sm sm:items-center sm:p-4">
+            <div role="dialog" aria-modal="true" aria-labelledby="edit-material-title" className={`${cardClass} my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto overscroll-contain p-4 shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:p-6`}>
               <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-white/10">
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                <h3 id="edit-material-title" className="text-base font-bold text-slate-900 dark:text-white">
                   Edit Course Material
                 </h3>
                 <button
                   type="button"
                   onClick={() => setEditingMaterial(null)}
-                  className="text-slate-400 hover:text-slate-600"
+                  aria-label="Close edit material dialog"
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
                 >
                   ✕
                 </button>
@@ -1245,7 +1254,7 @@ export default function AdminDashboardPage() {
                 </div>
               </form>
             </div>
-          </div>
+          </div>, document.body,
         )}
       </div>
     </main>
