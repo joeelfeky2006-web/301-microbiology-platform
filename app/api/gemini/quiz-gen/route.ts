@@ -80,11 +80,11 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
     if (materialError || !material) return NextResponse.json({ error: 'Lecture material was not found.' }, { status: 404 });
 
-    const module = material.module as ModuleName;
+    const moduleName = material.module as ModuleName;
     const rawQuizText = material.raw_quiz_text || '';
     const aiContext = material.ai_context || '';
     const customPrompt = material.custom_system_prompt || '';
-    if (!MODULES.includes(module)) return NextResponse.json({ error: 'Invalid module code.' }, { status: 400 });
+    if (!MODULES.includes(moduleName)) return NextResponse.json({ error: 'Invalid module code.' }, { status: 400 });
     if (rawQuizText.length > MAX_SOURCE_CHARS || aiContext.length > MAX_SOURCE_CHARS || customPrompt.length > 10_000) {
       return NextResponse.json({ error: 'Quiz source exceeds the allowed size.' }, { status: 413 });
     }
@@ -99,10 +99,10 @@ export async function POST(request: NextRequest) {
     if ('response' in access) return access.response;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: [
         'Convert the supplied raw quiz bank into JSON only. Return an array of question objects with id, question, exactly four options {id: A|B|C|D, text}, correctAnswer (option ID), and explanation. Preserve the provided key; never invent a key when absent. Omit questions whose answer key cannot be determined.',
-        `Module: ${module}`,
+        `Module: ${moduleName}`,
         `Lecture knowledge context:\n${aiContext.slice(0, MAX_SOURCE_CHARS)}`,
         `Admin prompt overlay:\n${customPrompt.slice(0, 10_000)}`,
         `Raw quiz bank:\n${rawQuizText.slice(0, MAX_SOURCE_CHARS)}`,

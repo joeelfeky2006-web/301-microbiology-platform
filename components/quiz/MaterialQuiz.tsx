@@ -16,32 +16,41 @@ type Question = {
 type Report = { module: ModuleName; score: number; isCorrect: boolean; feedback: string; diagnosticFocus: string; strengths: string[]; weaknesses: string[]; studyRecommendations: string[] };
 
 function printReport(report: Report, question: Question) {
-  const win = window.open('', '_blank', 'width=800,height=700');
-  if (!win) return;
-  const doc = win.document;
-  doc.title = 'MedAtlas Diagnostic Feedback';
-  const style = doc.createElement('style');
-  style.textContent = 'body{font:16px Arial,sans-serif;max-width:760px;margin:40px auto;padding:0 24px;color:#172033}h1{color:#1d4ed8}li{margin:.5em 0}@media print{body{margin:0}}';
-  doc.head.append(style);
-  const main = doc.createElement('main');
-  const h1 = doc.createElement('h1'); h1.textContent = 'MedAtlas Egypt · Quiz Feedback'; main.append(h1);
-  const title = doc.createElement('h2'); title.textContent = report.module + ' diagnostic report'; main.append(title);
-  const q = doc.createElement('p'); q.textContent = question.question; main.append(q);
-  const score = doc.createElement('p'); score.textContent = `Result: ${report.isCorrect ? 'Correct' : 'Review needed'} · ${report.score}%`; main.append(score);
-  for (const [heading, value] of [['Feedback', report.feedback], ['Diagnostic focus', report.diagnosticFocus]] as const) {
-    const h = doc.createElement('h3'); h.textContent = heading; main.append(h);
-    const p = doc.createElement('p'); p.textContent = value; main.append(p);
+  try {
+    const win = typeof window !== 'undefined' ? window.open('', '_blank', 'width=800,height=700') : null;
+    if (win) {
+      const doc = win.document;
+      doc.title = 'MedAtlas Diagnostic Feedback';
+      const style = doc.createElement('style');
+      style.textContent = 'body{font:16px Arial,sans-serif;max-width:760px;margin:40px auto;padding:0 24px;color:#172033}h1{color:#1d4ed8}li{margin:.5em 0}@media print{body{margin:0}}';
+      doc.head.append(style);
+      const main = doc.createElement('main');
+      const h1 = doc.createElement('h1'); h1.textContent = 'MedAtlas Egypt · Quiz Feedback'; main.append(h1);
+      const title = doc.createElement('h2'); title.textContent = report.module + ' diagnostic report'; main.append(title);
+      const q = doc.createElement('p'); q.textContent = question.question; main.append(q);
+      const score = doc.createElement('p'); score.textContent = `Result: ${report.isCorrect ? 'Correct' : 'Review needed'} · ${report.score}%`; main.append(score);
+      for (const [heading, value] of [['Feedback', report.feedback], ['Diagnostic focus', report.diagnosticFocus]] as const) {
+        const h = doc.createElement('h3'); h.textContent = heading; main.append(h);
+        const p = doc.createElement('p'); p.textContent = value; main.append(p);
+      }
+      for (const [heading, values] of [['Strengths', report.strengths], ['Review areas', report.weaknesses], ['Study recommendations', report.studyRecommendations]] as const) {
+        if (!values.length) continue;
+        const h = doc.createElement('h3'); h.textContent = heading; main.append(h);
+        const ul = doc.createElement('ul');
+        values.forEach((value) => { const li = doc.createElement('li'); li.textContent = value; ul.append(li); });
+        main.append(ul);
+      }
+      doc.body.append(main);
+      win.focus();
+      win.setTimeout(() => { win.print(); win.close(); }, 200);
+      return;
+    }
+  } catch {
+    // fallback if window.open is blocked by iframe sandbox
   }
-  for (const [heading, values] of [['Strengths', report.strengths], ['Review areas', report.weaknesses], ['Study recommendations', report.studyRecommendations]] as const) {
-    if (!values.length) continue;
-    const h = doc.createElement('h3'); h.textContent = heading; main.append(h);
-    const ul = doc.createElement('ul');
-    values.forEach((value) => { const li = doc.createElement('li'); li.textContent = value; ul.append(li); });
-    main.append(ul);
+  if (typeof window !== 'undefined') {
+    window.print();
   }
-  doc.body.append(main);
-  win.focus();
-  win.setTimeout(() => { win.print(); win.close(); }, 200);
 }
 
 export default function MaterialQuiz({ material }: { material: Material }) {
@@ -55,15 +64,20 @@ export default function MaterialQuiz({ material }: { material: Material }) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/gemini/quiz-gen?material_id=' + encodeURIComponent(material.id), { headers: await authenticatedHeaders() })
-      .then((response) => response.json())
-      .then((data) => { if (!cancelled) setAvailable(Boolean(data.available)); })
-      .catch(() => {
+    const checkAvailability = async () => {
+      try {
+        const headers = await authenticatedHeaders();
+        const response = await fetch('/api/gemini/quiz-gen?material_id=' + encodeURIComponent(material.id), { headers });
+        const data = await response.json();
+        if (!cancelled) setAvailable(Boolean(data.available));
+      } catch {
         if (!cancelled) {
           setAvailable(true);
           setError('Could not check this lecture’s quiz bank. Try loading it again.');
         }
-      });
+      }
+    };
+    checkAvailability();
     return () => { cancelled = true; };
   }, [material.id]);
 
@@ -89,8 +103,9 @@ export default function MaterialQuiz({ material }: { material: Material }) {
     if (!question || !selected) return;
     setLoading(true); setError('');
     try {
+      const headers = await authenticatedHeaders();
       const response = await fetch('/api/gemini/quiz-eval', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers,
         body: JSON.stringify({
           material_id: material.id, module: material.module, topic: material.title,
           question: question.question, correctAnswer: question.correctAnswer, selectedAnswer: selected,
