@@ -185,7 +185,7 @@ create policy "materials_staff_select_policy" on public.materials
   using (public.is_editor_or_admin());
 
 create or replace view public.student_materials as
-select id, module, type, title, file_url, format, source_type, created_at, updated_at, author_email
+select id, module, type, title, file_url, format, source_type
 from public.materials;
 grant select on public.student_materials to authenticated;
 
