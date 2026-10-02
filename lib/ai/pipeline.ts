@@ -25,7 +25,7 @@ export async function loadMaterial(id: unknown) {
   if (!admin) return { response: aiError('glitch', 503) };
   const { data, error } = await admin.from('materials').select('id,module,title,ai_context,raw_quiz_text,custom_system_prompt').eq('id', id).maybeSingle();
   if (error || !data) return { response: aiError('glitch', 404) };
-  return { material: await loadLectureSource(admin, data as LoadedMaterial) };
+  return { material: await loadLectureSource(admin, data as unknown as import('./loadSource').SourceRow) };
 }
 
 export async function beginAction(request: NextRequest, action: AIAction) {

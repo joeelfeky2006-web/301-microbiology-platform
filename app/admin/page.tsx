@@ -238,7 +238,7 @@ export default function AdminDashboardPage() {
       const original = materials.find((m) => m.id === editingMaterial.id);
       const renamed = editingMaterial.title.trim() !== (original?.title ?? '');
       if (renamed) {
-        const { error: renameError } = await supabase.from('materials').update({ title: editingMaterial.title.trim() })
+        const { error: renameError } = await supabase.from('materials').update({ title: editingMaterial.title.trim(), module: editingMaterial.module })
           .eq('module', original?.module ?? editingMaterial.module).eq('title', original?.title ?? editingMaterial.title);
         if (renameError) throw renameError;
       }
@@ -308,6 +308,7 @@ export default function AdminDashboardPage() {
     }).eq('id', 1);
     if (error) { alert('Could not save platform settings. Please check your permissions.'); return; }
     invalidateSettingsCache();
+    window.dispatchEvent(new Event('platform_settings_updated'));
     await refreshSettings();
     setSettingsSaved(true);
     setTimeout(() => setSettingsSaved(false), 2500);

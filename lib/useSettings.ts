@@ -25,9 +25,15 @@ async function loadSettings(force = false): Promise<PlatformSettings> {
       const { data, error } = await supabase.from('platform_settings').select('*').eq('id', 1);
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
-      cachedSettings = row ? { ...DEFAULT_PLATFORM_SETTINGS, ...row, id: 1 } : DEFAULT_PLATFORM_SETTINGS;
+      const resolved: PlatformSettings = row ? {
+        ...DEFAULT_PLATFORM_SETTINGS,
+        ...row,
+        id: 1,
+        whatsapp_number: String(row.whatsapp_number || DEFAULT_PLATFORM_SETTINGS.whatsapp_number),
+      } : DEFAULT_PLATFORM_SETTINGS;
+      cachedSettings = resolved;
       cacheExpiresAt = Date.now() + 60_000;
-      return cachedSettings;
+      return resolved;
     } catch {
       return DEFAULT_PLATFORM_SETTINGS;
     } finally {
@@ -52,7 +58,9 @@ export function useSettings() {
   useEffect(() => {
     let active = true;
     loadSettings().then((value) => { if (active) { setSettings(value); setLoading(false); } });
-    return () => { active = false; };
+    const update = () => { loadSettings(true).then((value) => { if (active) setSettings(value); }); };
+    window.addEventListener('platform_settings_updated', update);
+    return () => { active = false; window.removeEventListener('platform_settings_updated', update); };
   }, []);
   return { settings, loading, refresh };
 }

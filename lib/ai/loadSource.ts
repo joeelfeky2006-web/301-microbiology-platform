@@ -1,7 +1,7 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-type SourceRow = { id: string; module: string; title: string | null; ai_context: string | null; raw_quiz_text: string | null; custom_system_prompt: string | null };
+export type SourceRow = { id: string; module: string; title?: string | null; ai_context?: string | null; raw_quiz_text?: string | null; custom_system_prompt?: string | null };
 
 /** Resolve empty lecture-level AI fields from another material row in the same lecture group. */
 export async function loadLectureSource(admin: SupabaseClient, requested: SourceRow): Promise<SourceRow> {

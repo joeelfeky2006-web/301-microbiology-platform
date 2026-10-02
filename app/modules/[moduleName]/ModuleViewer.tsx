@@ -222,6 +222,8 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
     };
   }, [moduleName]);
 
+  const categorizedTypes = new Set<MaterialCategory>([...THEORY_TYPES, ...PRACTICAL_TYPES, ...EXAM_TYPES]);
+
   return (
     <main className="p-4 sm:p-6 md:p-12">
       <div className="mx-auto max-w-5xl space-y-8">
@@ -354,6 +356,14 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
                 tone="purple"
                 items={materials.filter((m) => EXAM_TYPES.includes(m.type))}
                 emptyText={`No exam materials uploaded yet for ${MODULE_TITLES[moduleName]}.`}
+                isComplete={isComplete}
+                onToggleComplete={toggle}
+              />
+              <Section
+                heading="Other Resources"
+                tone="blue"
+                items={materials.filter((m) => !categorizedTypes.has(m.type))}
+                emptyText="No other resources are available for this module."
                 isComplete={isComplete}
                 onToggleComplete={toggle}
               />

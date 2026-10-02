@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/useSession';
-import { canAccessAdmin, getUserRole } from '@/lib/admin';
+import { useRole } from '@/lib/useRole';
 import type { GroupSection } from '@/types';
 import ThemeToggle from './ThemeToggle';
 import WhatsAppButton from './WhatsAppButton';
@@ -33,6 +33,7 @@ export default function Header() {
   const [supportModalOpen, setSupportModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userGroup, setUserGroup] = useState<GroupSection>('G1');
+  const { role: userRole } = useRole();
 
   useEffect(() => {
     if (session?.user?.user_metadata?.group_section) {
@@ -58,8 +59,7 @@ export default function Header() {
 
   const userEmail = session?.user?.email;
   const userName = session?.user?.user_metadata?.name || userEmail?.split('@')[0] || 'Student';
-  const userRole = getUserRole(userEmail);
-  const hasAdminAccess = canAccessAdmin(userEmail);
+  const hasAdminAccess = userRole === 'super_admin' || userRole === 'editor';
 
   return (
     <>
