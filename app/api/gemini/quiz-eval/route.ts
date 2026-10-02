@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ai } from '@/lib/gemini';
 import type { ModuleName } from '@/types';
 import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { authenticate, authorizeAndSpend } from '@/lib/apiAuth';
 
 export const runtime = 'nodejs';
 
@@ -48,6 +49,9 @@ export async function POST(request: NextRequest) {
       question = key.question; answerKey = key.correctAnswer; topic = key.topic;
     }
     if (!answerKey) return NextResponse.json({ error: 'A verified answer key is required.' }, { status: 400 });
+
+    const access = await authorizeAndSpend(request, 1);
+    if ('response' in access) return access.response;
 
     const studentAnswer = typeof body?.selectedAnswer === 'string'
       ? body.selectedAnswer.slice(0, 2000)
