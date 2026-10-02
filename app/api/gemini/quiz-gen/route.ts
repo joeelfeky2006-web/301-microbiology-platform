@@ -50,6 +50,16 @@ function validateQuestions(value: unknown): QuizQuestion[] {
   });
 }
 
+export async function GET(request: NextRequest) {
+  const materialId = new URL(request.url).searchParams.get('material_id');
+  if (!materialId) return NextResponse.json({ error: 'A lecture material id is required.' }, { status: 400 });
+  const admin = createSupabaseAdmin();
+  if (!admin) return NextResponse.json({ error: 'AI resource service is not configured.' }, { status: 503 });
+  const { data, error } = await admin.from('materials').select('raw_quiz_text').eq('id', materialId).maybeSingle();
+  if (error || !data) return NextResponse.json({ error: 'Lecture material was not found.' }, { status: 404 });
+  return NextResponse.json({ available: Boolean(data.raw_quiz_text?.trim()) }, { headers: { 'Cache-Control': 'no-store' } });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
