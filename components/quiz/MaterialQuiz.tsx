@@ -15,7 +15,7 @@ type Question = {
 type Report = { module: ModuleName; score: number; isCorrect: boolean; feedback: string; diagnosticFocus: string; strengths: string[]; weaknesses: string[]; studyRecommendations: string[] };
 
 function printReport(report: Report, question: Question) {
-  const win = window.open('', '_blank', 'noopener,noreferrer,width=800,height=700');
+  const win = window.open('', '_blank', 'width=800,height=700');
   if (!win) return;
   const doc = win.document;
   doc.title = 'MedAtlas Diagnostic Feedback';
