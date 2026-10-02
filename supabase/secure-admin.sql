@@ -253,6 +253,6 @@ begin
   raise notice 'MedAtlas Egypt RBAC successfully provisioned:';
   raise notice ' - Role table: public.user_roles created & protected';
   raise notice ' - Super Admin assigned: joeelfeky2006@gmail.com';
-  raise notice ' - Table RLS: public.materials (Select: All | Insert/Update: Editor+Admin | Delete: Super Admin)';
+  raise notice ' - Table RLS: staff manage base materials; authenticated students read safe student_materials view';
   raise notice ' - Storage RLS: materials bucket (Upload/Update: Editor+Admin | Delete: Super Admin)';
 end $$;
