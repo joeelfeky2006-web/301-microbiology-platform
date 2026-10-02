@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import AuthGate from '@/components/AuthGate';
 import { parseModuleName } from '@/types';
 import ModuleViewer from './ModuleViewer';
@@ -6,6 +6,7 @@ import ModuleViewer from './ModuleViewer';
 export default function ModulePage({ params }: { params: { moduleName: string } }) {
   const moduleName = parseModuleName(params.moduleName);
   if (!moduleName) notFound();
+  if (params.moduleName !== moduleName) redirect(`/modules/${moduleName}`);
 
   // Materials are fetched in the browser with the signed-in user's session,
   // so Supabase RLS can restrict reads to authenticated users.

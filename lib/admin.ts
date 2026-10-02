@@ -22,7 +22,6 @@ export function getStoredUserRoles(): Record<string, UserRole> {
   if (typeof window === 'undefined') {
     return {
       [PRIMARY_ADMIN_EMAIL]: 'super_admin',
-      'editor@must.edu.eg': 'editor',
     };
   }
   try {
@@ -41,7 +40,6 @@ export function getStoredUserRoles(): Record<string, UserRole> {
   }
   const defaults: Record<string, UserRole> = {
     [PRIMARY_ADMIN_EMAIL]: 'super_admin',
-    'editor@must.edu.eg': 'editor',
   };
   try {
     localStorage.setItem(ROLE_STORAGE_KEY, JSON.stringify(defaults));
@@ -69,7 +67,7 @@ export function setUserRole(email: string, role: UserRole): void {
 export function getUserRole(email?: string | null): UserRole {
   if (!email) return 'student';
   const clean = email.trim().toLowerCase();
-  if (clean === PRIMARY_ADMIN_EMAIL || clean === 'admin@must.edu.eg') {
+  if (clean === PRIMARY_ADMIN_EMAIL) {
     return 'super_admin';
   }
   const roles = getStoredUserRoles();

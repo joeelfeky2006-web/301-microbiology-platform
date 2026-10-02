@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { cardClass } from '@/lib/ui';
 import { authenticatedHeaders } from '@/lib/authHeaders';
+import AiDisclaimer from '@/components/ai/AiDisclaimer';
 
 interface Message {
   id: string;
@@ -316,6 +317,7 @@ export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolea
                   <Send className="h-4 w-4" />
                 </button>
               </form>
+              <AiDisclaimer className="mt-2 text-[10px]" />
             </div>
           </>
         )}

@@ -116,7 +116,7 @@ export default function Home() {
       try {
         const { data, error } = await supabase
           .from('materials')
-          .select('*')
+          .select('id,module,type,title,file_url,format,source_type')
           .order('title', { ascending: true })
           .returns<Material[]>();
         if (!cancelled && !error && data) {

@@ -20,6 +20,7 @@ import { authenticatedHeaders } from '@/lib/authHeaders';
 import { MODULE_TITLES, type ModuleName } from '@/types';
 import { useUserCredits, ACTION_COSTS } from '@/lib/credits';
 import CreditBadge from '@/components/credits/CreditBadge';
+import AiDisclaimer from '@/components/ai/AiDisclaimer';
 
 interface AILearningStudioProps {
   initialModule?: ModuleName;
@@ -180,16 +181,13 @@ export default function AILearningStudio({
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Interactive medical case vignettes, high-yield lecture summaries, and automated diagnostic quiz evaluation.
           </p>
-          {/* Academic Calibration Tag */}
+          {/* Academic Calibration Tag & Disclaimer */}
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-800 dark:bg-indigo-950/50 dark:text-cyan-300 ring-1 ring-indigo-200 dark:ring-indigo-900/60">
+            <div className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-800 dark:bg-indigo-950/50 dark:text-cyan-300 ring-1 ring-indigo-200 dark:ring-indigo-900/60">
               <BookOpen className="h-3 w-3 text-indigo-600 dark:text-cyan-400" />
               <span>Calibrated on Levinson Medical Microbiology, First Aid (USMLE Step 1), &amp; MUST 301 Standards</span>
             </div>
-            <div className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 ring-1 ring-amber-200 dark:ring-amber-900/60">
-              <Stethoscope className="h-3 w-3 text-amber-600 dark:text-amber-400" />
-              <span>AI-generated, verify against standard medical textbooks</span>
-            </div>
+            <AiDisclaimer className="rounded-lg bg-amber-50 px-2.5 py-1 font-semibold text-amber-800 ring-1 ring-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-900/60" />
           </div>
         </div>
 

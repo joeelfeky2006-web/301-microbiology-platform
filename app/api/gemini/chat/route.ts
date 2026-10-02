@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ai } from '@/lib/gemini';
+import { ai, GEMINI_MODEL } from '@/lib/gemini';
 import { authorizeAndSpend } from '@/lib/apiAuth';
 
 interface ChatMessage {
@@ -98,14 +98,7 @@ export async function POST(req: NextRequest) {
     const access = await authorizeAndSpend(req, 1);
     if ('response' in access) return access.response;
 
-    // Select recommended model:
-    // gemini-3.1-pro-preview for complex tasks, gemini-3.5-flash for general tasks, gemini-3.1-flash-lite for fast tasks.
-    const model =
-      taskComplexity === 'complex'
-        ? 'gemini-3.5-flash' // using 3.5-flash for complex/general stability
-        : taskComplexity === 'fast'
-        ? 'gemini-3.1-flash-lite'
-        : 'gemini-3.5-flash';
+    const model = GEMINI_MODEL;
 
     if (ai) {
       try {

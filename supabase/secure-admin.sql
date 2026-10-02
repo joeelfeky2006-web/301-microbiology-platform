@@ -49,7 +49,7 @@ begin
   from auth.users
   where id = auth.uid();
 
-  if v_email in ('joeelfeky2006@gmail.com', 'admin@must.edu.eg') then
+  if v_email = 'joeelfeky2006@gmail.com' then
     return 'super_admin';
   end if;
 
@@ -104,7 +104,7 @@ declare
   v_initial_role text;
 begin
   -- Automatically grant Super Admin to designated platform owner
-  if lower(trim(new.email)) in ('joeelfeky2006@gmail.com', 'admin@must.edu.eg') then
+  if lower(trim(new.email)) = 'joeelfeky2006@gmail.com' then
     v_initial_role := 'super_admin';
   else
     v_initial_role := 'student';

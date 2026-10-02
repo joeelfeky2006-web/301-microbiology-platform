@@ -76,6 +76,8 @@ function categoryOptions(types: MaterialCategory[]) {
   ));
 }
 
+const SHOW_UNFINISHED_TABS = false;
+
 export default function AdminDashboardPage() {
   const session = useSession();
   const router = useRouter();
@@ -186,7 +188,6 @@ export default function AdminDashboardPage() {
         format,
         source_type: source,
         file_url: finalFileUrl,
-        author_email: currentUserEmail,
         ai_context: aiContext.trim() || null,
         raw_quiz_text: rawQuizText.trim() || null,
         custom_system_prompt: customSystemPrompt.trim() || null,
@@ -262,6 +263,14 @@ export default function AdminDashboardPage() {
     if (!confirm(`Are you sure you want to permanently delete "${itemTitle}"?`)) return;
 
     try {
+      const target = materials.find((m) => m.id === id);
+      const marker = '/storage/v1/object/public/materials/';
+      const idx = target?.file_url ? target.file_url.indexOf(marker) : -1;
+      if (target && idx !== -1) {
+        const path = decodeURIComponent(target.file_url.slice(idx + marker.length).split('?')[0]);
+        const { error: removeError } = await supabase.storage.from('materials').remove([path]);
+        if (removeError) console.error('Could not remove stored file:', removeError.message);
+      }
       const { error } = await supabase.from('materials').delete().eq('id', id);
       if (error) throw error;
       setMaterials((prev) => prev.filter((m) => m.id !== id));
@@ -439,33 +448,37 @@ export default function AdminDashboardPage() {
             Publish &amp; Upload
           </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('roles')}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${
-              activeTab === 'roles'
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-900 dark:text-slate-300'
-            }`}
-          >
-            <Users className="h-4 w-4" />
-            RBAC Roles &amp; Permissions
-            {!userIsSuperAdmin && <Lock className="h-3 w-3 text-amber-500" />}
-          </button>
+          {SHOW_UNFINISHED_TABS && (
+            <>
+              <button
+                type="button"
+                onClick={() => setActiveTab('roles')}
+                className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${
+                  activeTab === 'roles'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                    : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-900 dark:text-slate-300'
+                }`}
+              >
+                <Users className="h-4 w-4" />
+                RBAC Roles &amp; Permissions
+                {!userIsSuperAdmin && <Lock className="h-3 w-3 text-amber-500" />}
+              </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('settings')}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${
-              activeTab === 'settings'
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-900 dark:text-slate-300'
-            }`}
-          >
-            <Settings className="h-4 w-4" />
-            Platform &amp; Marketing Settings
-            {!userIsSuperAdmin && <Lock className="h-3 w-3 text-amber-500" />}
-          </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('settings')}
+                className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${
+                  activeTab === 'settings'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                    : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-900 dark:text-slate-300'
+                }`}
+              >
+                <Settings className="h-4 w-4" />
+                Platform &amp; Marketing Settings
+                {!userIsSuperAdmin && <Lock className="h-3 w-3 text-amber-500" />}
+              </button>
+            </>
+          )}
         </div>
 
         {/* TAB 1: Materials Management Table / CMS */}

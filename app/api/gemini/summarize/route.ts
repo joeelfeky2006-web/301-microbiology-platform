@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ai } from '@/lib/gemini';
+import { ai, GEMINI_MODEL } from '@/lib/gemini';
 import { authorizeAndSpend } from '@/lib/apiAuth';
 import { MODULE_TITLES, type ModuleName } from '@/types';
 
@@ -79,7 +79,7 @@ Return ONLY valid JSON matching this schema:
 
       try {
         const response = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
+          model: GEMINI_MODEL,
           contents: prompt,
           config: {
             responseMimeType: 'application/json',

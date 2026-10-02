@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ai } from '@/lib/gemini';
+import { ai, GEMINI_MODEL } from '@/lib/gemini';
 import type { ModuleName } from '@/types';
 import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { authenticate, authorizeAndSpend } from '@/lib/apiAuth';
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     if ('response' in access) return access.response;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+      model: GEMINI_MODEL,
       contents: [
         'Convert the supplied raw quiz bank into JSON only. Return an array of question objects with id, question, exactly four options {id: A|B|C|D, text}, correctAnswer (option ID), and explanation. Preserve the provided key; never invent a key when absent. Omit questions whose answer key cannot be determined.',
         `Module: ${moduleName}`,
