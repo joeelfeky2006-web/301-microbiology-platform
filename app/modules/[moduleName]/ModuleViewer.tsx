@@ -19,6 +19,7 @@ import AdSlot from '@/components/marketing/AdSlot';
 import AILearningStudio from '@/components/ai/AILearningStudio';
 import { useModuleProgress } from '@/lib/progress';
 import MaterialQuiz from '@/components/quiz/MaterialQuiz';
+import { useSettings } from '@/lib/useSettings';
 
 type Tone = 'blue' | 'emerald' | 'purple';
 
@@ -174,6 +175,8 @@ function Section({
 }
 
 export default function ModuleViewer({ moduleName }: { moduleName: ModuleName }) {
+  const { settings } = useSettings();
+  const moduleTitle = settings.site_content.modules[moduleName]?.label || MODULE_TITLES[moduleName];
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -236,9 +239,10 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
             <h1 className="mt-1 text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">
               {moduleName}{' '}
               <span className="font-normal text-slate-400 dark:text-slate-500">
-                · {MODULE_TITLES[moduleName]}
+                · {moduleTitle}
               </span>
             </h1>
+            <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-300">{settings.site_content.modules[moduleName]?.summary}</p>
 
             {/* Module Completion Indicator */}
             {currentModStats && currentModStats.total > 0 && (
@@ -283,7 +287,7 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
         )}
 
         {loading ? (
-          <p className="text-slate-500 text-sm">Loading {MODULE_TITLES[moduleName]} resources…</p>
+          <p className="text-slate-500 text-sm">Loading {moduleTitle} resources…</p>
         ) : (
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
             <div className="space-y-8 lg:col-span-3">
@@ -337,8 +341,8 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
                 })}
                 emptyText={
                   selectedCohort !== 'ALL'
-                    ? `No theory materials uploaded for Group ${selectedCohort} yet in ${MODULE_TITLES[moduleName]}.`
-                    : `No theory materials uploaded yet for ${MODULE_TITLES[moduleName]}.`
+                    ? `No theory materials uploaded for Group ${selectedCohort} yet in ${moduleTitle}.`
+                    : `No theory materials uploaded yet for ${moduleTitle}.`
                 }
                 isComplete={isComplete}
                 onToggleComplete={toggle}
@@ -347,7 +351,7 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
                 heading="Practicals & OSPE"
                 tone="emerald"
                 items={materials.filter((m) => PRACTICAL_TYPES.includes(m.type))}
-                emptyText={`No practical materials uploaded yet for ${MODULE_TITLES[moduleName]}.`}
+                emptyText={`No practical materials uploaded yet for ${moduleTitle}.`}
                 isComplete={isComplete}
                 onToggleComplete={toggle}
               />
@@ -355,7 +359,7 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
                 heading="Exam Vault"
                 tone="purple"
                 items={materials.filter((m) => EXAM_TYPES.includes(m.type))}
-                emptyText={`No exam materials uploaded yet for ${MODULE_TITLES[moduleName]}.`}
+                emptyText={`No exam materials uploaded yet for ${moduleTitle}.`}
                 isComplete={isComplete}
                 onToggleComplete={toggle}
               />
