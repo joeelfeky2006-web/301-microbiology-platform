@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ai } from '@/lib/gemini';
 import type { ModuleName } from '@/types';
 import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { authenticate, authorizeAndSpend } from '@/lib/apiAuth';
 
 export const runtime = 'nodejs';
 
@@ -51,6 +52,8 @@ function validateQuestions(value: unknown): QuizQuestion[] {
 }
 
 export async function GET(request: NextRequest) {
+  const access = await authenticate(request);
+  if ('response' in access) return access.response;
   const materialId = new URL(request.url).searchParams.get('material_id');
   if (!materialId) return NextResponse.json({ error: 'A lecture material id is required.' }, { status: 400 });
   const admin = createSupabaseAdmin();
@@ -89,6 +92,9 @@ export async function POST(request: NextRequest) {
     if (!ai) {
       return NextResponse.json({ error: 'Quiz conversion is temporarily unavailable.' }, { status: 503 });
     }
+
+    const access = await authorizeAndSpend(request, 2);
+    if ('response' in access) return access.response;
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
