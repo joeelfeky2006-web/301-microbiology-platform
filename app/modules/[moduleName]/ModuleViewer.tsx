@@ -170,7 +170,7 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
     let cancelled = false;
     (async () => {
       const { data, error } = await supabase
-        .from('student_materials')
+        .from('materials')
         .select('id,module,type,title,file_url,format,source_type')
         .eq('module', moduleName)
         .order('title', { ascending: true })

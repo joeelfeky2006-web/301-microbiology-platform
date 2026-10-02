@@ -178,16 +178,18 @@ drop policy if exists "materials_insert_policy" on public.materials;
 drop policy if exists "materials_update_policy" on public.materials;
 drop policy if exists "materials_delete_policy" on public.materials;
 
--- [SELECT]: Staff read the base table; students use the safe projection below.
+-- [SELECT]: Authenticated students can read only granted public material columns.
+drop policy if exists "materials_select_policy" on public.materials;
 drop policy if exists "materials_staff_select_policy" on public.materials;
-create policy "materials_staff_select_policy" on public.materials
-  for select to authenticated
-  using (public.is_editor_or_admin());
+drop policy if exists "materials_student_select_policy" on public.materials;
+drop view if exists public.student_materials;
+create policy "materials_student_select_policy" on public.materials
+  for select to authenticated using (true);
 
-create or replace view public.student_materials as
-select id, module, type, title, file_url, format, source_type, created_at, updated_at, author_email
-from public.materials;
-grant select on public.student_materials to authenticated;
+-- Column-level grants keep AI-only columns out of direct student REST reads.
+revoke select on public.materials from public, anon, authenticated;
+grant select (id, module, type, title, file_url, format, source_type)
+  on public.materials to authenticated;
 
 -- [INSERT]: Editors and Super Admins can publish new course materials
 create policy "materials_insert_policy" on public.materials
@@ -253,6 +255,6 @@ begin
   raise notice 'MedAtlas Egypt RBAC successfully provisioned:';
   raise notice ' - Role table: public.user_roles created & protected';
   raise notice ' - Super Admin assigned: joeelfeky2006@gmail.com';
-  raise notice ' - Table RLS: staff manage base materials; authenticated students read safe student_materials view';
+  raise notice ' - Table RLS: staff manage materials; student REST reads are limited to safe columns';
   raise notice ' - Storage RLS: materials bucket (Upload/Update: Editor+Admin | Delete: Super Admin)';
 end $$;

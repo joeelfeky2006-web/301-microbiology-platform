@@ -73,14 +73,19 @@ revoke all on function public.deduct_user_credit(uuid, integer) from public, ano
 grant execute on function public.deduct_user_credit(uuid, integer) to authenticated;
 
 -- Keep lecture notes, raw question banks and custom prompts out of student REST reads.
--- Staff continue to manage the base table; students read a safe projection.
+-- Students receive only safe column privileges; CMS access to AI fields goes through a staff endpoint.
 drop policy if exists "materials_select_policy" on public.materials;
 drop policy if exists "materials_staff_select_policy" on public.materials;
-create policy "materials_staff_select_policy" on public.materials
-  for select to authenticated
-  using (public.is_editor_or_admin());
+drop policy if exists "materials_student_select_policy" on public.materials;
+drop view if exists public.student_materials;
+create policy "materials_student_select_policy" on public.materials
+  for select to authenticated using (true);
 
-create or replace view public.student_materials as
-select id, module, type, title, file_url, format, source_type, created_at, updated_at, author_email
-from public.materials;
-grant select on public.student_materials to authenticated;
+revoke select on public.materials from public, anon, authenticated;
+grant select (id, module, type, title, file_url, format, source_type)
+  on public.materials to authenticated;
+
+grant insert (ai_context, raw_quiz_text, custom_system_prompt)
+  on public.materials to authenticated;
+grant update (ai_context, raw_quiz_text, custom_system_prompt)
+  on public.materials to authenticated;

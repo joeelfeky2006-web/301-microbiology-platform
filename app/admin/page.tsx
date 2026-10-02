@@ -38,6 +38,7 @@ import {
   savePlatformSettings,
 } from '@/lib/admin';
 import { cardClass, inputClass, labelClass } from '@/lib/ui';
+import { authenticatedHeaders } from '@/lib/authHeaders';
 import {
   EXAM_TYPES,
   MATERIAL_TYPE_LABELS,
@@ -130,14 +131,10 @@ export default function AdminDashboardPage() {
   const loadMaterials = async () => {
     setMaterialsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('materials')
-        .select('*')
-        .order('title', { ascending: true })
-        .returns<Material[]>();
-      if (!error && data) {
-        setMaterials(data);
-      }
+      const response = await fetch('/api/admin/materials', { headers: await authenticatedHeaders() });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Could not load course materials.');
+      setMaterials((payload.materials || []) as Material[]);
     } catch (err) {
       console.error('Error fetching materials:', err);
     } finally {
