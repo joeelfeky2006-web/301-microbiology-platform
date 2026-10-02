@@ -58,7 +58,12 @@ export default function MaterialQuiz({ material }: { material: Material }) {
     fetch('/api/gemini/quiz-gen?material_id=' + encodeURIComponent(material.id), { headers: await authenticatedHeaders() })
       .then((response) => response.json())
       .then((data) => { if (!cancelled) setAvailable(Boolean(data.available)); })
-      .catch(() => { if (!cancelled) setAvailable(false); });
+      .catch(() => {
+        if (!cancelled) {
+          setAvailable(true);
+          setError('Could not check this lecture’s quiz bank. Try loading it again.');
+        }
+      });
     return () => { cancelled = true; };
   }, [material.id]);
 
