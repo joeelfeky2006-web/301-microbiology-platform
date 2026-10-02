@@ -17,6 +17,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { cardClass } from '@/lib/ui';
+import { authenticatedHeaders } from '@/lib/authHeaders';
 
 interface Message {
   id: string;
@@ -83,7 +84,7 @@ export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolea
 
       const res = await fetch('/api/gemini/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authenticatedHeaders(),
         body: JSON.stringify({
           message: textToSend,
           history: apiHistory.slice(0, -1), // previous turns
