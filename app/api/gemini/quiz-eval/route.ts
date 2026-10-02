@@ -21,6 +21,8 @@ const SERVER_ANSWER_KEYS: Record<string, { module: ModuleName; question: string;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const identity = await authenticate(request);
+    if ('response' in identity) return identity.response;
     let module = body?.module as ModuleName;
     let storedContext = '';
     let storedPrompt = '';
