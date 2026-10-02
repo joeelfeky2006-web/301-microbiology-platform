@@ -18,6 +18,7 @@ import {
 import AdSlot from '@/components/marketing/AdSlot';
 import AILearningStudio from '@/components/ai/AILearningStudio';
 import { useModuleProgress } from '@/lib/progress';
+import MaterialQuiz from '@/components/quiz/MaterialQuiz';
 
 type Tone = 'blue' | 'emerald' | 'purple';
 
@@ -147,6 +148,7 @@ function Section({
                   );
                 })}
               </div>
+              <MaterialQuiz material={materials.find((m) => Boolean(m.raw_quiz_text?.trim() || m.ai_context?.trim())) ?? materials[0]} />
             </div>
           ))}
         </div>
