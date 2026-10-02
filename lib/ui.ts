@@ -4,4 +4,4 @@ export const inputClass =
 export const labelClass = 'mb-2 block text-sm font-bold text-slate-700 dark:text-slate-300';
 
 export const cardClass =
-  'rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/40';
+  'rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/40';

@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 
 export default function ThemeToggle() {
   const [dark, setDark] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     setDark(document.documentElement.classList.contains('dark'));
   }, []);
 
@@ -29,7 +31,9 @@ export default function ThemeToggle() {
       title={dark ? 'Light mode' : 'Dark mode'}
       className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
     >
-      {dark ? (
+      {!mounted ? (
+        <span className="h-4 w-4 rounded-full bg-slate-300 dark:bg-slate-700 opacity-60" />
+      ) : dark ? (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
           <circle cx="12" cy="12" r="4" />
           <path strokeLinecap="round" d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />

@@ -2,11 +2,12 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   // The app sets <html class="dark">, so dark: variants must follow that class
-  // (Tailwind's default follows the OS setting, which caused theme clashes).
   darkMode: "class",
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./lib/**/*.{js,ts,jsx,tsx,mdx}",
+    "./types.ts",
   ],
   theme: {
     extend: {
@@ -18,6 +19,7 @@ const config: Config = {
         lab: {
           950: "#070b14",
           900: "#0b1120",
+          850: "#0f172a",
         },
       },
     },

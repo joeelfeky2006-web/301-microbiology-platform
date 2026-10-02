@@ -24,8 +24,14 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
 
   if (!isOpen) return null;
 
-  const copyToClipboard = (text: string, key: string) => {
-    navigator.clipboard.writeText(text);
+  const copyToClipboard = async (text: string, key: string) => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      }
+    } catch (err) {
+      console.warn('Clipboard write prevented:', err);
+    }
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
   };
