@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ai } from '@/lib/gemini';
+import { authorizeAndSpend } from '@/lib/apiAuth';
 import { MODULE_TITLES, type ModuleName } from '@/types';
 
 interface SummarizePayload {
@@ -30,6 +31,9 @@ export async function POST(req: NextRequest) {
     const moduleName = body.module || 'URS';
     const topic = body.topic || 'Core High-Yield Microorganisms';
     const moduleFullName = MODULE_TITLES[moduleName] || 'Medical Microbiology';
+
+    const access = await authorizeAndSpend(req, 1);
+    if ('response' in access) return access.response;
 
     // 1. Check in-memory cache
     const cacheKey = `${moduleName}_${topic.toLowerCase().trim()}`;
