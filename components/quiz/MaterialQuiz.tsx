@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader2, Printer, Sparkles } from 'lucide-react';
 import type { Material, ModuleName } from '@/types';
 import QuizComfortCard from './ComfortCard';
@@ -45,11 +45,21 @@ function printReport(report: Report, question: Question) {
 
 export default function MaterialQuiz({ material }: { material: Material }) {
   const [questions, setQuestions] = useState<Question[] | null>(null);
+  const [available, setAvailable] = useState<boolean | null>(null);
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<Question['correctAnswer'] | ''>('');
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/gemini/quiz-gen?material_id=' + encodeURIComponent(material.id))
+      .then((response) => response.json())
+      .then((data) => { if (!cancelled) setAvailable(Boolean(data.available)); })
+      .catch(() => { if (!cancelled) setAvailable(false); });
+    return () => { cancelled = true; };
+  }, [material.id]);
 
   const load = async () => {
     setLoading(true); setError('');
@@ -93,11 +103,11 @@ export default function MaterialQuiz({ material }: { material: Material }) {
     <div className="mt-4 rounded-2xl border border-indigo-200 bg-white p-5 dark:border-indigo-900/50 dark:bg-slate-900">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h4 className="font-bold text-slate-900 dark:text-white">Lecture Practice Quiz</h4>
-        {!questions && <button type="button" onClick={load} disabled={loading} className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-60">
+        {!questions && available && <button type="button" onClick={load} disabled={loading} className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-60">
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Load practice questions
         </button>}
       </div>
-      {!questions && !material.raw_quiz_text?.trim() && <div className="mt-4"><QuizComfortCard /></div>}
+      {available === null && <p className="mt-3 text-xs text-slate-500">Checking lecture question bank…</p>}
       {error && <p role="alert" className="mt-3 text-sm text-rose-600">{error}</p>}
       {question && (
         <div className="mt-4 space-y-3">
