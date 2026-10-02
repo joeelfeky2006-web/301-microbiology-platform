@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Loader2, Printer, Sparkles } from 'lucide-react';
 import type { Material, ModuleName } from '@/types';
 import QuizComfortCard from './ComfortCard';
+import { authenticatedHeaders } from '@/lib/authHeaders';
 
 type Question = {
   id: string;
@@ -54,7 +55,7 @@ export default function MaterialQuiz({ material }: { material: Material }) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/gemini/quiz-gen?material_id=' + encodeURIComponent(material.id))
+    fetch('/api/gemini/quiz-gen?material_id=' + encodeURIComponent(material.id), { headers: await authenticatedHeaders() })
       .then((response) => response.json())
       .then((data) => { if (!cancelled) setAvailable(Boolean(data.available)); })
       .catch(() => { if (!cancelled) setAvailable(false); });
@@ -65,7 +66,7 @@ export default function MaterialQuiz({ material }: { material: Material }) {
     setLoading(true); setError('');
     try {
       const response = await fetch('/api/gemini/quiz-gen', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: await authenticatedHeaders(),
         body: JSON.stringify({
           material_id: material.id,
         }),
