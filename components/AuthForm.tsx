@@ -24,6 +24,7 @@ export default function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   const session = useSession();
   const { settings } = useSettings();
   const [name, setName] = useState('');
+  const [universityId, setUniversityId] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -53,13 +54,14 @@ export default function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
     event.preventDefault(); setError(''); setInfo('');
     if (isSignUp && !settings.registration_open) { setError('Registration is currently closed. Please try again later.'); return; }
     if (isSignUp && password.length < 8) { setError('Password must be at least 8 characters.'); return; }
+    if (isSignUp && !universityId.trim()) { setError('Enter your university ID.'); return; }
     if (isSignUp && password !== confirm) { setError('Passwords do not match.'); return; }
     setLoading(true);
     try {
       if (isSignUp) {
         const { data, error: authError } = await supabase.auth.signUp({
           email: email.trim(), password,
-          options: { data: { name: name.trim() }, emailRedirectTo: `${siteUrl()}/sign-in?confirmed=1` },
+          options: { data: { name: name.trim(), university_id: universityId.trim() }, emailRedirectTo: `${siteUrl()}/sign-in?confirmed=1` },
         });
         if (authError) throw authError;
         if (data.user && data.user.identities?.length === 0) {
@@ -93,7 +95,8 @@ export default function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
       {!isSignUp && params.get('password_reset') === '1' && <p role="status" className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">Password updated. Sign in with your new password.</p>}
       {!isSignUp && params.get('message') === 'session-expired' && <p role="status" className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">Your session expired. Sign in again to continue where you left off.</p>}
       {!confirmationPending && (!isSignUp || settings.registration_open) && <form onSubmit={handleSubmit} className="space-y-4">
-        {isSignUp && <div><label className={labelClass} htmlFor="name">Full name</label><input id="name" required value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" className={inputClass} /></div>}
+        {isSignUp && <div><label className={labelClass} htmlFor="name">Full name</label><input id="name" required maxLength={100} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" className={inputClass} /></div>}
+        {isSignUp && <div><label className={labelClass} htmlFor="university-id">University ID</label><input id="university-id" required maxLength={64} value={universityId} onChange={(e) => setUniversityId(e.target.value)} autoComplete="off" className={inputClass} placeholder="Enter your MUST university ID" /></div>}
         <div><label className={labelClass} htmlFor="email">Email</label><input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" className={inputClass} /></div>
         <div><label className={labelClass} htmlFor="password">Password</label><input id="password" type="password" required minLength={isSignUp ? 8 : undefined} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={isSignUp ? 'new-password' : 'current-password'} className={inputClass} /></div>
         {isSignUp && <div><label className={labelClass} htmlFor="confirm">Confirm password</label><input id="confirm" type="password" required minLength={8} value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" className={inputClass} /></div>}

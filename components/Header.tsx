@@ -131,6 +131,13 @@ export default function Header() {
                 </>
               ) : (
                 <>
+                  <Link
+                    href="/profile"
+                    className="flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 transition"
+                  >
+                    <User className="h-3 w-3" />
+                    My Profile
+                  </Link>
                   {hasAdminAccess && (
                     <Link
                       href="/admin"
@@ -301,6 +308,14 @@ export default function Header() {
                   </div>
                 ) : (
                   <div className="space-y-2">
+                    <Link
+                      href="/profile"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2.5 text-center text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 transition"
+                    >
+                      <User className="h-3.5 w-3.5" />
+                      My Profile
+                    </Link>
                     {hasAdminAccess && (
                       <Link
                         href="/admin"
