@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     .select('*')
     .order('title', { ascending: true });
   if (error) {
-    console.error('Admin material load failed:', error.message);
+    console.error(JSON.stringify({ action: 'admin-materials', material_id: null, kind: 'glitch', latency_ms: 0 }));
     return NextResponse.json({ error: 'Could not load course materials.' }, { status: 500 });
   }
   return NextResponse.json({ materials: materials || [] }, { headers: { 'Cache-Control': 'no-store' } });
