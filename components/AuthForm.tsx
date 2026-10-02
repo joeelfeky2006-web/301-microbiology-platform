@@ -18,6 +18,7 @@ export default function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   const router = useRouter();
   const params = useSearchParams();
   const redirect = safeRedirect(params.get('redirect'));
+  const authMessage = params.get('message') === 'session-expired' ? 'Please sign in to continue with Dr. Atlas.' : '';
   const session = useSession();
 
   const [name, setName] = useState('');
@@ -91,6 +92,7 @@ export default function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
         <p className="mb-6 mt-1 text-slate-500 dark:text-slate-400">
           {isSignUp ? 'Sign up to access modules and materials.' : 'Sign in to access modules and materials.'}
         </p>
+        {authMessage && <p role="status" className="mb-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-950/40 dark:text-blue-200">{authMessage}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {isSignUp && (

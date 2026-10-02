@@ -122,7 +122,7 @@ export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolea
       });
 
       const data = await res.json();
-      if (res.status === 401) { window.location.assign('/sign-in'); return; }
+      if (res.status === 401) { window.location.assign('/sign-in?message=session-expired'); return; }
       window.dispatchEvent(new Event('credits_updated'));
       if (!res.ok) {
         if (data.kind === 'busy') setRetrySeconds(60);

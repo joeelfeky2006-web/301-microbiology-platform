@@ -75,7 +75,7 @@ export default function MaterialQuiz({ material }: { material: Material }) {
         const headers = await authenticatedHeaders();
         const response = await fetch('/api/quiz/bank?material_id=' + encodeURIComponent(material.id), { headers });
         const data = await response.json();
-        if (response.status === 401) { window.location.assign('/sign-in'); return; }
+        if (response.status === 401) { window.location.assign('/sign-in?message=session-expired'); return; }
         if (!cancelled && data.kind === 'fallback') { setQuestions([]); setAvailable(false); }
         else if (!cancelled) setAvailable(Array.isArray(data.questions));
       } catch {
@@ -95,7 +95,7 @@ export default function MaterialQuiz({ material }: { material: Material }) {
       const headers = await authenticatedHeaders();
       const response = await fetch('/api/quiz/bank?material_id=' + encodeURIComponent(material.id), { headers });
       const data = await response.json();
-      if (response.status === 401) { window.location.assign('/sign-in'); return; }
+      if (response.status === 401) { window.location.assign('/sign-in?message=session-expired'); return; }
       window.dispatchEvent(new Event('credits_updated'));
       if (!response.ok) { setError(typeof data.message === 'string' ? data.message : 'Practice questions are temporarily unavailable.'); return; }
       if (data.kind === 'fallback') { setQuestions([]); return; }
@@ -118,7 +118,7 @@ export default function MaterialQuiz({ material }: { material: Material }) {
         }),
       });
       const data = await response.json();
-      if (response.status === 401) { window.location.assign('/sign-in'); return; }
+      if (response.status === 401) { window.location.assign('/sign-in?message=session-expired'); return; }
       if (!response.ok) {
         if (data.kind === 'busy') setRetrySeconds(60);
         setError(typeof data.message === 'string' ? data.message : 'Dr. Atlas is catching his breath. Let’s give it another try in a moment!');
@@ -141,7 +141,7 @@ export default function MaterialQuiz({ material }: { material: Material }) {
         </button>}
       </div>
       {available === null && <p className="mt-3 text-xs text-slate-500">Checking lecture question bank…</p>}
-      {error && <p role="alert" className="mt-3 text-sm text-rose-600">{error}</p>}
+      {error && <div role="alert" className="mt-3 text-sm text-rose-600"><p>{error}</p>{retrySeconds > 0 && <p className="mt-1 text-xs">Try again in {retrySeconds}s.</p>}{report && <button type="button" onClick={submit} disabled={loading || retrySeconds > 0 || !selected} className="mt-2 rounded-lg border px-3 py-1.5 text-xs font-semibold disabled:opacity-50">{retrySeconds > 0 ? `Try again in ${retrySeconds}s` : 'Retry feedback'}</button>}</div>}
       {question && (
         <div className="mt-4 space-y-3">
           <p className="font-semibold text-slate-800 dark:text-slate-100">{index + 1}. {question.question}</p>

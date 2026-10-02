@@ -69,7 +69,7 @@ export default function AILearningStudio({
       try {
         const { data } = await supabase
           .from('materials')
-          .select('id,module,type,title,ai_context,raw_quiz_text')
+          .select('id,module,type,title')
           .eq('module', selectedModule)
           .order('title', { ascending: true });
         if (!cancelled && data) {
@@ -108,7 +108,7 @@ export default function AILearningStudio({
         }),
       });
       const data = await res.json();
-      if (res.status === 401) { window.location.assign('/sign-in'); return; }
+      if (res.status === 401) { window.location.assign('/sign-in?message=session-expired'); return; }
       window.dispatchEvent(new Event('credits_updated'));
       if (data.kind === 'busy') setRetrySeconds(60);
       if (data.caseStudy) {
@@ -145,7 +145,7 @@ export default function AILearningStudio({
         }),
       });
       const data = await res.json();
-      if (res.status === 401) { window.location.assign('/sign-in'); return; }
+      if (res.status === 401) { window.location.assign('/sign-in?message=session-expired'); return; }
       window.dispatchEvent(new Event('credits_updated'));
       if (data.kind === 'busy') setRetrySeconds(60);
       if (data.summary) {
@@ -306,7 +306,7 @@ export default function AILearningStudio({
                   <option value="">Choose a lecture with AI context</option>
                   {moduleMaterials.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.title} {m.ai_context ? '✦ (AI Context Connected)' : ''}
+                      {m.title}
                     </option>
                   ))}
                 </select>
@@ -591,7 +591,7 @@ export default function AILearningStudio({
                   <option value="">Choose a lecture with AI context</option>
                   {moduleMaterials.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.title} {m.ai_context ? '✦ (AI Context Connected)' : ''}
+                      {m.title}
                     </option>
                   ))}
                 </select>
