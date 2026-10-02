@@ -17,7 +17,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { cardClass } from '@/lib/ui';
-import { authenticatedHeaders } from '@/lib/authHeaders';
+import { authenticatedHeaders, redirectAfterSessionExpiry } from '@/lib/authHeaders';
 import AiDisclaimer from '@/components/ai/AiDisclaimer';
 import { supabase } from '@/lib/supabase';
 
@@ -122,7 +122,7 @@ export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolea
       });
 
       const data = await res.json();
-      if (res.status === 401) { window.location.assign('/sign-in?message=session-expired'); return; }
+      if (res.status === 401) { await redirectAfterSessionExpiry(); return; }
       window.dispatchEvent(new Event('credits_updated'));
       if (!res.ok) {
         if (data.kind === 'busy') setRetrySeconds(60);

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Loader2, Printer, Sparkles } from 'lucide-react';
 import type { Material, ModuleName } from '@/types';
 import QuizComfortCard from './ComfortCard';
-import { authenticatedHeaders } from '@/lib/authHeaders';
+import { authenticatedHeaders, redirectAfterSessionExpiry } from '@/lib/authHeaders';
 
 type Question = {
   id: string;
@@ -75,7 +75,7 @@ export default function MaterialQuiz({ material }: { material: Material }) {
         const headers = await authenticatedHeaders();
         const response = await fetch('/api/quiz/bank?material_id=' + encodeURIComponent(material.id), { headers });
         const data = await response.json();
-        if (response.status === 401) { window.location.assign('/sign-in?message=session-expired'); return; }
+        if (response.status === 401) { await redirectAfterSessionExpiry(); return; }
         if (!cancelled && data.kind === 'fallback') { setQuestions([]); setAvailable(false); }
         else if (!cancelled) setAvailable(Array.isArray(data.questions));
       } catch {
@@ -95,7 +95,7 @@ export default function MaterialQuiz({ material }: { material: Material }) {
       const headers = await authenticatedHeaders();
       const response = await fetch('/api/quiz/bank?material_id=' + encodeURIComponent(material.id), { headers });
       const data = await response.json();
-      if (response.status === 401) { window.location.assign('/sign-in?message=session-expired'); return; }
+      if (response.status === 401) { await redirectAfterSessionExpiry(); return; }
       window.dispatchEvent(new Event('credits_updated'));
       if (!response.ok) { setError(typeof data.message === 'string' ? data.message : 'Practice questions are temporarily unavailable.'); return; }
       if (data.kind === 'fallback') { setQuestions([]); return; }
@@ -118,7 +118,7 @@ export default function MaterialQuiz({ material }: { material: Material }) {
         }),
       });
       const data = await response.json();
-      if (response.status === 401) { window.location.assign('/sign-in?message=session-expired'); return; }
+      if (response.status === 401) { await redirectAfterSessionExpiry(); return; }
       if (!response.ok) {
         if (data.kind === 'busy') setRetrySeconds(60);
         setError(typeof data.message === 'string' ? data.message : 'Dr. Atlas is catching his breath. Let’s give it another try in a moment!');

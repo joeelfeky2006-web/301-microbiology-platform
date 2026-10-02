@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { cardClass } from '@/lib/ui';
 import { supabase } from '@/lib/supabase';
-import { authenticatedHeaders } from '@/lib/authHeaders';
+import { authenticatedHeaders, redirectAfterSessionExpiry } from '@/lib/authHeaders';
 import { MODULE_TITLES, type ModuleName, type Material } from '@/types';
 import AiDisclaimer from '@/components/ai/AiDisclaimer';
 import MaterialQuiz from '@/components/quiz/MaterialQuiz';
@@ -108,7 +108,7 @@ export default function AILearningStudio({
         }),
       });
       const data = await res.json();
-      if (res.status === 401) { window.location.assign('/sign-in?message=session-expired'); return; }
+      if (res.status === 401) { await redirectAfterSessionExpiry(); return; }
       window.dispatchEvent(new Event('credits_updated'));
       if (data.kind === 'busy') setRetrySeconds(60);
       if (data.caseStudy) {
@@ -145,7 +145,7 @@ export default function AILearningStudio({
         }),
       });
       const data = await res.json();
-      if (res.status === 401) { window.location.assign('/sign-in?message=session-expired'); return; }
+      if (res.status === 401) { await redirectAfterSessionExpiry(); return; }
       window.dispatchEvent(new Event('credits_updated'));
       if (data.kind === 'busy') setRetrySeconds(60);
       if (data.summary) {
