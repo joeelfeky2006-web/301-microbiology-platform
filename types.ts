@@ -64,6 +64,10 @@ export interface Material {
   created_at?: string;
   updated_at?: string;
   author_email?: string;
+  /** Nullable lecture-level Gemini source material and quiz bank. */
+  ai_context?: string | null;
+  raw_quiz_text?: string | null;
+  custom_system_prompt?: string | null;
 }
 
 export interface Student {
