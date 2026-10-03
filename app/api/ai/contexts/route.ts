@@ -9,14 +9,14 @@ export async function GET(request: NextRequest) {
   const identity = await authenticate(request);
   if ('response' in identity) return identity.response;
 
-  const module = request.nextUrl.searchParams.get('module');
-  if (!module || !MODULES.has(module)) return Response.json({ error: 'Invalid module.' }, { status: 400 });
+  const moduleCode = request.nextUrl.searchParams.get('module');
+  if (!moduleCode || !MODULES.has(moduleCode)) return Response.json({ error: 'Invalid module.' }, { status: 400 });
   const admin = createSupabaseAdmin();
   if (!admin) return Response.json({ error: 'AI context service is unavailable.' }, { status: 503 });
 
   const { data, error } = await admin.from('materials')
     .select('id,module,type,title,file_url,ai_context')
-    .eq('module', module)
+    .eq('module', moduleCode)
     .not('ai_context', 'is', null)
     .order('title', { ascending: true });
   if (error) return Response.json({ error: 'Could not load lecture contexts.' }, { status: 503 });
