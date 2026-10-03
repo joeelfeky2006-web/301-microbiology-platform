@@ -26,7 +26,7 @@ function validateQuestions(value: unknown) {
 export async function GET(request: NextRequest) {
   const auth = await authorizeQuizStaff(request);
   if ('response' in auth) return auth.response;
-  const { data, error } = await auth.admin.from('lecture_quizzes').select('id,material_id,module,lecture_title,quiz_number,title,is_published,created_at').order('module').order('lecture_title').order('quiz_number');
+  const { data, error } = await auth.admin.from('lecture_quizzes').select('id,material_id,module,lecture_title,quiz_number,title,time_limit_minutes,is_published,created_at').order('module').order('lecture_title').order('quiz_number');
   if (error) return Response.json({ error: 'Could not load quizzes.' }, { status: 503 });
   return Response.json({ quizzes: data || [] }, { headers: { 'Cache-Control': 'no-store' } });
 }
@@ -40,10 +40,27 @@ export async function POST(request: NextRequest) {
     const quizNumber = Number(body.quiz_number);
     const title = typeof body.title === 'string' ? body.title.trim() : '';
     if (!Number.isInteger(quizNumber) || quizNumber < 1 || quizNumber > 100 || !title || title.length > 120) return Response.json({ error: 'Enter a title and quiz number from 1 to 100.' }, { status: 400 });
+    let timeLimit: number | null = null;
+    if (body.time_limit_minutes !== undefined && body.time_limit_minutes !== null && body.time_limit_minutes !== '') {
+      const minutes = Number(body.time_limit_minutes);
+      if (!Number.isInteger(minutes) || minutes < 1 || minutes > 180) {
+        return Response.json({ error: 'Time limit must be blank (untimed) or between 1 and 180 minutes.' }, { status: 400 });
+      }
+      timeLimit = minutes;
+    }
     const questions = validateQuestions(body.questions);
     const { data: material, error: materialError } = await auth.admin.from('materials').select('id,module,title').eq('id', body.material_id).maybeSingle();
     if (materialError || !material) return Response.json({ error: 'The selected lecture no longer exists.' }, { status: 404 });
-    const { data, error } = await auth.admin.from('lecture_quizzes').insert({ material_id: material.id, module: material.module, lecture_title: material.title, quiz_number: quizNumber, title, questions, created_by: auth.identity.userId }).select('id,title,quiz_number,module,lecture_title').single();
+    const { data, error } = await auth.admin.from('lecture_quizzes').insert({
+      material_id: material.id,
+      module: material.module,
+      lecture_title: material.title,
+      quiz_number: quizNumber,
+      title,
+      time_limit_minutes: timeLimit,
+      questions,
+      created_by: auth.identity.userId,
+    }).select('id,title,quiz_number,module,lecture_title,time_limit_minutes').single();
     if (error?.code === '23505') return Response.json({ error: `Quiz ${quizNumber} already exists for this lecture. Choose another quiz number.` }, { status: 409 });
     if (error || !data) return Response.json({ error: 'Could not save this quiz.' }, { status: 503 });
     return Response.json({ quiz: data }, { status: 201 });

@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   if (!admin) return Response.json({ error: 'Quiz service is unavailable.' }, { status: 503 });
   const { data: material, error: materialError } = await admin.from('materials').select('module,title').eq('id', materialId).maybeSingle();
   if (materialError || !material) return Response.json({ error: 'Lecture not found.' }, { status: 404 });
-  const { data, error } = await admin.from('lecture_quizzes').select('id,title,quiz_number').eq('module', material.module).eq('lecture_title', material.title).eq('is_published', true).order('quiz_number');
+  const { data, error } = await admin.from('lecture_quizzes').select('id,title,quiz_number,time_limit_minutes').eq('module', material.module).eq('lecture_title', material.title).eq('is_published', true).order('quiz_number');
   if (error) return Response.json({ error: 'Could not load the lecture quizzes.' }, { status: 503 });
   return Response.json({ quizzes: data || [] }, { headers: { 'Cache-Control': 'private, no-store' } });
 }

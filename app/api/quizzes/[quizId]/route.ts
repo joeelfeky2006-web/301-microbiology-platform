@@ -8,8 +8,9 @@ export async function GET(request: NextRequest, { params }: { params: { quizId: 
   if (!/^[0-9a-f-]{36}$/i.test(params.quizId)) return Response.json({ error: 'Invalid quiz ID.' }, { status: 400 });
   const admin = createSupabaseAdmin();
   if (!admin) return Response.json({ error: 'Quiz service is unavailable.' }, { status: 503 });
-  const { data, error } = await admin.from('lecture_quizzes').select('id,title,quiz_number,questions').eq('id', params.quizId).eq('is_published', true).maybeSingle();
+  const { data, error } = await admin.from('lecture_quizzes').select('id,title,quiz_number,time_limit_minutes,questions').eq('id', params.quizId).eq('is_published', true).maybeSingle();
   if (error || !data) return Response.json({ error: 'This quiz is unavailable.' }, { status: 404 });
   const questions = Array.isArray(data.questions) ? data.questions.map((item: any) => ({ id: item.id, question: item.question, options: item.options })) : [];
-  return Response.json({ quiz: { id: data.id, title: data.title, quiz_number: data.quiz_number }, questions }, { headers: { 'Cache-Control': 'private, no-store' } });
+  const timeLimit = typeof data.time_limit_minutes === 'number' && data.time_limit_minutes >= 1 ? data.time_limit_minutes : null;
+  return Response.json({ quiz: { id: data.id, title: data.title, quiz_number: data.quiz_number, time_limit_minutes: timeLimit }, questions }, { headers: { 'Cache-Control': 'private, no-store' } });
 }
