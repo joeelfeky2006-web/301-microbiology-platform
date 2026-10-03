@@ -107,8 +107,21 @@ export default function AdminDashboardPage() {
 
   // Roles state
   const [userRolesMap, setUserRolesMap] = useState<Record<string, UserRole>>({});
+  const [adminUsers, setAdminUsers] = useState<Array<{ email: string; role: UserRole; name?: string; university_id?: string }>>([]);
   const [newRoleEmail, setNewRoleEmail] = useState('');
   const [newRoleChoice, setNewRoleChoice] = useState<UserRole>('editor');
+
+  const applyAdminUsers = (data: unknown) => {
+    const users = Array.isArray(data) ? data : [];
+    const normalized = users.map((u: any) => ({
+      email: String(u.email || '').toLowerCase(),
+      role: u.role as UserRole,
+      name: u.name ? String(u.name) : '',
+      university_id: u.university_id ? String(u.university_id) : '',
+    })).filter((u) => u.email);
+    setAdminUsers(normalized);
+    setUserRolesMap(Object.fromEntries(normalized.map((u) => [u.email, u.role])));
+  };
 
   // Platform settings state
   const { role: currentRole, loading: roleLoading } = useRole();
@@ -178,10 +191,7 @@ export default function AdminDashboardPage() {
       loadMaterials();
       setSettings(liveSettings);
       if (userIsSuperAdmin) {
-        supabase.rpc('admin_list_users').then(({ data }) => {
-          const users = Array.isArray(data) ? data : [];
-          setUserRolesMap(Object.fromEntries(users.map((u: any) => [String(u.email).toLowerCase(), u.role as UserRole])));
-        });
+        supabase.rpc('admin_list_users').then(({ data }) => applyAdminUsers(data));
       }
     }
   }, [session, canAccessPortal, liveSettings, userIsSuperAdmin]);
@@ -386,7 +396,7 @@ export default function AdminDashboardPage() {
     if (error) { alert('Could not update that role. Check the email and your permissions.'); return; }
     clearRoleCache();
     const { data } = await supabase.rpc('admin_list_users');
-    setUserRolesMap(Object.fromEntries((Array.isArray(data) ? data : []).map((u: any) => [String(u.email).toLowerCase(), u.role as UserRole])));
+    applyAdminUsers(data);
     setNewRoleEmail('');
   };
 
@@ -888,16 +898,21 @@ export default function AdminDashboardPage() {
                       <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase text-slate-500 dark:border-white/10 dark:bg-slate-900">
                         <tr>
                           <th className="px-4 py-2.5">User Account</th>
+                          <th className="px-4 py-2.5">University ID</th>
                           <th className="px-4 py-2.5">Role</th>
                           <th className="px-4 py-2.5">Permissions</th>
                           <th className="px-4 py-2.5 text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 dark:divide-white/5">
-                        {Object.entries(userRolesMap).map(([email, role]) => (
+                        {(adminUsers.length ? adminUsers : Object.entries(userRolesMap).map(([email, role]) => ({ email, role, name: '', university_id: '' }))).map(({ email, role, name, university_id }) => (
                           <tr key={email} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
                             <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-200">
-                              {email}
+                              <div>{name || email}</div>
+                              {name ? <div className="text-[10px] font-normal text-slate-500">{email}</div> : null}
+                            </td>
+                            <td className="px-4 py-3 font-mono text-[11px] text-slate-600 dark:text-slate-300">
+                              {university_id || '—'}
                             </td>
                             <td className="px-4 py-3">
                               <span
@@ -929,7 +944,7 @@ export default function AdminDashboardPage() {
                                       if (error) { alert('Could not update that role.'); return; }
                                       clearRoleCache();
                                       const { data } = await supabase.rpc('admin_list_users');
-                                      setUserRolesMap(Object.fromEntries((Array.isArray(data) ? data : []).map((u: any) => [String(u.email).toLowerCase(), u.role as UserRole])));
+                                      applyAdminUsers(data);
                                     });
                                   }}
                                   className="text-[11px] text-blue-600 hover:underline dark:text-cyan-300"

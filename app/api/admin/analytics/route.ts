@@ -77,6 +77,7 @@ export async function GET(request: NextRequest) {
     quizzesResult,
     sponsorResult,
     authUsersResult,
+    studentsResult,
   ] = await Promise.all([
     admin.from('user_roles').select('role'),
     admin.from('user_credits').select('daily_remaining,monthly_remaining,daily_limit,monthly_limit'),
@@ -94,6 +95,7 @@ export async function GET(request: NextRequest) {
     admin.from('lecture_quizzes').select('is_published'),
     admin.from('sponsor_analytics').select('event_type'),
     admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+    admin.from('students').select('id,email,name,university_id,group_section,created_at').order('email'),
   ]);
 
   const roles = rolesResult.data || [];
@@ -148,6 +150,16 @@ export async function GET(request: NextRequest) {
     if (t in sponsor) sponsor[t] += 1;
   }
 
+  const roster = (studentsResult.data || []).map((row) => ({
+    id: row.id as string,
+    email: String(row.email || ''),
+    name: String(row.name || ''),
+    university_id: row.university_id ? String(row.university_id) : '',
+    group_section: row.group_section ? String(row.group_section) : '',
+    created_at: row.created_at as string | null,
+  }));
+  const withUniversityId = roster.filter((row) => row.university_id).length;
+
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
     users: {
@@ -155,6 +167,7 @@ export async function GET(request: NextRequest) {
       students: studentCount,
       editors,
       superAdmins,
+      withUniversityId,
     },
     credits: {
       rows: credits.length,
@@ -172,6 +185,7 @@ export async function GET(request: NextRequest) {
       quizzesPublished,
     },
     sponsor,
+    roster,
     recentActivity: recentResult.data || [],
     links: {
       vercel:
@@ -188,6 +202,7 @@ export async function GET(request: NextRequest) {
       quizzesResult.error?.message,
       sponsorResult.error?.message,
       authUsersResult.error?.message,
+      studentsResult.error?.message,
     ].filter(Boolean),
   });
 }

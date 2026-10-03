@@ -134,6 +134,18 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
+  // Keep public.students in sync even if the auth trigger is delayed/unavailable.
+  if (admin) {
+    const { error: studentError } = await admin.from('students').upsert({
+      id: identity.userId,
+      email: updatedUser.email || (emailChangePending ? currentData.user.email : email) || '',
+      name,
+      university_id: universityId,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'id' });
+    if (studentError) console.warn('students upsert failed:', studentError.message);
+  }
+
   return NextResponse.json({
     email_change_pending: emailChangePending,
     profile: {

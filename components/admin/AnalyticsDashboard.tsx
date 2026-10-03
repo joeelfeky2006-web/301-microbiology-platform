@@ -16,7 +16,15 @@ import { cardClass } from '@/lib/ui';
 
 type AnalyticsPayload = {
   generatedAt: string;
-  users: { total: number; students: number; editors: number; superAdmins: number };
+  users: { total: number; students: number; editors: number; superAdmins: number; withUniversityId?: number };
+  roster?: Array<{
+    id: string;
+    email: string;
+    name: string;
+    university_id: string;
+    group_section: string;
+    created_at: string | null;
+  }>;
   credits: {
     rows: number;
     dailyRemainingSum: number;
@@ -140,7 +148,11 @@ export default function AnalyticsDashboard() {
       {data && (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-            <MetricCard label="Accounts" value={data.users.total} hint={`${data.users.students} students`} />
+            <MetricCard
+              label="Accounts"
+              value={data.users.total}
+              hint={`${data.users.students} students · ${data.users.withUniversityId ?? 0} with Uni ID`}
+            />
             <MetricCard label="Materials" value={data.content.materialsTotal} hint={`URS ${data.content.materialsByModule.URS} · CNS ${data.content.materialsByModule.CNS} · REP ${data.content.materialsByModule.REP}`} />
             <MetricCard label="Quizzes" value={data.content.quizzesTotal} hint={`${data.content.quizzesPublished} published`} />
             <MetricCard label="AI spends (7d)" value={data.credits.spendCredits7d} hint={`${data.credits.spendEvents7d} events`} />
@@ -194,6 +206,38 @@ export default function AnalyticsDashboard() {
               </ul>
             </section>
           </div>
+
+          <section className={`${cardClass} p-5`}>
+            <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+              <Users className="h-4 w-4" /> Student roster (University ID)
+            </h3>
+            {!data.roster?.length ? (
+              <p className="mt-3 text-sm text-slate-500">No student rows in public.students yet.</p>
+            ) : (
+              <div className="mt-3 overflow-x-auto">
+                <table className="min-w-full text-left text-xs">
+                  <thead className="border-b border-slate-200 text-slate-500 dark:border-white/10">
+                    <tr>
+                      <th className="py-2 pr-3 font-semibold">Name</th>
+                      <th className="py-2 pr-3 font-semibold">University ID</th>
+                      <th className="py-2 pr-3 font-semibold">Email</th>
+                      <th className="py-2 font-semibold">Group</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                    {data.roster.map((row) => (
+                      <tr key={row.id} className="text-slate-700 dark:text-slate-300">
+                        <td className="py-2 pr-3 font-semibold">{row.name || '—'}</td>
+                        <td className="py-2 pr-3 font-mono">{row.university_id || '—'}</td>
+                        <td className="py-2 pr-3">{row.email || '—'}</td>
+                        <td className="py-2 font-mono">{row.group_section || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
 
           <section className={`${cardClass} p-5`}>
             <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
