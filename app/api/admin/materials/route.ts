@@ -3,6 +3,7 @@ import { authenticate } from '@/lib/apiAuth';
 import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { createClient } from '@supabase/supabase-js';
 import { PRIMARY_ADMIN_EMAIL } from '@/lib/admin';
+import { validateMaterialUpload, type UploadFormat } from '@/lib/uploadLimits';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -169,6 +170,17 @@ export async function POST(request: NextRequest) {
   if (!title) return NextResponse.json({ error: 'Lecture title is required.' }, { status: 400 });
   if (!moduleName) return NextResponse.json({ error: 'Module code is required.' }, { status: 400 });
   if (!fileUrl) return NextResponse.json({ error: 'File URL or external link is required.' }, { status: 400 });
+
+  const uploadFormat = format as UploadFormat;
+  if (uploadFormat !== 'external_link') {
+    const limitError = validateMaterialUpload({
+      format: uploadFormat,
+      fileName: typeof body.file_name === 'string' ? body.file_name : fileUrl,
+      contentType: typeof body.content_type === 'string' ? body.content_type : null,
+      size: typeof body.file_size === 'number' ? body.file_size : null,
+    });
+    if (limitError) return NextResponse.json({ error: limitError }, { status: 400 });
+  }
 
   const admin = createSupabaseAdmin();
   const db = admin || userClient;
