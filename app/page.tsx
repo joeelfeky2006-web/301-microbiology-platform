@@ -101,6 +101,7 @@ export default function Home() {
 
   // Materials & Progress State
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [materialsUnavailable, setMaterialsUnavailable] = useState(false);
   const { stats } = useModuleProgress(materials);
   const [supportModalOpen, setSupportModalOpen] = useState(false);
 
@@ -134,6 +135,13 @@ export default function Home() {
           headers: await authenticatedHeaders(),
           cache: 'no-store',
         });
+        if (res.status === 503) {
+          if (!cancelled) {
+            setMaterials([]);
+            setMaterialsUnavailable(true);
+          }
+          return;
+        }
         if (res.ok) {
           const payload = await res.json();
           if (!cancelled && Array.isArray(payload.materials)) {
@@ -355,6 +363,11 @@ export default function Home() {
           {/* ======================================================== */}
           {activeTab === 'modules' && (
             <div className="space-y-8 animate-in fade-in duration-200">
+              {materialsUnavailable && (
+                <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                  Materials are unavailable right now. Please try again in a moment.
+                </div>
+              )}
               <section className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
