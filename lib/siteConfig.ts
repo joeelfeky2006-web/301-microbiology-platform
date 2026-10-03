@@ -1,7 +1,7 @@
 import type { SiteContent } from '@/types';
 
 /** Beta: hide Support / payment UI until real channels are configured. */
-export const SHOW_SUPPORT = false;
+export const SHOW_SUPPORT = true;
 
 /** Public, editable copy defaults. Keep credentials and security policy out of this object. */
 export const DEFAULT_SITE_CONTENT: SiteContent = {
