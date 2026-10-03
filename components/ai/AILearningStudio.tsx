@@ -438,16 +438,19 @@ export default function AILearningStudio({
                   <div className="mt-4 space-y-2.5">
                     {caseStudy.options?.map((opt: any) => {
                       const isSelected = selectedOption === opt.id;
-                      const showResult = revealed || isSelected;
+                      const showResult = revealed;
                       return (
                         <button
                           key={opt.id}
                           type="button"
+                          disabled={revealed}
                           onClick={() => setSelectedOption(opt.id)}
-                          className={`flex w-full items-start justify-between rounded-xl border p-3.5 text-left text-sm transition-all ${
-                            isSelected
+                          className={`flex w-full items-start justify-between rounded-xl border p-3.5 text-left text-sm transition-all disabled:cursor-default ${
+                            !showResult && isSelected
                               ? 'border-blue-500 bg-blue-50/80 text-blue-900 dark:border-cyan-400 dark:bg-cyan-950/40 dark:text-white'
-                              : 'border-slate-200 bg-white text-slate-800 hover:border-slate-300 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200'
+                              : !showResult
+                              ? 'border-slate-200 bg-white text-slate-800 hover:border-slate-300 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200'
+                              : 'border-slate-200 bg-white text-slate-800 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200'
                           } ${
                             showResult && opt.isCorrect
                               ? '!border-emerald-500 !bg-emerald-50/80 text-emerald-900 dark:!bg-emerald-950/40 dark:text-emerald-300'
@@ -476,14 +479,23 @@ export default function AILearningStudio({
                     })}
                   </div>
 
-                  <div className="mt-5 flex items-center justify-between">
-                    <button
-                      type="button"
-                      onClick={() => setRevealed(!revealed)}
-                      className="text-xs font-semibold text-indigo-600 hover:underline dark:text-cyan-300"
-                    >
-                      {revealed ? 'Hide Clinical Reasoning' : 'Reveal Clinical Reasoning & Pearls →'}
-                    </button>
+                  <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                    {!revealed ? (
+                      <button
+                        type="button"
+                        disabled={!selectedOption}
+                        onClick={() => setRevealed(true)}
+                        className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-50"
+                      >
+                        Check my answer
+                      </button>
+                    ) : (
+                      <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        {caseStudy.options?.find((opt: any) => opt.id === selectedOption)?.isCorrect
+                          ? 'Correct — review the explanation below.'
+                          : 'Not quite — review the explanation below.'}
+                      </p>
+                    )}
 
                     <button
                       type="button"
