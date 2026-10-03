@@ -92,19 +92,21 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Graceful fallback to verified curated seed materials ONLY when database query failed
+  // Never serve demo seed data in production / Vercel. Local dev may use curated seed.
   if (!success) {
+    const isProd = process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
+    if (isProd) {
+      return NextResponse.json(
+        { materials: [], count: 0 },
+        { status: 503, headers: { 'Cache-Control': 'no-store' } },
+      );
+    }
     const fallbackList = (rawModule && rawModule !== 'ALL')
       ? INITIAL_MATERIALS.filter((m) => m.module === rawModule)
       : INITIAL_MATERIALS;
-
     return NextResponse.json(
       { materials: fallbackList, count: fallbackList.length, fallback: true },
-      {
-        headers: {
-          'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
-        },
-      }
+      { headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120' } },
     );
   }
 

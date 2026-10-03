@@ -55,7 +55,8 @@ export default function ProfilePage() {
           setUniversityId(profilePayload.profile.university_id || '');
         }
       } catch (loadError) {
-        if (!cancelled) setError(loadError instanceof Error ? loadError.message : 'Could not load your profile.');
+        console.error('Could not load profile:', loadError);
+        if (!cancelled) setError('We could not load your profile right now. Please try again shortly.');
       } finally { if (!cancelled) setLoading(false); }
     };
     if (session) void load();

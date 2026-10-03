@@ -249,6 +249,14 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
           headers: await authenticatedHeaders(),
           cache: 'no-store',
         });
+        if (res.status === 503) {
+          if (!cancelled) {
+            setMaterials([]);
+            setLoadError('Materials are unavailable right now');
+            setLoading(false);
+          }
+          return;
+        }
         if (res.ok) {
           const payload = await res.json();
           if (!cancelled && Array.isArray(payload.materials)) {
@@ -277,16 +285,17 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
             .order('title', { ascending: true });
 
           if (baseErr) {
-            console.error('Error fetching materials:', error);
-            setLoadError(error.message);
+            console.error('Error fetching materials:', error, baseErr);
+            setLoadError('Materials are unavailable right now');
           } else {
             setMaterials((baseData as Material[]) ?? []);
           }
         } else {
           setMaterials((data as Material[]) ?? []);
         }
-      } catch (err: any) {
-        if (!cancelled) setLoadError(err?.message || 'Could not load materials.');
+      } catch (err: unknown) {
+        console.error('Error fetching materials:', err);
+        if (!cancelled) setLoadError('Materials are unavailable right now');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -353,7 +362,7 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
 
         {loadError && (
           <div role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 text-xs font-semibold text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
-            Couldn&apos;t load materials right now. Please refresh in a moment.
+            Materials are unavailable right now. Please refresh in a moment.
           </div>
         )}
 

@@ -12,11 +12,7 @@ export const DEFAULT_SUPPORT_CONTENT: PlatformSettings['support_content'] = {
   benefit_one: 'AI Token Compute',
   benefit_two: 'High-Speed DB & CDN',
   payment_heading: 'Student Payment Channels',
-  methods: [
-    { id: 'instapay', title: 'InstaPay (Egypt)', value: 'medatlas.egypt@instapay', display: 'medatlas.egypt@instapay', action: 'copy', link_url: '' },
-    { id: 'vodafone', title: 'Vodafone Cash', value: '01099887766', display: '010 9988 7766', action: 'copy', link_url: '' },
-    { id: 'fawry', title: 'Fawry Service / Smart Wallet', value: '9900223311', display: 'Ref: 9900 2233 11', action: 'copy', link_url: '' },
-  ],
+  methods: [],
   copy_label: 'Copy',
   copied_label: 'Copied',
   link_label: 'Open',

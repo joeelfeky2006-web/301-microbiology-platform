@@ -4,6 +4,7 @@ import { authenticate, authorizeAndSpend, refundCredit } from '@/lib/apiAuth';
 import { loadMaterial, generateJson, noStoreJson } from '@/lib/ai/pipeline';
 import { AI_MESSAGES, aiError } from '@/lib/ai/messages';
 import { MODULE_RULES, SAFETY_RULES, dataBlock } from '@/lib/ai/modulePrompts';
+import { sealCaseAnswer } from '@/lib/ai/caseSeal';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,12 +31,32 @@ export async function POST(request: NextRequest) {
     const difficulty = body.difficulty || 'intermediate';
     const parsed = await generateJson(`You are Dr. Atlas. ${SAFETY_RULES}\n${MODULE_RULES[moduleCode] || ''}\nCreate an educational 301 Microbiology case vignette strictly from facts present in the source. If the source is too thin, say so in the vignette instead of inventing facts. Do not use outside clinical facts. Requested difficulty: ${difficulty}. ${topic ? dataBlock('STUDENT INPUT', topic) : ''} ${dataBlock('SOURCE MATERIAL', source)} ${loaded.material.custom_system_prompt ? dataBlock('ADMIN OVERLAY', loaded.material.custom_system_prompt) : ''}`, schema);
     if (!parsed.patient || !Array.isArray(parsed.options) || parsed.options.length !== 4 || parsed.options.filter((option: any) => option.isCorrect === true).length !== 1 || !Array.isArray(parsed.clinicalPearls)) throw new Error('shape');
+    const correct = parsed.options.find((option: any) => option.isCorrect === true);
+    if (!correct || typeof correct.id !== 'string') throw new Error('shape');
+    const sealed = sealCaseAnswer({
+      correctId: String(correct.id).slice(0, 8),
+      explanation: String(parsed.explanation || '').slice(0, 5000),
+      clinicalPearls: parsed.clinicalPearls.map((pearl: unknown) => String(pearl).slice(0, 500)).slice(0, 12),
+    });
+    const publicOptions = parsed.options.map((option: any) => ({ id: String(option.id).slice(0, 8), text: String(option.text || '').slice(0, 1000) }));
     console.info(JSON.stringify({ action: 'case-study', material_id: loaded.material.id, kind: 'ok', latency_ms: Date.now() - started }));
-    return noStoreJson({ success: true, caseStudy: { ...parsed, module: moduleCode } });
+    return noStoreJson({
+      success: true,
+      sealed,
+      caseStudy: {
+        title: parsed.title,
+        module: moduleCode,
+        difficulty: parsed.difficulty,
+        patient: parsed.patient,
+        question: parsed.question,
+        options: publicOptions,
+      },
+    });
   } catch (error: any) {
     await refundCredit(request, 'case-study');
     const busy = /429|RESOURCE_EXHAUSTED|rate.?limit/i.test(String(error?.message || error));
-    console.info(JSON.stringify({ action: 'case-study', material_id: loaded.material.id, kind: busy ? 'busy' : 'glitch', latency_ms: Date.now() - started }));
+    const misconfig = /CASE_SEAL_SECRET/i.test(String(error?.message || error));
+    console.info(JSON.stringify({ action: 'case-study', material_id: loaded.material.id, kind: busy ? 'busy' : 'glitch', latency_ms: Date.now() - started, misconfig }));
     return noStoreJson({ ok: false, kind: busy ? 'busy' : 'glitch', message: busy ? AI_MESSAGES.busy : AI_MESSAGES.glitch }, 503);
   }
 }

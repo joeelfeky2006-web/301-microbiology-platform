@@ -41,7 +41,8 @@ export default function SharedContextSelector({
         const nextFiles = result.files || [];
         if (!cancelled) { setFiles(nextFiles); onFilesChange?.(nextFiles); }
       } catch (cause) {
-        if (!cancelled) { setFiles([]); onFilesChange?.([]); setError(cause instanceof Error ? cause.message : 'Could not load lecture contexts.'); }
+        console.error('Could not load lecture contexts:', cause);
+        if (!cancelled) { setFiles([]); onFilesChange?.([]); setError('Lecture contexts are unavailable right now. Please try again shortly.'); }
       } finally { if (!cancelled) setLoading(false); }
     })();
     return () => { cancelled = true; };

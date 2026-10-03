@@ -111,7 +111,7 @@ export default function MaterialQuiz({ material }: { material: Pick<Material, 'i
         const response = await fetch(`/api/quizzes/${encodeURIComponent(selectedQuizId)}`, { headers, cache: 'no-store' });
         const data = await response.json();
         if (response.status === 401) { await redirectAfterSessionExpiry(); return; }
-        if (!response.ok) { setError(data.error || 'Could not load this quiz.'); return; }
+        if (!response.ok) { console.error('Quiz load failed:', data); setError('Could not load this quiz. Please try again.'); return; }
         setQuestions(Array.isArray(data.questions) ? data.questions : []);
         setSelectedQuizTitle(data.quiz?.title || 'Practice Quiz');
         setIndex(0); setSelected(''); setReport(null);

@@ -31,6 +31,7 @@ import SupportModal from '@/components/community/SupportModal';
 import { useModuleProgress } from '@/lib/progress';
 import { useSettings } from '@/lib/useSettings';
 import { authenticatedHeaders } from '@/lib/authHeaders';
+import { SHOW_SUPPORT } from '@/lib/siteConfig';
 
 const modules: {
   id: ModuleName;
@@ -101,6 +102,7 @@ export default function Home() {
 
   // Materials & Progress State
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [materialsUnavailable, setMaterialsUnavailable] = useState(false);
   const { stats } = useModuleProgress(materials);
   const [supportModalOpen, setSupportModalOpen] = useState(false);
 
@@ -134,6 +136,13 @@ export default function Home() {
           headers: await authenticatedHeaders(),
           cache: 'no-store',
         });
+        if (res.status === 503) {
+          if (!cancelled) {
+            setMaterials([]);
+            setMaterialsUnavailable(true);
+          }
+          return;
+        }
         if (res.ok) {
           const payload = await res.json();
           if (!cancelled && Array.isArray(payload.materials)) {
@@ -355,6 +364,11 @@ export default function Home() {
           {/* ======================================================== */}
           {activeTab === 'modules' && (
             <div className="space-y-8 animate-in fade-in duration-200">
+              {materialsUnavailable && (
+                <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                  Materials are unavailable right now. Please try again in a moment.
+                </div>
+              )}
               <section className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -454,7 +468,7 @@ export default function Home() {
               </section>
 
               {/* Mobile & Desktop Student Support Callout Card */}
-              <section className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4.5 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+              {SHOW_SUPPORT && <section className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4.5 dark:border-emerald-900/60 dark:bg-emerald-950/30">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
                   <div className="flex items-center gap-2.5 text-emerald-900 dark:text-emerald-200 text-left">
                     <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs">
@@ -477,7 +491,7 @@ export default function Home() {
                     Support Student Fund →
                   </button>
                 </div>
-              </section>
+              </section>}
             </div>
           )}
 
@@ -506,7 +520,7 @@ export default function Home() {
         <DrAtlasChatbot />
 
         {/* Global Student Support Modal */}
-        <SupportModal isOpen={supportModalOpen} onClose={() => setSupportModalOpen(false)} />
+        {SHOW_SUPPORT && <SupportModal isOpen={supportModalOpen} onClose={() => setSupportModalOpen(false)} />}
       </main>
     </>
   );
