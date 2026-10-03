@@ -104,6 +104,9 @@ export default function Header() {
               <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-blue-700 dark:border-cyan-800/60 dark:bg-cyan-950/60 dark:text-cyan-300">
                 301
               </span>
+              <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-400 dark:bg-blue-400/10 dark:text-blue-300">
+                Beta
+              </span>
             </Link>
 
             <Link
