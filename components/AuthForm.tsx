@@ -28,6 +28,7 @@ export default function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
@@ -56,12 +57,21 @@ export default function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
     if (isSignUp && password.length < 8) { setError('Password must be at least 8 characters.'); return; }
     if (isSignUp && !universityId.trim()) { setError('Enter your university ID.'); return; }
     if (isSignUp && password !== confirm) { setError('Passwords do not match.'); return; }
+    if (isSignUp && !acceptedLegal) { setError('Please accept the Terms of Use and Privacy Policy to create an account.'); return; }
     setLoading(true);
     try {
       if (isSignUp) {
         const { data, error: authError } = await supabase.auth.signUp({
           email: email.trim(), password,
-          options: { data: { name: name.trim(), university_id: universityId.trim() }, emailRedirectTo: `${siteUrl()}/sign-in?confirmed=1` },
+          options: {
+            data: {
+              name: name.trim(),
+              university_id: universityId.trim(),
+              accepted_terms_at: new Date().toISOString(),
+              accepted_privacy_at: new Date().toISOString(),
+            },
+            emailRedirectTo: `${siteUrl()}/sign-in?confirmed=1`,
+          },
         });
         if (authError) throw authError;
         if (data.user && data.user.identities?.length === 0) {
@@ -100,11 +110,29 @@ export default function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
         <div><label className={labelClass} htmlFor="email">Email</label><input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" className={inputClass} /></div>
         <div><label className={labelClass} htmlFor="password">Password</label><input id="password" type="password" required minLength={isSignUp ? 8 : undefined} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={isSignUp ? 'new-password' : 'current-password'} className={inputClass} /></div>
         {isSignUp && <div><label className={labelClass} htmlFor="confirm">Confirm password</label><input id="confirm" type="password" required minLength={8} value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" className={inputClass} /></div>}
+        {isSignUp && (
+          <label htmlFor="accept-legal" className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50/80 p-3 text-sm leading-5 text-slate-700 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300">
+            <input
+              id="accept-legal"
+              type="checkbox"
+              required
+              checked={acceptedLegal}
+              onChange={(e) => setAcceptedLegal(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800"
+            />
+            <span>
+              I confirm I am at least 15 years old and agree to the{' '}
+              <Link href="/terms" target="_blank" className="font-semibold text-blue-700 underline underline-offset-2 hover:text-blue-800 dark:text-cyan-300">Terms of Use</Link>
+              {' '}and{' '}
+              <Link href="/privacy" target="_blank" className="font-semibold text-blue-700 underline underline-offset-2 hover:text-blue-800 dark:text-cyan-300">Privacy Policy</Link>.
+            </span>
+          </label>
+        )}
         {!isSignUp && <Link className="block text-sm text-blue-600 hover:underline dark:text-cyan-300" href="/forgot-password">Forgot password?</Link>}
         {error && <p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
         {info && <p role="status" className="rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-700">{info}</p>}
         {canResend && !isSignUp && <button type="button" onClick={resend} disabled={cooldown > 0} className="w-full text-sm font-semibold text-blue-600 disabled:opacity-50">{cooldown ? `Resend confirmation in ${cooldown}s` : 'Resend confirmation email'}</button>}
-        <button type="submit" disabled={loading || (isSignUp && !settings.registration_open)} className="w-full rounded-xl bg-blue-600 py-3 font-bold text-white disabled:bg-slate-400">{loading ? 'Please wait…' : isSignUp ? 'Create account' : 'Sign in'}</button>
+        <button type="submit" disabled={loading || (isSignUp && (!settings.registration_open || !acceptedLegal))} className="w-full rounded-xl bg-blue-600 py-3 font-bold text-white disabled:bg-slate-400">{loading ? 'Please wait…' : isSignUp ? 'Create account' : 'Sign in'}</button>
       </form>}
       {error && confirmationPending && <p role="alert" className="mt-4 text-sm text-red-600">{error}</p>}
       {confirmationPending && <button onClick={resend} disabled={cooldown > 0} className="mt-3 w-full rounded-xl border px-4 py-2 text-sm disabled:opacity-50">{cooldown ? `Resend email in ${cooldown}s` : 'Resend confirmation email'}</button>}

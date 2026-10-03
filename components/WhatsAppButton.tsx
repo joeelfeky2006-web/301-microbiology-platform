@@ -1,4 +1,5 @@
 'use client';
+import { MessageCircle } from 'lucide-react';
 import { useSettings } from '@/lib/useSettings';
 
 export default function WhatsAppButton() {
@@ -11,14 +12,11 @@ export default function WhatsAppButton() {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label="Need info? Contact us on WhatsApp"
-      title="Need info? Chat on WhatsApp"
-      className="hidden h-9 items-center gap-2 rounded-full bg-emerald-500 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-600 sm:flex"
+      aria-label="Contact us on WhatsApp"
+      title="WhatsApp support"
+      className="hidden h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-emerald-400 sm:flex"
     >
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
-      </svg>
-      <span className="hidden sm:inline">Need info?</span>
+      <MessageCircle className="h-4 w-4" strokeWidth={1.75} />
     </a>
   );
 }

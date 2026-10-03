@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Zap, Clock, X, HeartHandshake } from 'lucide-react';
+import { CircleGauge, Clock, X, HeartHandshake } from 'lucide-react';
 import { authenticatedHeaders } from '@/lib/authHeaders';
 import { cardClass } from '@/lib/ui';
 
@@ -39,22 +39,22 @@ export default function CreditBadge({ compact = false, className = '', onOpenSup
   const dailyPercent = Math.round((credits.daily_remaining / Math.max(1, credits.daily_limit)) * 100);
   const monthlyPercent = Math.round((credits.monthly_remaining / Math.max(1, credits.monthly_limit)) * 100);
   const color = credits.daily_remaining === 0
-    ? 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300'
+    ? 'border-rose-200 text-rose-700 dark:border-rose-900/60 dark:text-rose-300'
     : credits.daily_remaining <= 2
-      ? 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300'
-      : 'border-indigo-200 bg-indigo-50/90 text-indigo-700 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-cyan-300';
+      ? 'border-amber-200 text-amber-800 dark:border-amber-900/60 dark:text-amber-300'
+      : 'border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-200';
 
   return <>
-    <button type="button" onClick={() => setModalOpen(true)} title="View AI credit balance" className={`group flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold transition hover:shadow-xs active:scale-95 ${color} ${className}`}>
-      <Zap className="h-3.5 w-3.5 fill-current text-amber-500" />
-      <span className="font-mono">{credits.daily_remaining}/{credits.daily_limit}</span>
-      {!compact && <span className="hidden text-[10px] text-slate-500 dark:text-slate-400 sm:inline">· {credits.monthly_remaining} mo</span>}
+    <button type="button" onClick={() => setModalOpen(true)} title="View AI credit balance" className={`group flex h-9 items-center gap-1.5 rounded-lg border bg-white px-2.5 text-xs font-semibold transition hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 ${color} ${className}`}>
+      <CircleGauge className="h-3.5 w-3.5 opacity-80" strokeWidth={1.75} />
+      <span className="font-mono tabular-nums">{credits.daily_remaining}/{credits.daily_limit}</span>
+      {!compact && <span className="hidden text-[10px] font-medium text-slate-500 dark:text-slate-400 sm:inline">{credits.monthly_remaining} mo</span>}
     </button>
     {modalOpen && typeof document !== 'undefined' && createPortal(
       <div onMouseDown={(event) => { if (event.target === event.currentTarget) setModalOpen(false); }} className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-slate-950/60 p-3 backdrop-blur-xs">
         <section role="dialog" aria-modal="true" aria-labelledby="credits-dialog-title" className={`${cardClass} relative my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto overscroll-contain border border-slate-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-slate-900 sm:p-6`}>
           <header className="mb-4 flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-600 text-white"><Zap className="h-5 w-5 fill-current text-amber-300" /></span><div><h3 id="credits-dialog-title" className="text-lg font-black text-slate-900 dark:text-white">Student AI Credits</h3><p className="text-xs text-slate-500 dark:text-slate-400">Balances refresh from your account</p></div></div>
+            <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"><CircleGauge className="h-5 w-5" strokeWidth={1.75} /></span><div><h3 id="credits-dialog-title" className="text-lg font-bold text-slate-900 dark:text-white">Student AI Credits</h3><p className="text-xs text-slate-500 dark:text-slate-400">Balances refresh from your account</p></div></div>
             <button type="button" onClick={() => setModalOpen(false)} aria-label="Close credit wallet" className="shrink-0 rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"><X className="h-4 w-4" /></button>
           </header>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
 import {
-  Sparkles,
+  BrainCircuit,
   Shield,
   User,
   HeartHandshake,
@@ -15,7 +15,6 @@ import {
   UserPlus,
   LogOut,
   Layers,
-  GraduationCap,
   Users2,
   ChevronRight,
 } from 'lucide-react';
@@ -102,19 +101,19 @@ export default function Header() {
             >
               <img src={site.brand.logo || '/logo.svg'} alt="" width={30} height={30} className="h-7 w-7 rounded object-contain" onError={(e) => { e.currentTarget.src = '/logo.svg'; }} />
               <span>{site.brand.shortName}</span>
-              <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-blue-700 dark:border-cyan-800/60 dark:bg-cyan-950/60 dark:text-cyan-300">
+              <span className="inline-flex rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
                 301
               </span>
-              <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-400 dark:bg-blue-400/10 dark:text-blue-300">
+              <span className="rounded-md border border-slate-200 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
                 Beta
               </span>
             </Link>
 
             <Link
               href="/#ai-studio"
-              className="hidden items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold text-indigo-600 hover:bg-indigo-50 dark:text-cyan-300 dark:hover:bg-slate-800 md:flex transition"
+              className="hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white md:flex"
             >
-              <Sparkles className="h-3.5 w-3.5" />
+              <BrainCircuit className="h-3.5 w-3.5" strokeWidth={1.75} />
               {site.brand.tagline}
             </Link>
           </div>
@@ -192,7 +191,7 @@ export default function Header() {
               ref={menuTrigger}
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="sm:hidden flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 active:scale-95 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 transition"
+              className="sm:hidden flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
               aria-label="Toggle mobile menu"
               aria-expanded={mobileMenuOpen}
               aria-controls="mobile-navigation"
@@ -272,14 +271,14 @@ export default function Header() {
                 <Link
                   href="/#ai-studio"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex flex-col gap-1 rounded-xl border border-indigo-200 bg-indigo-50/50 p-3 hover:bg-indigo-100/50 dark:border-indigo-900/60 dark:bg-indigo-950/40 dark:hover:bg-indigo-950/60 transition"
+                  className="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50/70 p-3 transition hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
                 >
-                  <div className="flex items-center justify-between text-indigo-600 dark:text-cyan-300">
-                    <Sparkles className="h-4 w-4" />
-                    <ChevronRight className="h-3 w-3 text-indigo-400" />
+                  <div className="flex items-center justify-between text-slate-700 dark:text-slate-200">
+                    <BrainCircuit className="h-4 w-4" strokeWidth={1.75} />
+                    <ChevronRight className="h-3 w-3 text-slate-400" />
                   </div>
-                  <span className="text-xs font-bold text-indigo-900 dark:text-cyan-200">AI Clinical Lab</span>
-                  <span className="text-[10px] text-indigo-600/80 dark:text-cyan-300/80">Case Studies & MCQs</span>
+                  <span className="text-xs font-bold text-slate-800 dark:text-white">AI Clinical Lab</span>
+                  <span className="text-[10px] text-slate-500">Case Studies & MCQs</span>
                 </Link>
               </div>
 
