@@ -88,38 +88,23 @@ export default function PublishMaterial({ materials, onPublished }: { materials:
         sync_ai_to_lecture: Boolean(editingAi && attach),
       };
 
-      let apiSuccess = false;
-      try {
-        const response = await fetch('/api/admin/materials', {
-          method: 'POST',
-          headers: await authenticatedHeaders(),
-          body: JSON.stringify(payload),
-        });
-        if (response.ok) {
-          apiSuccess = true;
-        } else {
-          const errData = await response.json().catch(() => ({}));
-          console.warn('POST /api/admin/materials returned error, attempting direct client fallback:', errData.error);
-        }
-      } catch (apiErr) {
-        console.warn('POST /api/admin/materials network error, attempting direct client fallback:', apiErr);
-      }
-
-      if (!apiSuccess) {
-        const common = { module, title: cleanTitle, subtitle: subtitle.trim() || null, type, format, source_type: sourceType, file_url: fileUrl };
-        if (editingAi && attach) {
-          const { error: aiError } = await supabase.from('materials').update({ ai_context: aiContext.trim() || null, raw_quiz_text: quizText.trim() || null, custom_system_prompt: systemPrompt.trim() || null }).eq('module', module).eq('title', cleanTitle);
-          if (aiError) throw aiError;
-        }
-        const { error: insertError } = await supabase.from('materials').insert([{ ...common, ...(attach ? {} : { ai_context: aiContext.trim() || null, raw_quiz_text: quizText.trim() || null, custom_system_prompt: systemPrompt.trim() || null }) }]);
-        if (insertError) throw insertError;
+      const response = await fetch('/api/admin/materials', {
+        method: 'POST',
+        headers: await authenticatedHeaders(),
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        console.error('POST /api/admin/materials failed:', errData);
+        throw new Error(typeof errData.error === 'string' ? errData.error : 'Could not save this resource. Check your editor permissions and try again.');
       }
 
       await onPublished(); resetResource(); setAttach(true);
       setNotice(`Resource added to “${cleanTitle}”. Add another file when ready.`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (uploadedPath) await supabase.storage.from('materials').remove([uploadedPath]);
-      setNotice(`Could not save this resource: ${err?.message || 'Check the file or URL and your editor permissions, then try again.'}`); setIsError(true);
+      const message = err instanceof Error ? err.message : 'Could not save this resource. Check the file or URL and your editor permissions, then try again.';
+      setNotice(message); setIsError(true);
     } finally { setBusy(false); }
   };
 
