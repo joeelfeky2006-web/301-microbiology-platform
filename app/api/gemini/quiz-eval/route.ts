@@ -41,27 +41,30 @@ export async function POST(request: NextRequest) {
     return [{ question_id: question.id, question: question.question, topic: question.question.slice(0, 100), is_correct: answer.choice.toUpperCase() === question.correctAnswer, student_answer: answer.choice.toUpperCase(), correct_answer: question.correctAnswer, explanation: question.explanation }];
   });
   if (!results.length) return aiError('glitch', 400);
-  const access = await authorizeAndSpend(request, 'quiz-eval');
-  if ('response' in access) return access.response;
   const wrong = results.filter((item) => !item.is_correct);
   const score = Math.round((results.length - wrong.length) / results.length * 100);
   let feedback = 'Nice work. Keep reviewing your lecture question bank.';
   let weaknesses: string[] = [];
   let studyRecommendations: string[] = [];
-  if (wrong.length) {
-    try {
-      const critique = await generateJson(`You are Dr. Atlas. ${SAFETY_RULES}\n${MODULE_RULES[loaded.material.module] || ''}\nCreate a short supportive critique, weak topics, and revision advice based ONLY on these wrong questions and stored explanations. ${dataBlock('SOURCE MATERIAL', JSON.stringify(wrong.map(({ question, explanation }) => ({ question, explanation }))))}\n${dataBlock('STUDENT INPUT', JSON.stringify(wrong.map(({ question, student_answer }) => ({ question, student_answer }))))}`, {
-        type: 'OBJECT', properties: { feedback: { type: 'STRING' }, weaknesses: { type: 'ARRAY', items: { type: 'STRING' } }, studyRecommendations: { type: 'ARRAY', items: { type: 'STRING' } } }, required: ['feedback', 'weaknesses', 'studyRecommendations'],
-      });
-      if (typeof critique.feedback !== 'string' || !Array.isArray(critique.weaknesses) || !Array.isArray(critique.studyRecommendations)) throw new Error('shape');
-      feedback = critique.feedback.slice(0, 1500); weaknesses = critique.weaknesses.slice(0, 8).map((x: unknown) => String(x).slice(0, 300)); studyRecommendations = critique.studyRecommendations.slice(0, 8).map((x: unknown) => String(x).slice(0, 300));
-    } catch (error: any) {
-      await refundCredit(request, 'quiz-eval');
-      const busy = /429|RESOURCE_EXHAUSTED|rate.?limit/i.test(String(error?.message || error));
-      console.info(JSON.stringify({ action: 'quiz-eval', material_id: loaded.material.id, kind: busy ? 'busy' : 'glitch', latency_ms: Date.now() - started }));
-      return noStoreJson({ report: { module: loaded.material.module, score, isCorrect: wrong.length === 0, perQuestion: results.map(({ explanation, ...item }) => item), feedback: busy ? AI_MESSAGES.busy : AI_MESSAGES.glitch, diagnosticFocus: '', strengths: results.filter((x) => x.is_correct).map((x) => `Correct: ${x.topic}`), weaknesses, studyRecommendations }, kind: busy ? 'busy' : 'glitch', message: busy ? AI_MESSAGES.busy : AI_MESSAGES.glitch });
-    }
+  // Perfect scores need no AI critique and must not spend a credit.
+  if (!wrong.length) {
+    console.info(JSON.stringify({ action: 'quiz-eval', material_id: loaded.material.id, kind: 'ok', latency_ms: Date.now() - started, charged: false }));
+    return noStoreJson({ report: { module: loaded.material.module, score, isCorrect: true, perQuestion: results.map(({ explanation, ...item }) => item), feedback, diagnosticFocus: '', strengths: results.map((x) => `Correct: ${x.topic}`), weaknesses, studyRecommendations } });
   }
-  console.info(JSON.stringify({ action: 'quiz-eval', material_id: loaded.material.id, kind: 'ok', latency_ms: Date.now() - started }));
-  return noStoreJson({ report: { module: loaded.material.module, score, isCorrect: wrong.length === 0, perQuestion: results.map(({ explanation, ...item }) => item), feedback, diagnosticFocus: '', strengths: results.filter((x) => x.is_correct).map((x) => `Correct: ${x.topic}`), weaknesses, studyRecommendations } });
+  const access = await authorizeAndSpend(request, 'quiz-eval');
+  if ('response' in access) return access.response;
+  try {
+    const critique = await generateJson(`You are Dr. Atlas. ${SAFETY_RULES}\n${MODULE_RULES[loaded.material.module] || ''}\nCreate a short supportive critique, weak topics, and revision advice based ONLY on these wrong questions and stored explanations. ${dataBlock('SOURCE MATERIAL', JSON.stringify(wrong.map(({ question, explanation }) => ({ question, explanation }))))}\n${dataBlock('STUDENT INPUT', JSON.stringify(wrong.map(({ question, student_answer }) => ({ question, student_answer }))))}`, {
+      type: 'OBJECT', properties: { feedback: { type: 'STRING' }, weaknesses: { type: 'ARRAY', items: { type: 'STRING' } }, studyRecommendations: { type: 'ARRAY', items: { type: 'STRING' } } }, required: ['feedback', 'weaknesses', 'studyRecommendations'],
+    });
+    if (typeof critique.feedback !== 'string' || !Array.isArray(critique.weaknesses) || !Array.isArray(critique.studyRecommendations)) throw new Error('shape');
+    feedback = critique.feedback.slice(0, 1500); weaknesses = critique.weaknesses.slice(0, 8).map((x: unknown) => String(x).slice(0, 300)); studyRecommendations = critique.studyRecommendations.slice(0, 8).map((x: unknown) => String(x).slice(0, 300));
+  } catch (error: any) {
+    await refundCredit(request, 'quiz-eval');
+    const busy = /429|RESOURCE_EXHAUSTED|rate.?limit/i.test(String(error?.message || error));
+    console.info(JSON.stringify({ action: 'quiz-eval', material_id: loaded.material.id, kind: busy ? 'busy' : 'glitch', latency_ms: Date.now() - started }));
+    return noStoreJson({ report: { module: loaded.material.module, score, isCorrect: false, perQuestion: results.map(({ explanation, ...item }) => item), feedback: busy ? AI_MESSAGES.busy : AI_MESSAGES.glitch, diagnosticFocus: '', strengths: results.filter((x) => x.is_correct).map((x) => `Correct: ${x.topic}`), weaknesses, studyRecommendations }, kind: busy ? 'busy' : 'glitch', message: busy ? AI_MESSAGES.busy : AI_MESSAGES.glitch });
+  }
+  console.info(JSON.stringify({ action: 'quiz-eval', material_id: loaded.material.id, kind: 'ok', latency_ms: Date.now() - started, charged: true }));
+  return noStoreJson({ report: { module: loaded.material.module, score, isCorrect: false, perQuestion: results.map(({ explanation, ...item }) => item), feedback, diagnosticFocus: '', strengths: results.filter((x) => x.is_correct).map((x) => `Correct: ${x.topic}`), weaknesses, studyRecommendations } });
 }
