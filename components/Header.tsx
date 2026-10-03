@@ -29,6 +29,7 @@ import WhatsAppButton from './WhatsAppButton';
 import CreditBadge from './credits/CreditBadge';
 import SupportModal from './community/SupportModal';
 import { useOnClickOutside } from '@/lib/useOnClickOutside';
+import { SHOW_SUPPORT } from '@/lib/siteConfig';
 
 export default function Header() {
   const session = useSession();
@@ -130,10 +131,10 @@ export default function Header() {
           {/* Navigation Controls */}
           <nav className="flex items-center gap-1 sm:gap-2">
             {/* Live Student AI Credits */}
-            <CreditBadge onOpenSupport={() => setSupportModalOpen(true)} />
+            <CreditBadge onOpenSupport={SHOW_SUPPORT ? () => setSupportModalOpen(true) : undefined} />
 
             {/* Support Community Link */}
-            <button
+            {SHOW_SUPPORT && <button
               type="button"
               onClick={() => setSupportModalOpen(true)}
               title="Support student server hosting & AI tokens"
@@ -141,7 +142,7 @@ export default function Header() {
             >
               <HeartHandshake className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
               <span className="hidden sm:inline">Support Us</span>
-            </button>
+            </button>}
 
             {/* WhatsApp Support Button */}
             <WhatsAppButton />
@@ -305,7 +306,7 @@ export default function Header() {
               </div>
 
               {/* Community Support CTA */}
-              <button
+              {SHOW_SUPPORT && <button
                 type="button"
                 onClick={() => {
                   setMobileMenuOpen(false);
@@ -318,7 +319,7 @@ export default function Header() {
                   Support Student AI Hosting Fund
                 </span>
                 <span className="rounded-md bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">Chip In →</span>
-              </button>
+              </button>}
 
               {/* Account Controls */}
               <div className="border-t border-slate-200 pt-3 dark:border-slate-800">
@@ -381,7 +382,7 @@ export default function Header() {
       </header>
 
       {/* Support Community Modal */}
-      <SupportModal isOpen={supportModalOpen} onClose={() => setSupportModalOpen(false)} />
+      {SHOW_SUPPORT && <SupportModal isOpen={supportModalOpen} onClose={() => setSupportModalOpen(false)} />}
     </>
   );
 }

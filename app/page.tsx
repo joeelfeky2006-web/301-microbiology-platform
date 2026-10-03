@@ -31,6 +31,7 @@ import SupportModal from '@/components/community/SupportModal';
 import { useModuleProgress } from '@/lib/progress';
 import { useSettings } from '@/lib/useSettings';
 import { authenticatedHeaders } from '@/lib/authHeaders';
+import { SHOW_SUPPORT } from '@/lib/siteConfig';
 
 const modules: {
   id: ModuleName;
@@ -467,7 +468,7 @@ export default function Home() {
               </section>
 
               {/* Mobile & Desktop Student Support Callout Card */}
-              <section className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4.5 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+              {SHOW_SUPPORT && <section className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4.5 dark:border-emerald-900/60 dark:bg-emerald-950/30">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
                   <div className="flex items-center gap-2.5 text-emerald-900 dark:text-emerald-200 text-left">
                     <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs">
@@ -490,7 +491,7 @@ export default function Home() {
                     Support Student Fund →
                   </button>
                 </div>
-              </section>
+              </section>}
             </div>
           )}
 
@@ -519,7 +520,7 @@ export default function Home() {
         <DrAtlasChatbot />
 
         {/* Global Student Support Modal */}
-        <SupportModal isOpen={supportModalOpen} onClose={() => setSupportModalOpen(false)} />
+        {SHOW_SUPPORT && <SupportModal isOpen={supportModalOpen} onClose={() => setSupportModalOpen(false)} />}
       </main>
     </>
   );
