@@ -1,11 +1,11 @@
 import 'server-only';
-import { GoogleGenAI } from '@google/genai';
 import type { NextRequest } from 'next/server';
 import type { AIAction } from './actions';
 import { authenticate, authorizeAndSpend, refundCredit } from '@/lib/apiAuth';
 import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { aiError } from './messages';
 import { loadLectureSource } from './loadSource';
+import { generateStructuredJson } from './provider';
 
 export type AIBody = Record<string, unknown>;
 export type LoadedMaterial = { id: string; module: string; title?: string | null; ai_context?: string | null; raw_quiz_text?: string | null; custom_system_prompt?: string | null };
@@ -43,27 +43,5 @@ export function noStoreJson(data: unknown, status = 200) {
 }
 
 export async function generateJson(prompt: string, schema: Record<string, unknown>, timeoutMs = 25_000) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  const primary = process.env.GEMINI_MODEL;
-  if (!apiKey || !primary) throw new Error('configuration');
-  const ai = new GoogleGenAI({ apiKey, httpOptions: { timeout: timeoutMs } });
-  const run = async (model: string) => {
-    let lastError: unknown;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const result = await ai.models.generateContent({ model, contents: prompt, config: { responseMimeType: 'application/json', responseSchema: schema as any } });
-        const parsed = JSON.parse(result.text || '');
-        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('shape');
-        const required = Array.isArray(schema.required) ? schema.required as string[] : [];
-        if (required.some((key) => !(key in parsed))) throw new Error('shape');
-        return parsed as Record<string, any>;
-      } catch (error) { lastError = error; }
-    }
-    throw lastError;
-  };
-  try { return await run(primary); }
-  catch (error: any) {
-    if (process.env.GEMINI_FALLBACK_MODEL && /not.?found|unsupported|404/i.test(String(error?.message || error))) return run(process.env.GEMINI_FALLBACK_MODEL);
-    throw error;
-  }
+  return generateStructuredJson(prompt, schema, timeoutMs);
 }

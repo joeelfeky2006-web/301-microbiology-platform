@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
@@ -28,6 +28,7 @@ import ThemeToggle from './ThemeToggle';
 import WhatsAppButton from './WhatsAppButton';
 import CreditBadge from './credits/CreditBadge';
 import SupportModal from './community/SupportModal';
+import { useOnClickOutside } from '@/lib/useOnClickOutside';
 
 export default function Header() {
   const session = useSession();
@@ -39,8 +40,17 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const menuTrigger = useRef<HTMLButtonElement>(null);
   const mobileMenu = useRef<HTMLDivElement>(null);
+  const modulesMenu = useRef<HTMLDetailsElement>(null);
+  const accountMenu = useRef<HTMLDetailsElement>(null);
   const [userGroup, setUserGroup] = useState<GroupSection>('G1');
   const { role: userRole } = useRole();
+
+  const closeMobileMenuOutside = useCallback(() => setMobileMenuOpen(false), []);
+  const closeModulesOutside = useCallback(() => { if (modulesMenu.current) modulesMenu.current.open = false; }, []);
+  const closeAccountOutside = useCallback(() => { if (accountMenu.current) accountMenu.current.open = false; }, []);
+  useOnClickOutside(mobileMenu, closeMobileMenuOutside, mobileMenuOpen, menuTrigger);
+  useOnClickOutside(modulesMenu, closeModulesOutside);
+  useOnClickOutside(accountMenu, closeAccountOutside);
 
   useEffect(() => {
     if (session?.user?.user_metadata?.group_section) {
@@ -56,11 +66,8 @@ export default function Header() {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') { setMobileMenuOpen(false); menuTrigger.current?.focus(); }
     };
-    const onPointer = (event: MouseEvent) => {
-      if (event.target instanceof Node && !mobileMenu.current?.contains(event.target) && !menuTrigger.current?.contains(event.target)) setMobileMenuOpen(false);
-    };
-    window.addEventListener('keydown', onKey); window.addEventListener('mousedown', onPointer);
-    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('mousedown', onPointer); };
+    window.addEventListener('keydown', onKey);
+    return () => { window.removeEventListener('keydown', onKey); };
   }, [mobileMenuOpen]);
   useEffect(() => { setMobileMenuOpen(false); }, [pathname]);
 
@@ -110,7 +117,7 @@ export default function Header() {
 
           <nav aria-label="Main" className="hidden items-center gap-3 text-xs font-semibold lg:flex">
             {site.navigationOrder.map((key) => {
-              if (key === 'modules') return <details key={key} className="relative"><summary className="cursor-pointer list-none rounded px-2 py-2 text-slate-600 hover:text-blue-700 dark:text-slate-300">{site.navigation.modules} ▾</summary><div className="absolute right-0 top-full z-50 mt-2 grid min-w-48 gap-1 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-white/10 dark:bg-slate-900">{([['CNS', site.navigation.cns], ['URS', site.navigation.urs], ['REP', site.navigation.rep]] as const).map(([id, label]) => <Link key={id} href={`/modules/${id}`} className="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800">{label}</Link>)}</div></details>;
+              if (key === 'modules') return <details ref={modulesMenu} key={key} className="relative"><summary className="cursor-pointer list-none rounded px-2 py-2 text-slate-600 hover:text-blue-700 dark:text-slate-300">{site.navigation.modules} ▾</summary><div className="absolute right-0 top-full z-50 mt-2 grid min-w-48 gap-1 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-white/10 dark:bg-slate-900">{([['CNS', site.navigation.cns], ['URS', site.navigation.urs], ['REP', site.navigation.rep]] as const).map(([id, label]) => <Link key={id} href={`/modules/${id}`} className="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800">{label}</Link>)}</div></details>;
               const href = key === 'home' ? '/' : `/${key}`;
               if ((key === 'about' && !site.pages.about.visible) || (key === 'contact' && !site.pages.contact.visible)) return null;
               return <Link key={key} href={href} aria-current={pathname === href ? 'page' : undefined} className="rounded px-2 py-2 text-slate-600 hover:text-blue-700 focus-visible:outline focus-visible:outline-2 dark:text-slate-300 dark:hover:text-cyan-300">{site.navigation[key]}</Link>;
@@ -161,7 +168,7 @@ export default function Header() {
                   </Link>
                 </>
               ) : (
-                <details className="group relative">
+                <details ref={accountMenu} className="group relative">
                   <summary aria-label="Open account menu" className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-slate-200 bg-white p-1 pr-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
                     <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 font-bold text-white">{userName.charAt(0).toUpperCase()}</span><span className="max-w-20 truncate">{userName}</span>
                   </summary>

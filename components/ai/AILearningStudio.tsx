@@ -16,11 +16,15 @@ import {
   FileText,
 } from 'lucide-react';
 import { cardClass } from '@/lib/ui';
-import { supabase } from '@/lib/supabase';
 import { authenticatedHeaders, redirectAfterSessionExpiry } from '@/lib/authHeaders';
 import { MODULE_TITLES, type ModuleName, type Material } from '@/types';
 import AiDisclaimer from '@/components/ai/AiDisclaimer';
 import MaterialQuiz from '@/components/quiz/MaterialQuiz';
+
+function contextFileLabel(type: string | null | undefined) {
+  const labels: Record<string, string> = { lec_pdf: 'Lecture PDF', record_g1: 'G1 recording transcript', record_g2: 'G2 recording transcript', audio_recording: 'Audio transcript', mindmap: 'Mind map', qbank: 'Question bank', practical_pdf: 'Practical PDF' };
+  return labels[type || ''] || (type ? type.replaceAll('_', ' ') : 'Resource');
+}
 
 interface AILearningStudioProps {
   initialModule?: ModuleName;
@@ -67,14 +71,10 @@ export default function AILearningStudio({
     let cancelled = false;
     async function loadModuleMaterials() {
       try {
-        const { data } = await supabase
-          .from('materials')
-          .select('id,module,type,title')
-          .eq('module', selectedModule)
-          .order('title', { ascending: true });
-        if (!cancelled && data) {
-          setModuleMaterials(data as unknown as Material[]);
-        }
+        const response = await fetch(`/api/ai/contexts?module=${encodeURIComponent(selectedModule)}`, { headers: await authenticatedHeaders(), cache: 'no-store' });
+        if (!response.ok) throw new Error(`Context request failed (${response.status})`);
+        const result = await response.json() as { files?: Material[] };
+        if (!cancelled) setModuleMaterials(result.files || []);
       } catch (e) {
         console.warn('Failed to load module materials for AI feed:', e);
       }
@@ -85,6 +85,8 @@ export default function AILearningStudio({
       cancelled = true;
     };
   }, [selectedModule]);
+
+  const contextGroups = Array.from(new Map(moduleMaterials.map((material) => [material.title, material.title])).entries());
 
   const fetchCaseStudy = async () => {
     setCreditNotice(null);
@@ -304,10 +306,12 @@ export default function AILearningStudio({
                   className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 >
                   <option value="">Choose a lecture with AI context</option>
-                  {moduleMaterials.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.title}
-                    </option>
+                  {contextGroups.map(([title]) => (
+                    <optgroup key={title} label={`[${selectedModule}] ${title}`}>
+                      {moduleMaterials.filter((material) => material.title === title).map((material) => (
+                        <option key={material.id} value={material.id}>{title} — {contextFileLabel(material.type)}</option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
                 {selectedMaterialId && (
@@ -589,10 +593,12 @@ export default function AILearningStudio({
                   className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 >
                   <option value="">Choose a lecture with AI context</option>
-                  {moduleMaterials.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.title}
-                    </option>
+                  {contextGroups.map(([title]) => (
+                    <optgroup key={title} label={`[${selectedModule}] ${title}`}>
+                      {moduleMaterials.filter((material) => material.title === title).map((material) => (
+                        <option key={material.id} value={material.id}>{title} — {contextFileLabel(material.type)}</option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
                 {selectedMaterialId && (
