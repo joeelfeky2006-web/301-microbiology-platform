@@ -99,30 +99,10 @@ export default function AdSlot({
     if (!activeCampaign.discountCode) return;
     navigator.clipboard?.writeText(activeCampaign.discountCode);
     setCopied(true);
-    // Track coupon copy event for CTR analysis
-    fetch('/api/analytics/sponsor-click', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'coupon_copy',
-        placement,
-        coupon: activeCampaign.discountCode,
-      }),
-    }).catch(() => {});
     setTimeout(() => setCopied(false), 2500);
   };
 
   const handleLinkClick = () => {
-    // Track outgoing sponsor click
-    fetch('/api/analytics/sponsor-click', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'click',
-        placement,
-        coupon: activeCampaign.discountCode,
-      }),
-    }).catch(() => {});
     if (onActionClick) onActionClick();
   };
 
