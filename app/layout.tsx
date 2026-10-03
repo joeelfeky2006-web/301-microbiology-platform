@@ -4,6 +4,7 @@ import Header from "@/components/Header";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
 import MaintenanceGate from "@/components/MaintenanceGate";
 import Footer from "@/components/Footer";
+import CookieBanner from "@/components/CookieBanner";
 import { Space_Grotesk, IBM_Plex_Mono } from 'next/font/google';
 import { getPublicSiteContent } from '@/lib/publicSiteContent';
 
@@ -40,6 +41,7 @@ export default function RootLayout({
         <AnnouncementBanner />
         <div id="main" tabIndex={-1} className="flex flex-1 flex-col"><MaintenanceGate>{children}</MaintenanceGate></div>
         <Footer />
+        <CookieBanner />
       </body>
     </html>
   );

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { supabase, generateUUID } from '@/lib/supabase';
+import { authenticatedHeaders } from '@/lib/authHeaders';
 import { MATERIAL_TYPE_LABELS, MODULE_NAMES, MODULE_TITLES, type Material, type MaterialCategory, type MaterialFormat, type ModuleName } from '@/types';
 import { inputClass, labelClass } from '@/lib/ui';
 
@@ -35,11 +36,11 @@ export default function PublishMaterial({ materials, onPublished }: { materials:
   const [isError, setIsError] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const titleGroups = useMemo(() => Array.from(new Set(materials.filter((m) => m.module === module).map((m) => m.title))).sort(), [materials, module]);
+  const titleGroups = useMemo(() => Array.from(new Set(materials.filter((m) => (m.module || '').trim().toUpperCase() === module).map((m) => m.title))).sort(), [materials, module]);
   const filteredTitles = titleGroups.filter((item) => normalize(item).includes(normalize(search)));
-  const selectedRows = materials.filter((m) => m.module === module && normalize(m.title) === normalize(title));
+  const selectedRows = materials.filter((m) => (m.module || '').trim().toUpperCase() === module && normalize(m.title) === normalize(title));
   const aiSource = selectedRows.find((m) => m.ai_context || m.raw_quiz_text || m.custom_system_prompt);
-  const duplicate = !attach && !!title.trim() && materials.some((m) => m.module === module && normalize(m.title) === normalize(title));
+  const duplicate = !attach && !!title.trim() && materials.some((m) => (m.module || '').trim().toUpperCase() === module && normalize(m.title) === normalize(title));
 
   const resetResource = () => { setSubtitle(''); setFile(null); setUrl(''); setFileInputKey((k) => k + 1); setSaved(true); };
   const submit = async (event: React.FormEvent) => {
@@ -64,18 +65,52 @@ export default function PublishMaterial({ materials, onPublished }: { materials:
         fileUrl = supabase.storage.from('materials').getPublicUrl(uploadedPath).data.publicUrl;
         sourceType = 'supabase';
       }
-      const common = { module, title: cleanTitle, subtitle: subtitle.trim() || null, type, format, source_type: sourceType, file_url: fileUrl };
-      if (editingAi && attach) {
-        const { error: aiError } = await supabase.from('materials').update({ ai_context: aiContext.trim() || null, raw_quiz_text: quizText.trim() || null, custom_system_prompt: systemPrompt.trim() || null }).eq('module', module).eq('title', cleanTitle);
-        if (aiError) throw aiError;
+      const payload = {
+        module,
+        title: cleanTitle,
+        subtitle: subtitle.trim() || null,
+        type,
+        format,
+        source_type: sourceType,
+        file_url: fileUrl,
+        ai_context: aiContext.trim() || null,
+        raw_quiz_text: quizText.trim() || null,
+        custom_system_prompt: systemPrompt.trim() || null,
+        sync_ai_to_lecture: Boolean(editingAi && attach),
+      };
+
+      let apiSuccess = false;
+      try {
+        const response = await fetch('/api/admin/materials', {
+          method: 'POST',
+          headers: await authenticatedHeaders(),
+          body: JSON.stringify(payload),
+        });
+        if (response.ok) {
+          apiSuccess = true;
+        } else {
+          const errData = await response.json().catch(() => ({}));
+          console.warn('POST /api/admin/materials returned error, attempting direct client fallback:', errData.error);
+        }
+      } catch (apiErr) {
+        console.warn('POST /api/admin/materials network error, attempting direct client fallback:', apiErr);
       }
-      const { error: insertError } = await supabase.from('materials').insert([{ ...common, ...(attach ? {} : { ai_context: aiContext.trim() || null, raw_quiz_text: quizText.trim() || null, custom_system_prompt: systemPrompt.trim() || null }) }]);
-      if (insertError) throw insertError;
+
+      if (!apiSuccess) {
+        const common = { module, title: cleanTitle, subtitle: subtitle.trim() || null, type, format, source_type: sourceType, file_url: fileUrl };
+        if (editingAi && attach) {
+          const { error: aiError } = await supabase.from('materials').update({ ai_context: aiContext.trim() || null, raw_quiz_text: quizText.trim() || null, custom_system_prompt: systemPrompt.trim() || null }).eq('module', module).eq('title', cleanTitle);
+          if (aiError) throw aiError;
+        }
+        const { error: insertError } = await supabase.from('materials').insert([{ ...common, ...(attach ? {} : { ai_context: aiContext.trim() || null, raw_quiz_text: quizText.trim() || null, custom_system_prompt: systemPrompt.trim() || null }) }]);
+        if (insertError) throw insertError;
+      }
+
       await onPublished(); resetResource(); setAttach(true);
       setNotice(`Resource added to “${cleanTitle}”. Add another file when ready.`);
-    } catch {
+    } catch (err: any) {
       if (uploadedPath) await supabase.storage.from('materials').remove([uploadedPath]);
-      setNotice('Could not save this resource. Check the file or URL and your editor permissions, then try again.'); setIsError(true);
+      setNotice(`Could not save this resource: ${err?.message || 'Check the file or URL and your editor permissions, then try again.'}`); setIsError(true);
     } finally { setBusy(false); }
   };
 

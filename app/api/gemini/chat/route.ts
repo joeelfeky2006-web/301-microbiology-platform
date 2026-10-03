@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
   const access = await authorizeAndSpend(request, 'chat');
   if ('response' in access) return access.response;
   try {
-    const module = loaded.material.module;
-    const parsed = await generateJson(`You are Dr. Atlas, a supportive Micro 301 tutor. ${SAFETY_RULES}\n${MODULE_RULES[module] || ''}\nAnswer only from the source where lecture-specific facts are needed; if source is insufficient, say so. ${dataBlock('SOURCE MATERIAL', source)}\n${dataBlock('STUDENT INPUT', body.message)}\nConversation context: ${dataBlock('STUDENT INPUT', JSON.stringify(history))}`, schema);
+    const moduleCode = loaded.material.module;
+    const parsed = await generateJson(`You are Dr. Atlas, a supportive Micro 301 tutor. ${SAFETY_RULES}\n${MODULE_RULES[moduleCode] || ''}\nAnswer only from the source where lecture-specific facts are needed; if source is insufficient, say so. ${dataBlock('SOURCE MATERIAL', source)}\n${dataBlock('STUDENT INPUT', body.message)}\nConversation context: ${dataBlock('STUDENT INPUT', JSON.stringify(history))}`, schema);
     if (typeof parsed.reply !== 'string' || parsed.reply.length > 5000) throw new Error('shape');
     console.info(JSON.stringify({ action: 'chat', material_id: loaded.material.id, kind: 'ok', latency_ms: Date.now() - started }));
     return noStoreJson({ reply: parsed.reply });

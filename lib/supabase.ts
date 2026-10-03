@@ -26,71 +26,9 @@ export function generateUUID(): string {
   });
 }
 
-// High-yield seed data for MUST 301 Microbiology using valid UUIDs
-const INITIAL_MATERIALS: Material[] = [
-  // CNS Module
-  {
-    id: '11111111-cns1-4000-8000-000000000001',
-    module: 'CNS',
-    type: 'lec_pdf',
-    title: 'CNS Lec 1: Acute Bacterial & Viral Meningitis',
-    file_url: 'https://drive.google.com/file/d/demo-cns-lec1/view',
-    format: 'pdf',
-    source_type: 'drive',
-    created_at: '2026-09-10T10:00:00Z',
-  },
-  {
-    id: '11111111-cns1-4000-8000-000000000002',
-    module: 'CNS',
-    type: 'record_g1',
-    title: 'CNS Lec 1: Acute Bacterial & Viral Meningitis',
-    file_url: 'https://example.com/audio/cns_lec1_g1.mp3',
-    format: 'audio',
-    source_type: 'drive',
-    created_at: '2026-09-10T12:00:00Z',
-  },
-  {
-    id: '11111111-cns1-4000-8000-000000000003',
-    module: 'CNS',
-    type: 'record_g2',
-    title: 'CNS Lec 1: Acute Bacterial & Viral Meningitis',
-    file_url: 'https://example.com/audio/cns_lec1_g2.mp3',
-    format: 'audio',
-    source_type: 'drive',
-    created_at: '2026-09-10T14:00:00Z',
-  },
-  {
-    id: '11111111-cns1-4000-8000-000000000004',
-    module: 'CNS',
-    type: 'lec_pdf',
-    title: 'CNS Lec 2: Chronic Meningitis & Brain Abscess',
-    file_url: 'https://drive.google.com/file/d/demo-cns-lec2/view',
-    format: 'pdf',
-    source_type: 'drive',
-    created_at: '2026-09-14T10:00:00Z',
-  },
-  {
-    id: '11111111-cns1-4000-8000-000000000005',
-    module: 'CNS',
-    type: 'practical_pdf',
-    title: 'CNS Practical: CSF Examination, Gram Stain & OSPE Slides',
-    file_url: 'https://drive.google.com/file/d/demo-cns-prac/view',
-    format: 'pdf',
-    source_type: 'drive',
-    created_at: '2026-09-18T09:00:00Z',
-  },
-  {
-    id: '11111111-cns1-4000-8000-000000000006',
-    module: 'CNS',
-    type: 'midterm_study',
-    title: 'CNS Midterm Exam Vault: Past MCQ Questions & Rationale',
-    file_url: 'https://drive.google.com/file/d/demo-cns-midterm/view',
-    format: 'pdf',
-    source_type: 'drive',
-    created_at: '2026-09-22T14:00:00Z',
-  },
-
-  // URS (Urinary System) Module
+// High-yield seed data for MUST 301 Microbiology using valid UUIDs (Only active modules)
+export const INITIAL_MATERIALS: Material[] = [
+  // URS (Urinary System) Module - Active Uploaded Materials
   {
     id: '22222222-urs1-4000-8000-000000000001',
     module: 'URS',
@@ -140,48 +78,6 @@ const INITIAL_MATERIALS: Material[] = [
     format: 'pdf',
     source_type: 'drive',
     created_at: '2026-09-24T11:00:00Z',
-  },
-
-  // REP Module
-  {
-    id: '33333333-rep1-4000-8000-000000000001',
-    module: 'REP',
-    type: 'lec_pdf',
-    title: 'REP Lec 1: Sexually Transmitted Infections (Syphilis & Gonorrhea)',
-    file_url: 'https://drive.google.com/file/d/demo-rep-lec1/view',
-    format: 'pdf',
-    source_type: 'drive',
-    created_at: '2026-09-15T10:00:00Z',
-  },
-  {
-    id: '33333333-rep1-4000-8000-000000000002',
-    module: 'REP',
-    type: 'record_g1',
-    title: 'REP Lec 1: Sexually Transmitted Infections (Syphilis & Gonorrhea)',
-    file_url: 'https://example.com/audio/rep_lec1_g1.mp3',
-    format: 'audio',
-    source_type: 'drive',
-    created_at: '2026-09-15T12:00:00Z',
-  },
-  {
-    id: '33333333-rep1-4000-8000-000000000003',
-    module: 'REP',
-    type: 'practical_pdf',
-    title: 'REP Practical: Genital Swab Microscopy & Wet Mounts',
-    file_url: 'https://drive.google.com/file/d/demo-rep-prac/view',
-    format: 'pdf',
-    source_type: 'drive',
-    created_at: '2026-09-21T09:00:00Z',
-  },
-  {
-    id: '33333333-rep1-4000-8000-000000000004',
-    module: 'REP',
-    type: 'midterm_study',
-    title: 'REP Midterm Vault: High-Yield Topics & Flash Review',
-    file_url: 'https://drive.google.com/file/d/demo-rep-midterm/view',
-    format: 'pdf',
-    source_type: 'drive',
-    created_at: '2026-09-25T15:00:00Z',
   },
 ];
 

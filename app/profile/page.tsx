@@ -102,6 +102,27 @@ export default function ProfilePage() {
         ? 'Profile saved. Confirm the email-change message sent by Supabase before the new email becomes active.'
         : 'Profile saved successfully.');
       setProfileNoticeType('success');
+
+      // Dispatch event and update any stored local session so changes reflect immediately
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('profile_saved', { detail: payload.profile }));
+        try {
+          const stored = localStorage.getItem('micro_atlas_session');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed?.user) {
+              parsed.user.user_metadata = {
+                ...parsed.user.user_metadata,
+                name: updated.profile.name,
+                university_id: updated.profile.university_id,
+              };
+              localStorage.setItem('micro_atlas_session', JSON.stringify(parsed));
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
       if (refreshed && !refreshed.data.session) console.warn('Profile saved, but the local session could not be refreshed.');
     } catch (saveError) {
       setProfileNotice(saveError instanceof Error ? saveError.message : 'Could not save your profile.');

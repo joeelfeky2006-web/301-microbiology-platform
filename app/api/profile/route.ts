@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticate } from '@/lib/apiAuth';
+import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -67,29 +68,82 @@ export async function PATCH(request: NextRequest) {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
   const { data: currentData, error: currentError } = await client.auth.getUser(token);
-  if (currentError || !currentData.user || currentData.user.id !== identity.userId) return NextResponse.json({ error: 'Your session expired. Sign in again.' }, { status: 401 });
-  const emailChangePending = email !== currentData.user.email?.toLowerCase();
-  const { data, error } = await client.auth.updateUser({
-    ...(emailChangePending ? { email } : {}),
-    data: { ...currentData.user.user_metadata, name, university_id: universityId },
-  });
-  if (error || !data.user) {
-    const message = error?.message.toLowerCase() || '';
-    const friendly = message.includes('already') || message.includes('registered')
-      ? 'That email is already associated with another account.'
-      : 'We could not save your profile. Check the details and try again.';
-    return NextResponse.json({ error: friendly }, { status: 400 });
+  if (currentError || !currentData.user || currentData.user.id !== identity.userId) {
+    return NextResponse.json({ error: 'Your session expired. Sign in again.' }, { status: 401 });
   }
+
+  const emailChangePending = email !== currentData.user.email?.toLowerCase();
+  const admin = createSupabaseAdmin();
+  let updatedUser: any = null;
+
+  // Primary Path: Use Supabase Service Role Admin client (bypasses GoTrue session constraints & RLS issues)
+  if (admin) {
+    try {
+      const updatePayload: Record<string, any> = {
+        user_metadata: {
+          ...currentData.user.user_metadata,
+          name,
+          full_name: name,
+          university_id: universityId,
+        },
+      };
+      if (emailChangePending) {
+        updatePayload.email = email;
+      }
+      const { data: adminUpdateData, error: adminUpdateErr } = await admin.auth.admin.updateUserById(
+        identity.userId,
+        updatePayload
+      );
+      if (!adminUpdateErr && adminUpdateData?.user) {
+        updatedUser = adminUpdateData.user;
+      } else if (adminUpdateErr) {
+        console.warn('Admin updateUserById encountered error, trying user client fallback:', adminUpdateErr.message);
+      }
+    } catch (adminEx) {
+      console.warn('Admin update threw error, trying user client fallback:', adminEx);
+    }
+  }
+
+  // Secondary Path: User client with session initialization
+  if (!updatedUser) {
+    try {
+      await client.auth.setSession({ access_token: token, refresh_token: '' });
+      const { data, error } = await client.auth.updateUser({
+        ...(emailChangePending ? { email } : {}),
+        data: {
+          ...currentData.user.user_metadata,
+          name,
+          full_name: name,
+          university_id: universityId,
+        },
+      });
+
+      if (error || !data.user) {
+        const message = error?.message?.toLowerCase() || '';
+        const friendly = message.includes('already') || message.includes('registered')
+          ? 'That email is already associated with another account.'
+          : (error?.message ? `Failed to save profile: ${error.message}` : 'We could not save your profile. Check the details and try again.');
+        return NextResponse.json({ error: friendly }, { status: 400 });
+      }
+      updatedUser = data.user;
+    } catch (clientEx: any) {
+      console.error('User client update threw exception:', clientEx);
+      return NextResponse.json({
+        error: clientEx?.message || 'We could not save your profile. Check the details and try again.',
+      }, { status: 400 });
+    }
+  }
+
   return NextResponse.json({
     email_change_pending: emailChangePending,
     profile: {
-      id: data.user.id,
+      id: updatedUser.id,
       name,
       university_id: universityId,
-      email: data.user.email || '',
-      email_confirmed: Boolean(data.user.email_confirmed_at),
-      created_at: data.user.created_at,
-      last_sign_in_at: data.user.last_sign_in_at,
+      email: updatedUser.email || (emailChangePending ? currentData.user.email : email),
+      email_confirmed: Boolean(updatedUser.email_confirmed_at),
+      created_at: updatedUser.created_at,
+      last_sign_in_at: updatedUser.last_sign_in_at,
     },
   }, { headers: { 'Cache-Control': 'no-store' } });
 }

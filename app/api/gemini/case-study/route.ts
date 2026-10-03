@@ -25,13 +25,13 @@ export async function POST(request: NextRequest) {
   const access = await authorizeAndSpend(request, 'case-study');
   if ('response' in access) return access.response;
   try {
-    const module = loaded.material.module;
+    const moduleCode = loaded.material.module;
     const topic = typeof body.topic === 'string' ? body.topic.slice(0, 500) : '';
     const difficulty = body.difficulty || 'intermediate';
-    const parsed = await generateJson(`You are Dr. Atlas. ${SAFETY_RULES}\n${MODULE_RULES[module] || ''}\nCreate an educational 301 Microbiology case vignette strictly from facts present in the source. If the source is too thin, say so in the vignette instead of inventing facts. Do not use outside clinical facts. Requested difficulty: ${difficulty}. ${topic ? dataBlock('STUDENT INPUT', topic) : ''} ${dataBlock('SOURCE MATERIAL', source)} ${loaded.material.custom_system_prompt ? dataBlock('ADMIN OVERLAY', loaded.material.custom_system_prompt) : ''}`, schema);
+    const parsed = await generateJson(`You are Dr. Atlas. ${SAFETY_RULES}\n${MODULE_RULES[moduleCode] || ''}\nCreate an educational 301 Microbiology case vignette strictly from facts present in the source. If the source is too thin, say so in the vignette instead of inventing facts. Do not use outside clinical facts. Requested difficulty: ${difficulty}. ${topic ? dataBlock('STUDENT INPUT', topic) : ''} ${dataBlock('SOURCE MATERIAL', source)} ${loaded.material.custom_system_prompt ? dataBlock('ADMIN OVERLAY', loaded.material.custom_system_prompt) : ''}`, schema);
     if (!parsed.patient || !Array.isArray(parsed.options) || parsed.options.length !== 4 || parsed.options.filter((option: any) => option.isCorrect === true).length !== 1 || !Array.isArray(parsed.clinicalPearls)) throw new Error('shape');
     console.info(JSON.stringify({ action: 'case-study', material_id: loaded.material.id, kind: 'ok', latency_ms: Date.now() - started }));
-    return noStoreJson({ success: true, caseStudy: { ...parsed, module } });
+    return noStoreJson({ success: true, caseStudy: { ...parsed, module: moduleCode } });
   } catch (error: any) {
     await refundCredit(request, 'case-study');
     const busy = /429|RESOURCE_EXHAUSTED|rate.?limit/i.test(String(error?.message || error));

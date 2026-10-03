@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Sparkles, BookOpen, Layers, CheckCircle2, Circle, Check, Users2 } from 'lucide-react';
+import { Sparkles, BookOpen, Layers, CheckCircle2, Circle, Check, Users2, Clock3 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { cardClass } from '@/lib/ui';
 import {
@@ -20,8 +20,38 @@ import AILearningStudio from '@/components/ai/AILearningStudio';
 import { useModuleProgress } from '@/lib/progress';
 import MaterialQuiz from '@/components/quiz/MaterialQuiz';
 import { useSettings } from '@/lib/useSettings';
+import { authenticatedHeaders } from '@/lib/authHeaders';
 
 type Tone = 'blue' | 'emerald' | 'purple';
+
+function isDirectPlayableAudio(url?: string | null, sourceType?: string | null): boolean {
+  if (!url) return false;
+  // External cloud storage or messaging links require opening externally
+  if (sourceType === 'drive' || sourceType === 'telegram' || sourceType === 'external') {
+    return false;
+  }
+  const clean = url.trim().toLowerCase().split('?')[0];
+  if (
+    clean.includes('drive.google.com') ||
+    clean.includes('docs.google.com') ||
+    clean.includes('t.me') ||
+    clean.includes('telegram.me') ||
+    clean.includes('youtube.com') ||
+    clean.includes('youtu.be') ||
+    clean.includes('dropbox.com') ||
+    clean.includes('onedrive.live.com') ||
+    clean.includes('1drv.ms') ||
+    clean.includes('mega.nz')
+  ) {
+    return false;
+  }
+  // Direct Supabase storage file upload
+  if (sourceType === 'supabase' || url.includes('/storage/v1/object/public/')) {
+    return true;
+  }
+  // Direct playable audio stream / file extension
+  return /\.(mp3|wav|ogg|m4a|aac|opus|flac)$/i.test(clean);
+}
 
 const tones: Record<Tone, { bar: string; badge: string; button: string }> = {
   blue: {
@@ -151,16 +181,21 @@ function Section({
 
                       {mat.subtitle && <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">{mat.subtitle}</p>}
 
-                      {mat.format === 'audio' && <audio controls preload="none" src={mat.file_url} className="mt-3 w-full" />}
-
-                      <a
-                        href={mat.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`mt-3 rounded-lg px-3 py-1.5 text-center text-xs font-semibold text-white transition-colors ${t.button}`}
-                      >
-                        {mat.format === 'audio' ? 'Open audio →' : 'Open file →'}
-                      </a>
+                      {/* Mutually Exclusive Audio Player or External Link */}
+                      {mat.format === 'audio' && isDirectPlayableAudio(mat.file_url, mat.source_type) ? (
+                        <div className="mt-3">
+                          <audio controls preload="none" src={mat.file_url} className="w-full" />
+                        </div>
+                      ) : (
+                        <a
+                          href={mat.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`mt-3 block rounded-lg px-3 py-1.5 text-center text-xs font-semibold text-white transition-colors ${t.button}`}
+                        >
+                          {mat.format === 'audio' ? 'Open audio link ↗' : 'Open file →'}
+                        </a>
+                      )}
                     </div>
                   );
                 })}
@@ -205,20 +240,56 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase
-        .from('materials')
-        .select('id,module,type,title,subtitle,file_url,format,source_type')
-        .eq('module', moduleName)
-        .order('title', { ascending: true })
-        .returns<Material[]>();
-      if (cancelled) return;
-      if (error) {
-        console.error('Error fetching materials:', error);
-        setLoadError(error.message);
-      } else {
-        setMaterials(data ?? []);
+      setLoading(true);
+      setLoadError('');
+
+      // Attempt 1: Fast cached /api/materials API endpoint (handles guest RLS and module casing)
+      try {
+        const res = await fetch(`/api/materials?module=${encodeURIComponent(moduleName)}`, {
+          headers: await authenticatedHeaders(),
+          cache: 'no-store',
+        });
+        if (res.ok) {
+          const payload = await res.json();
+          if (!cancelled && Array.isArray(payload.materials)) {
+            setMaterials(payload.materials);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch (apiErr) {
+        console.warn('API /api/materials fetch failed, falling back to direct client query:', apiErr);
       }
-      setLoading(false);
+
+      // Attempt 2: Direct Supabase client fallback
+      try {
+        const { data, error } = await (supabase.from('materials') as any)
+          .select('id,module,type,title,subtitle,file_url,format,source_type')
+          .or(`module.eq.${moduleName},module.eq.${moduleName.toLowerCase()}`)
+          .order('title', { ascending: true });
+
+        if (cancelled) return;
+        if (error) {
+          // Attempt 3: Base columns if subtitle is restricted
+          const { data: baseData, error: baseErr } = await (supabase.from('materials') as any)
+            .select('id,module,type,title,file_url,format,source_type')
+            .or(`module.eq.${moduleName},module.eq.${moduleName.toLowerCase()}`)
+            .order('title', { ascending: true });
+
+          if (baseErr) {
+            console.error('Error fetching materials:', error);
+            setLoadError(error.message);
+          } else {
+            setMaterials((baseData as Material[]) ?? []);
+          }
+        } else {
+          setMaterials((data as Material[]) ?? []);
+        }
+      } catch (err: any) {
+        if (!cancelled) setLoadError(err?.message || 'Could not load materials.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
     return () => {
       cancelled = true;
@@ -288,6 +359,37 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
 
         {loading ? (
           <p className="text-slate-500 text-sm">Loading {moduleTitle} resources…</p>
+        ) : materials.length === 0 ? (
+          <div className={`${cardClass} mx-auto max-w-2xl p-8 sm:p-12 text-center space-y-4`}>
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-200 dark:bg-indigo-950/60 dark:text-cyan-300 dark:ring-indigo-800">
+              <Clock3 className="h-8 w-8" />
+            </div>
+            <span className="inline-block rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-indigo-800 dark:bg-indigo-900/60 dark:text-cyan-300">
+              Curriculum in Preparation
+            </span>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+              {moduleTitle} ({moduleName}) Coming Soon
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-lg mx-auto">
+              Course materials, lecture recordings, practical OSPE slides, and question vaults for the{' '}
+              <strong>{moduleTitle}</strong> module are currently being curated and uploaded by the academic staff.
+            </p>
+            <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href="/modules/URS"
+                className="rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition"
+              >
+                View Active URS Materials →
+              </Link>
+              <button
+                type="button"
+                onClick={() => setShowAIStudio(true)}
+                className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-800 dark:text-slate-200 transition"
+              >
+                Practice with AI Case Lab
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
             <div className="space-y-8 lg:col-span-3">

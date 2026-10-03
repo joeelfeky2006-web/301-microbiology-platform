@@ -17,6 +17,7 @@ import {
   TrendingUp,
   ShoppingBag,
   HeartHandshake,
+  Clock3,
 } from 'lucide-react';
 import { MODULE_TITLES, type Material, type ModuleName } from '@/types';
 import { supabase } from '@/lib/supabase';
@@ -29,6 +30,7 @@ import ModuleProgressTracker from '@/components/dashboard/ModuleProgressTracker'
 import SupportModal from '@/components/community/SupportModal';
 import { useModuleProgress } from '@/lib/progress';
 import { useSettings } from '@/lib/useSettings';
+import { authenticatedHeaders } from '@/lib/authHeaders';
 
 const modules: {
   id: ModuleName;
@@ -126,6 +128,24 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false;
     async function loadMaterials() {
+      // Attempt 1: Fetch via /api/materials API endpoint
+      try {
+        const res = await fetch('/api/materials', {
+          headers: await authenticatedHeaders(),
+          cache: 'no-store',
+        });
+        if (res.ok) {
+          const payload = await res.json();
+          if (!cancelled && Array.isArray(payload.materials)) {
+            setMaterials(payload.materials);
+            return;
+          }
+        }
+      } catch (apiErr) {
+        console.warn('/api/materials fetch on home failed, falling back to direct query:', apiErr);
+      }
+
+      // Attempt 2: Direct Supabase client query
       try {
         const { data, error } = await supabase
           .from('materials')
@@ -134,6 +154,17 @@ export default function Home() {
           .returns<Material[]>();
         if (!cancelled && !error && data) {
           setMaterials(data);
+          return;
+        }
+
+        // Attempt 3: Core columns fallback
+        const { data: baseData, error: baseErr } = await supabase
+          .from('materials')
+          .select('id,module,type,title,file_url,format,source_type')
+          .order('title', { ascending: true })
+          .returns<Material[]>();
+        if (!cancelled && !baseErr && baseData) {
+          setMaterials(baseData);
         }
       } catch (err) {
         console.error('Failed to load materials on home:', err);
@@ -341,7 +372,10 @@ export default function Home() {
 
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                   {modules.map((mod) => {
+                    const modMaterialsCount = materials.filter((m) => (m.module || '').toUpperCase() === mod.id).length;
+                    const hasData = modMaterialsCount > 0;
                     const modStats = stats.byModule[mod.id];
+
                     return (
                       <Link key={mod.id} href={`/modules/${mod.id}`} className="h-full">
                         <div
@@ -349,19 +383,26 @@ export default function Home() {
                         >
                           <div>
                             <div
-                              className={`font-mono-accent mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-2xl text-2xl font-bold ring-1 transition-transform group-hover:scale-110 ${mod.badge}`}
+                              className={`font-mono-accent mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl text-2xl font-bold ring-1 transition-transform group-hover:scale-110 ${mod.badge}`}
                             >
                               {mod.id}
                             </div>
-                            <h3 className="mb-2 text-xl font-bold text-slate-900 dark:text-white">
-                              {settings.site_content.modules[mod.id]?.label || MODULE_TITLES[mod.id]}
-                            </h3>
+                            <div className="flex items-center justify-center gap-1.5 mb-2">
+                              <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                                {settings.site_content.modules[mod.id]?.label || MODULE_TITLES[mod.id]}
+                              </h3>
+                            </div>
+                            {!hasData && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-400 mb-3">
+                                <Clock3 className="h-3 w-3" /> Coming Soon
+                              </span>
+                            )}
                             <p className="text-xs text-slate-500 dark:text-slate-300 leading-relaxed">
                               {settings.site_content.modules[mod.id]?.summary || mod.description}
                             </p>
 
-                            {/* Mini live progress indicator on module card */}
-                            {modStats && modStats.total > 0 && (
+                            {/* Mini live progress indicator on module card if module has active materials */}
+                            {hasData && modStats && modStats.total > 0 && (
                               <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/90 p-3 text-left dark:border-slate-800 dark:bg-slate-800/80">
                                 <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 dark:text-slate-300">
                                   <span>Completed</span>
@@ -377,11 +418,28 @@ export default function Home() {
                                 </div>
                               </div>
                             )}
+
+                            {!hasData && (
+                              <div className="mt-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-3 text-center dark:border-slate-800 dark:bg-slate-800/40">
+                                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                  Curriculum currently under preparation
+                                </p>
+                              </div>
+                            )}
                           </div>
 
-                          <div className="mt-6 border-t border-slate-100 pt-4 dark:border-slate-800 flex items-center justify-center gap-1.5 text-xs font-bold text-blue-600 dark:text-cyan-300 group-hover:gap-2 transition-all">
-                            <span>Explore materials</span>
-                            <ArrowRight className="h-3.5 w-3.5" />
+                          <div className="mt-6 border-t border-slate-100 pt-4 dark:border-slate-800 flex items-center justify-center gap-1.5 text-xs font-bold transition-all">
+                            {hasData ? (
+                              <span className="flex items-center gap-1.5 text-blue-600 dark:text-cyan-300 group-hover:gap-2 transition-all">
+                                <span>Explore materials</span>
+                                <ArrowRight className="h-3.5 w-3.5" />
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1.5 text-slate-400 dark:text-slate-500">
+                                <span>Preview module details</span>
+                                <ArrowRight className="h-3.5 w-3.5" />
+                              </span>
+                            )}
                           </div>
                         </div>
                       </Link>

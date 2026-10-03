@@ -164,12 +164,20 @@ export default function ModuleProgressTracker({
                     {mod}
                   </span>
                   <div className="text-right">
-                    <span className="font-mono text-sm font-black text-slate-900 dark:text-white">
-                      {modStats.completed}/{modStats.total}
-                    </span>
-                    <span className={`ml-1 text-xs font-bold ${accent.textColor}`}>
-                      ({modStats.percent}%)
-                    </span>
+                    {modMaterials.length > 0 ? (
+                      <>
+                        <span className="font-mono text-sm font-black text-slate-900 dark:text-white">
+                          {modStats.completed}/{modStats.total}
+                        </span>
+                        <span className={`ml-1 text-xs font-bold ${accent.textColor}`}>
+                          ({modStats.percent}%)
+                        </span>
+                      </>
+                    ) : (
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                        Coming Soon
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -177,37 +185,53 @@ export default function ModuleProgressTracker({
                   {MODULE_TITLES[mod]}
                 </h3>
 
-                {/* Individual Module Progress Bar */}
-                <div className={`mt-2 h-1.5 w-full overflow-hidden rounded-full ${accent.bgTrack}`}>
-                  <div
-                    className={`h-full rounded-full ${accent.barColor} transition-all duration-300`}
-                    style={{ width: `${modStats.percent}%` }}
-                  />
-                </div>
+                {modMaterials.length > 0 ? (
+                  <>
+                    {/* Individual Module Progress Bar */}
+                    <div className={`mt-2 h-1.5 w-full overflow-hidden rounded-full ${accent.bgTrack}`}>
+                      <div
+                        className={`h-full rounded-full ${accent.barColor} transition-all duration-300`}
+                        style={{ width: `${modStats.percent}%` }}
+                      />
+                    </div>
 
-                {/* Footer Controls */}
-                <div className="mt-3 flex items-center justify-between pt-2 border-t border-slate-100 dark:border-white/5 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => toggleExpand(mod)}
-                    className="flex items-center gap-1 font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-                  >
-                    <span>Checklist ({modMaterials.length})</span>
-                    {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                  </button>
+                    {/* Footer Controls */}
+                    <div className="mt-3 flex items-center justify-between pt-2 border-t border-slate-100 dark:border-white/5 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => toggleExpand(mod)}
+                        className="flex items-center gap-1 font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                      >
+                        <span>Checklist ({modMaterials.length})</span>
+                        {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                      </button>
 
-                  <Link
-                    href={`/modules/${mod}`}
-                    className={`flex items-center gap-1 font-bold ${accent.textColor} hover:underline`}
-                  >
-                    <span>Open Module</span>
-                    <ExternalLink className="h-3 w-3" />
-                  </Link>
-                </div>
+                      <Link
+                        href={`/modules/${mod}`}
+                        className={`flex items-center gap-1 font-bold ${accent.textColor} hover:underline`}
+                      >
+                        <span>Open Module</span>
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-3 pt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs">
+                    <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                      Curriculum in preparation
+                    </span>
+                    <Link
+                      href={`/modules/${mod}`}
+                      className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
+                    >
+                      Preview →
+                    </Link>
+                  </div>
+                )}
               </div>
 
-              {/* Collapsible Materials Checklist */}
-              {isExpanded && (
+              {/* Collapsible Materials Checklist (Only when module has materials) */}
+              {isExpanded && modMaterials.length > 0 && (
                 <div className="border-t border-slate-200/80 bg-white p-3 dark:border-white/10 dark:bg-slate-900/60 rounded-b-2xl space-y-2 max-h-72 overflow-y-auto">
                   <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-white/5 text-[11px]">
                     <span className="font-bold text-slate-400 uppercase">Interactive Checklist</span>

@@ -25,12 +25,12 @@ export async function POST(request: NextRequest) {
   const access = await authorizeAndSpend(request, 'summarize');
   if ('response' in access) return access.response;
   try {
-    const module = loaded.material.module;
+    const moduleCode = loaded.material.module;
     const topic = typeof body.topic === 'string' ? body.topic.slice(0, 500) : loaded.material.title || 'Lecture summary';
-    const parsed = await generateJson(`You are Dr. Atlas. ${SAFETY_RULES}\n${MODULE_RULES[module] || ''}\nCreate an exam-focused summary only from the source. Do not invent facts absent from it; identify thin areas briefly. Topic: ${dataBlock('STUDENT INPUT', topic)} ${dataBlock('SOURCE MATERIAL', source)} ${loaded.material.custom_system_prompt ? dataBlock('ADMIN OVERLAY', loaded.material.custom_system_prompt) : ''}`, schema);
+    const parsed = await generateJson(`You are Dr. Atlas. ${SAFETY_RULES}\n${MODULE_RULES[moduleCode] || ''}\nCreate an exam-focused summary only from the source. Do not invent facts absent from it; identify thin areas briefly. Topic: ${dataBlock('STUDENT INPUT', topic)} ${dataBlock('SOURCE MATERIAL', source)} ${loaded.material.custom_system_prompt ? dataBlock('ADMIN OVERLAY', loaded.material.custom_system_prompt) : ''}`, schema);
     if (!Array.isArray(parsed.keyPathogens) || !Array.isArray(parsed.examTraps) || !Array.isArray(parsed.diagnosticAlgorithms)) throw new Error('shape');
     console.info(JSON.stringify({ action: 'summarize', material_id: loaded.material.id, kind: 'ok', latency_ms: Date.now() - started }));
-    return noStoreJson({ success: true, summary: { ...parsed, module, moduleTitle: module } });
+    return noStoreJson({ success: true, summary: { ...parsed, module: moduleCode, moduleTitle: moduleCode } });
   } catch (error: any) {
     await refundCredit(request, 'summarize');
     const busy = /429|RESOURCE_EXHAUSTED|rate.?limit/i.test(String(error?.message || error));

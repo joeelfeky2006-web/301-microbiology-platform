@@ -4,7 +4,8 @@ import 'server-only';
 import { aiError } from '@/lib/ai/messages';
 import { ACTION_COSTS, isAIAction, type AIAction } from '@/lib/ai/actions';
 
-type Authorization = { userId: string } | { response: Response };
+export type AuthIdentity = { userId: string; email?: string };
+type Authorization = AuthIdentity | { response: Response };
 
 export async function authenticate(request: NextRequest): Promise<Authorization> {
   const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
@@ -17,7 +18,7 @@ export async function authenticate(request: NextRequest): Promise<Authorization>
   });
   const { data, error } = await client.auth.getUser(token);
   if (error || !data.user) return { response: aiError('auth', 401) };
-  return { userId: data.user.id };
+  return { userId: data.user.id, email: data.user.email?.toLowerCase() };
 }
 
 /** Verify the caller and atomically spend server-side AI credits. */

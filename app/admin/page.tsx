@@ -115,9 +115,9 @@ export default function AdminDashboardPage() {
   const [siteContentValid, setSiteContentValid] = useState(true);
 
   // Role simulation for admin preview
-  const currentUserEmail = session?.user?.email ?? '';
-  const userIsSuperAdmin = currentRole === 'super_admin';
-  const canAccessPortal = currentRole === 'super_admin' || currentRole === 'editor';
+  const currentUserEmail = (session?.user?.email ?? '').trim().toLowerCase();
+  const userIsSuperAdmin = currentRole === 'super_admin' || currentUserEmail === PRIMARY_ADMIN_EMAIL;
+  const canAccessPortal = userIsSuperAdmin || currentRole === 'editor';
 
   // Redirect if not signed in or not allowed
   useEffect(() => {
@@ -133,10 +133,37 @@ export default function AdminDashboardPage() {
     try {
       const response = await fetch('/api/admin/materials', { headers: await authenticatedHeaders() });
       const payload = await response.json();
-      if (!response.ok) throw new Error(`${response.status}: ${payload.error || payload.message || 'Could not load course materials.'}`);
-      setMaterials((payload.materials || []) as Material[]);
+      if (response.ok && Array.isArray(payload.materials)) {
+        setMaterials((payload.materials || []) as Material[]);
+        return;
+      }
+      throw new Error(payload.error || payload.message || 'Server materials API failed');
     } catch (err) {
-      console.error('Error fetching materials:', err);
+      console.warn('API fetch materials failed, attempting direct Supabase query fallback:', err);
+      try {
+        const { data, error } = await supabase
+          .from('materials')
+          .select('id,module,type,title,subtitle,file_url,format,source_type')
+          .order('title', { ascending: true });
+        if (!error && Array.isArray(data)) {
+          setMaterials(data as Material[]);
+          setMaterialsError('');
+          return;
+        }
+
+        // Secondary fallback to core columns
+        const { data: baseData, error: baseError } = await supabase
+          .from('materials')
+          .select('id,module,type,title,file_url,format,source_type')
+          .order('title', { ascending: true });
+        if (!baseError && Array.isArray(baseData)) {
+          setMaterials(baseData as Material[]);
+          setMaterialsError('');
+          return;
+        }
+      } catch (clientErr) {
+        console.error('Direct client fallback also failed:', clientErr);
+      }
       setMaterialsError(`Could not load course materials. ${err instanceof Error ? err.message : 'Check your connection and staff access, then refresh.'}`);
     } finally {
       setMaterialsLoading(false);
@@ -237,27 +264,60 @@ export default function AdminDashboardPage() {
     try {
       const source = detectSource(editingMaterial.file_url) || editingMaterial.source_type;
       const changes = {
-          title: editingMaterial.title.trim(),
-          module: editingMaterial.module,
-          type: editingMaterial.type,
-          format: editingMaterial.format,
-          source_type: source,
-          file_url: editingMaterial.file_url.trim(),
-          subtitle: editingMaterial.subtitle?.trim() || null,
-          ai_context: editingMaterial.ai_context?.trim() || null,
-          raw_quiz_text: editingMaterial.raw_quiz_text?.trim() || null,
-          custom_system_prompt: editingMaterial.custom_system_prompt?.trim() || null,
-        };
-      const original = materials.find((m) => m.id === editingMaterial.id);
-      const renamed = editingMaterial.title.trim() !== (original?.title ?? '');
-      if (renamed) {
-        const { error: renameError } = await supabase.from('materials').update({ title: editingMaterial.title.trim(), module: editingMaterial.module })
-          .eq('module', original?.module ?? editingMaterial.module).eq('title', original?.title ?? editingMaterial.title);
-        if (renameError) throw renameError;
-      }
-      const { error } = await supabase.from('materials').update(changes).eq('id', editingMaterial.id);
+        id: editingMaterial.id,
+        title: editingMaterial.title.trim(),
+        module: editingMaterial.module,
+        type: editingMaterial.type,
+        format: editingMaterial.format,
+        source_type: source,
+        file_url: editingMaterial.file_url.trim(),
+        subtitle: editingMaterial.subtitle?.trim() || null,
+        ai_context: editingMaterial.ai_context?.trim() || null,
+        raw_quiz_text: editingMaterial.raw_quiz_text?.trim() || null,
+        custom_system_prompt: editingMaterial.custom_system_prompt?.trim() || null,
+        rename_all_matching: true,
+      };
 
-      if (error) throw error;
+      let apiSuccess = false;
+      try {
+        const patchRes = await fetch('/api/admin/materials', {
+          method: 'PATCH',
+          headers: await authenticatedHeaders(),
+          body: JSON.stringify(changes),
+        });
+        if (patchRes.ok) {
+          apiSuccess = true;
+        } else {
+          const errData = await patchRes.json().catch(() => ({}));
+          console.warn('PATCH /api/admin/materials returned error, attempting direct client fallback:', errData.error);
+        }
+      } catch (patchErr) {
+        console.warn('PATCH /api/admin/materials network error:', patchErr);
+      }
+
+      if (!apiSuccess) {
+        const original = materials.find((m) => m.id === editingMaterial.id);
+        const renamed = editingMaterial.title.trim() !== (original?.title ?? '');
+        if (renamed) {
+          const { error: renameError } = await supabase.from('materials').update({ title: editingMaterial.title.trim(), module: editingMaterial.module })
+            .eq('module', original?.module ?? editingMaterial.module).eq('title', original?.title ?? editingMaterial.title);
+          if (renameError) throw renameError;
+        }
+        const { error } = await supabase.from('materials').update({
+          title: changes.title,
+          module: changes.module,
+          type: changes.type,
+          format: changes.format,
+          source_type: changes.source_type,
+          file_url: changes.file_url,
+          subtitle: changes.subtitle,
+          ai_context: changes.ai_context,
+          raw_quiz_text: changes.raw_quiz_text,
+          custom_system_prompt: changes.custom_system_prompt,
+        }).eq('id', editingMaterial.id);
+
+        if (error) throw error;
+      }
 
       setEditStatus({ loading: false, message: 'Updated successfully!', type: 'success' });
       setTimeout(() => {
@@ -280,16 +340,35 @@ export default function AdminDashboardPage() {
     if (!confirm(`Are you sure you want to permanently delete "${itemTitle}"?`)) return;
 
     try {
-      const target = materials.find((m) => m.id === id);
-      const marker = '/storage/v1/object/public/materials/';
-      const idx = target?.file_url ? target.file_url.indexOf(marker) : -1;
-      if (target && idx !== -1) {
-        const path = decodeURIComponent(target.file_url.slice(idx + marker.length).split('?')[0]);
-        const { error: removeError } = await supabase.storage.from('materials').remove([path]);
-        if (removeError) console.error('Could not remove stored file:', removeError.message);
+      let apiSuccess = false;
+      try {
+        const delRes = await fetch(`/api/admin/materials?id=${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          headers: await authenticatedHeaders(),
+        });
+        if (delRes.ok) {
+          apiSuccess = true;
+        } else {
+          const errData = await delRes.json().catch(() => ({}));
+          console.warn('DELETE /api/admin/materials error, using direct client fallback:', errData.error);
+        }
+      } catch (delErr) {
+        console.warn('DELETE /api/admin/materials network error:', delErr);
       }
-      const { error } = await supabase.from('materials').delete().eq('id', id);
-      if (error) throw error;
+
+      if (!apiSuccess) {
+        const target = materials.find((m) => m.id === id);
+        const marker = '/storage/v1/object/public/materials/';
+        const idx = target?.file_url ? target.file_url.indexOf(marker) : -1;
+        if (target && idx !== -1) {
+          const path = decodeURIComponent(target.file_url.slice(idx + marker.length).split('?')[0]);
+          const { error: removeError } = await supabase.storage.from('materials').remove([path]);
+          if (removeError) console.error('Could not remove stored file:', removeError.message);
+        }
+        const { error } = await supabase.from('materials').delete().eq('id', id);
+        if (error) throw error;
+      }
+
       await loadMaterials();
     } catch (err: any) {
       alert(`Deletion failed: ${err?.message || 'Unknown error'}`);
@@ -350,11 +429,15 @@ export default function AdminDashboardPage() {
   // Filtered materials
   const filteredMaterials = useMemo(() => {
     return materials.filter((m) => {
-      const matchesMod = filterModule === 'ALL' || m.module === filterModule;
-      const matchesSearch =
-        searchQuery === '' ||
-        m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        MATERIAL_TYPE_LABELS[m.type]?.toLowerCase().includes(searchQuery.toLowerCase());
+      const mod = (m.module || '').trim().toUpperCase();
+      const matchesMod = filterModule === 'ALL' || mod === filterModule;
+      const q = searchQuery.trim().toLowerCase();
+      if (!q) return matchesMod;
+      const title = (m.title || '').toLowerCase();
+      const subtitle = (m.subtitle || '').toLowerCase();
+      const typeLabel = (MATERIAL_TYPE_LABELS[m.type] || m.type || '').toLowerCase();
+      const url = (m.file_url || '').toLowerCase();
+      const matchesSearch = title.includes(q) || subtitle.includes(q) || typeLabel.includes(q) || url.includes(q);
       return matchesMod && matchesSearch;
     });
   }, [materials, filterModule, searchQuery]);
@@ -364,9 +447,9 @@ export default function AdminDashboardPage() {
   const stats = useMemo(() => {
     return {
       total: materials.length,
-      cns: materials.filter((m) => m.module === 'CNS').length,
-      urs: materials.filter((m) => m.module === 'URS').length,
-      rep: materials.filter((m) => m.module === 'REP').length,
+      cns: materials.filter((m) => (m.module || '').trim().toUpperCase() === 'CNS').length,
+      urs: materials.filter((m) => (m.module || '').trim().toUpperCase() === 'URS').length,
+      rep: materials.filter((m) => (m.module || '').trim().toUpperCase() === 'REP').length,
     };
   }, [materials]);
 
@@ -605,6 +688,16 @@ export default function AdminDashboardPage() {
                             <div className="font-bold text-slate-900 dark:text-white">
                               {mat.title}
                             </div>
+                            {mat.subtitle && (
+                              <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                                {mat.subtitle}
+                              </p>
+                            )}
+                            {(mat.ai_context || mat.raw_quiz_text || mat.custom_system_prompt) && (
+                              <span className="inline-flex items-center gap-1 mt-0.5 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">
+                                <Sparkles className="h-3 w-3" /> AI Knowledge Attached
+                              </span>
+                            )}
                             <span className="font-mono text-[10px] text-slate-400 truncate max-w-xs block">
                               {mat.file_url}
                             </span>
@@ -616,10 +709,12 @@ export default function AdminDashboardPage() {
                                   ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300'
                                   : mat.module === 'CNS'
                                   ? 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300'
-                                  : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                                  : mat.module === 'REP'
+                                  ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                                  : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300'
                               }`}
                             >
-                              {mat.module} · {MODULE_TITLES[mat.module]}
+                              {mat.module} · {MODULE_TITLES[mat.module as ModuleName] ?? mat.module}
                             </span>
                           </td>
                           <td className="px-4 py-3.5 whitespace-nowrap">
@@ -691,143 +786,6 @@ export default function AdminDashboardPage() {
 
         {/* TAB 2: Publish & Upload Center */}
         {activeTab === 'publish' && <PublishMaterial materials={materials} onPublished={loadMaterials} />}
-        {false && activeTab === 'publish' && (
-          <div className={`${cardClass} max-w-3xl mx-auto p-8`}>
-            <div className="mb-6 border-b border-slate-200 pb-4 dark:border-white/10">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                Publish Course Material
-              </h2>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                Authorized for Super Admins and Editors. Resources will instantly appear in the corresponding student module portal.
-              </p>
-            </div>
-
-            {publishStatus.message && (
-              <div
-                className={`mb-6 rounded-xl border p-4 text-xs font-semibold ${
-                  publishStatus.type === 'success'
-                    ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-300'
-                    : publishStatus.type === 'error'
-                    ? 'border-red-300 bg-red-50 text-red-800 dark:border-red-500/30 dark:bg-red-950/40 dark:text-red-300'
-                    : 'border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-950/40 dark:text-blue-300'
-                }`}
-              >
-                {publishStatus.message}
-              </div>
-            )}
-
-            <form onSubmit={handlePublish} className="space-y-5">
-              <div>
-                <label className={labelClass}>Material Title</label>
-                <input
-                  type="text"
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Urinary System Lec 1: Acute Pyelonephritis"
-                  className={inputClass}
-                />
-                <p className="mt-1 text-[11px] text-slate-400">
-                  Tip: Multiple records with the same title (e.g. PDF + G1 Audio + G2 Audio) automatically group on the module cards.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={labelClass}>Target Module</label>
-                  <select
-                    value={moduleName}
-                    onChange={(e) => setModuleName(e.target.value as ModuleName)}
-                    className={inputClass}
-                  >
-                    {MODULE_NAMES.map((m) => (
-                      <option key={m} value={m}>
-                        {m} — {MODULE_TITLES[m]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className={labelClass}>Category</label>
-                  <select
-                    value={type}
-                    onChange={(e) => setType(e.target.value as MaterialCategory)}
-                    className={inputClass}
-                  >
-                    <optgroup label="Theory & Lectures">{categoryOptions(THEORY_TYPES)}</optgroup>
-                    <optgroup label="Practicals & OSPE">{categoryOptions(PRACTICAL_TYPES)}</optgroup>
-                    <optgroup label="Exam Vault">{categoryOptions(EXAM_TYPES)}</optgroup>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className={labelClass}>Material Format</label>
-                <select
-                  value={format}
-                  onChange={(e) => setFormat(e.target.value as MaterialFormat)}
-                  className={inputClass}
-                >
-                  <option value="external_link">External Link (Google Drive / Telegram / Web)</option>
-                  <option value="pdf">Direct PDF File Upload</option>
-                  <option value="audio">Direct Audio Recording (.mp3 / .m4a)</option>
-                </select>
-              </div>
-
-              {format === 'external_link' ? (
-                <div>
-                  <label className={labelClass}>External URL</label>
-                  <input
-                    type="url"
-                    required
-                    value={externalUrl}
-                    onChange={(e) => setExternalUrl(e.target.value)}
-                    placeholder="https://drive.google.com/... or https://t.me/..."
-                    className={inputClass}
-                  />
-                </div>
-              ) : (
-                <div>
-                  <label className={labelClass}>Upload File to Storage</label>
-                  <input
-                    key={fileInputKey}
-                    type="file"
-                    required
-                    accept={format === 'audio' ? 'audio/*' : '.pdf'}
-                    onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    className="block w-full text-xs text-slate-500 file:mr-4 file:rounded-xl file:border-0 file:bg-blue-600 file:px-4 file:py-2.5 file:text-xs file:font-semibold file:text-white hover:file:bg-blue-700"
-                  />
-                </div>
-              )}
-
-              <div className="space-y-4 rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4 dark:border-indigo-900/50 dark:bg-indigo-950/20">
-                <div>
-                  <label className={labelClass} title="Paste raw lecture notes, summaries, or reference text here. Gemini uses this as its primary knowledge base.">Knowledge Resource (AI Context)</label>
-                  <textarea rows={6} value={aiContext} onChange={(e) => setAiContext(e.target.value)} className={inputClass} placeholder="Paste lecture notes, references, and high-yield concepts..." />
-                  <p className="mt-1 text-[11px] text-slate-500">Paste raw lecture notes, summaries, or reference text here. Gemini uses this as its primary knowledge base.</p>
-                </div>
-                <div>
-                  <label className={labelClass} title="Paste raw text questions, choice options, and explanation keys here.">Raw Quiz Bank &amp; Explanations</label>
-                  <textarea rows={6} value={rawQuizText} onChange={(e) => setRawQuizText(e.target.value)} className={inputClass} placeholder="Paste questions, A-D options, answer keys, and explanations..." />
-                  <p className="mt-1 text-[11px] text-slate-500">Paste raw text questions, choice options, and explanation keys here.</p>
-                </div>
-                <div>
-                  <label className={labelClass}>Custom AI System Prompt (Optional)</label>
-                  <textarea rows={3} value={customSystemPrompt} onChange={(e) => setCustomSystemPrompt(e.target.value)} className={inputClass} placeholder="Optional lecture-specific instructions for the AI..." />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={publishStatus.loading}
-                className="w-full rounded-xl bg-blue-600 py-3 text-xs font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-700 disabled:opacity-50"
-              >
-                {publishStatus.loading ? 'Uploading & Registering...' : 'Publish Course Material'}
-              </button>
-            </form>
-          </div>
-        )}
 
         {/* TAB 3: RBAC Roles & Permissions (Super Admin only) */}
         {activeTab === 'roles' && (
