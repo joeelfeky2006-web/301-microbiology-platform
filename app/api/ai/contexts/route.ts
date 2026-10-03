@@ -15,13 +15,21 @@ export async function GET(request: NextRequest) {
   if (!admin) return Response.json({ error: 'AI context service is unavailable.' }, { status: 503 });
 
   const { data, error } = await admin.from('materials')
-    .select('id,module,type,title,ai_context')
+    .select('id,module,type,title,file_url,ai_context')
     .eq('module', module)
     .not('ai_context', 'is', null)
     .order('title', { ascending: true });
   if (error) return Response.json({ error: 'Could not load lecture contexts.' }, { status: 503 });
 
   const files = (data || []).filter((row) => typeof row.ai_context === 'string' && row.ai_context.trim().length > 0)
-    .map(({ id, module: rowModule, type, title }) => ({ id, module: rowModule, type, title }));
+    .map(({ id, module: rowModule, type, title, file_url }) => {
+      let fileLabel = 'Resource';
+      try {
+        const url = new URL(file_url);
+        const tail = decodeURIComponent(url.pathname.split('/').filter(Boolean).pop() || '');
+        fileLabel = `${url.hostname.replace(/^www\./, '')}${tail ? ` · ${tail}` : ''}`;
+      } catch { /* legacy non-URL values use the generic label */ }
+      return { id, module: rowModule, type, title, fileLabel };
+    });
   return Response.json({ files }, { headers: { 'Cache-Control': 'private, no-store' } });
 }

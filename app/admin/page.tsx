@@ -31,6 +31,7 @@ import { useRole, clearRoleCache } from '@/lib/useRole';
 import { DEFAULT_PLATFORM_SETTINGS, invalidateSettingsCache, useSettings } from '@/lib/useSettings';
 import { PRIMARY_ADMIN_EMAIL } from '@/lib/admin';
 import PublishMaterial from '@/components/admin/PublishMaterial';
+import QuizManager from '@/components/admin/QuizManager';
 import SiteContentEditor from '@/components/admin/SiteContentEditor';
 import { cardClass, inputClass, labelClass } from '@/lib/ui';
 import { authenticatedHeaders } from '@/lib/authHeaders';
@@ -76,7 +77,7 @@ export default function AdminDashboardPage() {
   const router = useRouter();
 
   // Active navigation tab
-  const [activeTab, setActiveTab] = useState<'materials' | 'publish' | 'roles' | 'settings'>('materials');
+  const [activeTab, setActiveTab] = useState<'materials' | 'publish' | 'quizzes' | 'roles' | 'settings'>('materials');
 
   // Materials state
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -583,6 +584,19 @@ export default function AdminDashboardPage() {
             Publish &amp; Upload
           </button>
 
+          <button
+            type="button"
+            onClick={() => setActiveTab('quizzes')}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${
+              activeTab === 'quizzes'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-900 dark:text-slate-300'
+            }`}
+          >
+            <FileText className="h-4 w-4" />
+            Multi-Quiz Manager
+          </button>
+
           {userIsSuperAdmin && (
             <>
               <button
@@ -786,6 +800,7 @@ export default function AdminDashboardPage() {
 
         {/* TAB 2: Publish & Upload Center */}
         {activeTab === 'publish' && <PublishMaterial materials={materials} onPublished={loadMaterials} />}
+        {activeTab === 'quizzes' && <QuizManager />}
 
         {/* TAB 3: RBAC Roles & Permissions (Super Admin only) */}
         {activeTab === 'roles' && (

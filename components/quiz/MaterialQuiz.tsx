@@ -52,7 +52,9 @@ function printReport(report: Report, question: Question) {
   }
 }
 
-export default function MaterialQuiz({ material }: { material: Material }) {
+type QuizChoice = { id: string; title: string; quiz_number: number };
+
+export default function MaterialQuiz({ material }: { material: Pick<Material, 'id' | 'module' | 'title'> }) {
   const [questions, setQuestions] = useState<Question[] | null>(null);
   const [available, setAvailable] = useState<boolean | null>(null);
   const [index, setIndex] = useState(0);
@@ -61,6 +63,9 @@ export default function MaterialQuiz({ material }: { material: Material }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [retrySeconds, setRetrySeconds] = useState(0);
+  const [quizChoices, setQuizChoices] = useState<QuizChoice[]>([]);
+  const [selectedQuizId, setSelectedQuizId] = useState('');
+  const [selectedQuizTitle, setSelectedQuizTitle] = useState('');
 
   useEffect(() => {
     if (!retrySeconds) return;
@@ -73,7 +78,15 @@ export default function MaterialQuiz({ material }: { material: Material }) {
     const checkAvailability = async () => {
       try {
         const headers = await authenticatedHeaders();
-        const response = await fetch('/api/quiz/bank?material_id=' + encodeURIComponent(material.id), { headers });
+        const structuredResponse = await fetch('/api/quizzes?material_id=' + encodeURIComponent(material.id), { headers, cache: 'no-store' });
+        const structured = await structuredResponse.json();
+        if (structuredResponse.status === 401) { await redirectAfterSessionExpiry(); return; }
+        if (!structuredResponse.ok) throw new Error(structured.error || 'Could not check quizzes.');
+        if (Array.isArray(structured.quizzes) && structured.quizzes.length) {
+          if (!cancelled) { setQuizChoices(structured.quizzes); setSelectedQuizId(structured.quizzes[0].id); setAvailable(true); }
+          return;
+        }
+        const response = await fetch('/api/quiz/bank?material_id=' + encodeURIComponent(material.id), { headers, cache: 'no-store' });
         const data = await response.json();
         if (response.status === 401) { await redirectAfterSessionExpiry(); return; }
         if (!cancelled && data.kind === 'fallback') { setQuestions([]); setAvailable(false); }
@@ -93,6 +106,17 @@ export default function MaterialQuiz({ material }: { material: Material }) {
     setLoading(true); setError('');
     try {
       const headers = await authenticatedHeaders();
+      if (quizChoices.length) {
+        if (!selectedQuizId) { setError('Choose one of the available quizzes.'); return; }
+        const response = await fetch(`/api/quizzes/${encodeURIComponent(selectedQuizId)}`, { headers, cache: 'no-store' });
+        const data = await response.json();
+        if (response.status === 401) { await redirectAfterSessionExpiry(); return; }
+        if (!response.ok) { setError(data.error || 'Could not load this quiz.'); return; }
+        setQuestions(Array.isArray(data.questions) ? data.questions : []);
+        setSelectedQuizTitle(data.quiz?.title || 'Practice Quiz');
+        setIndex(0); setSelected(''); setReport(null);
+        return;
+      }
       const response = await fetch('/api/quiz/bank?material_id=' + encodeURIComponent(material.id), { headers });
       const data = await response.json();
       if (response.status === 401) { await redirectAfterSessionExpiry(); return; }
@@ -114,7 +138,7 @@ export default function MaterialQuiz({ material }: { material: Material }) {
       const response = await fetch('/api/gemini/quiz-eval', {
         method: 'POST', headers,
         body: JSON.stringify({
-          material_id: material.id, answers: [{ qid: question.id, choice: selected }],
+          ...(selectedQuizId ? { quiz_id: selectedQuizId } : { material_id: material.id }), answers: [{ qid: question.id, choice: selected }],
         }),
       });
       const data = await response.json();
@@ -135,10 +159,13 @@ export default function MaterialQuiz({ material }: { material: Material }) {
   return (
     <div className="mt-4 rounded-2xl border border-indigo-200 bg-white p-5 dark:border-indigo-900/50 dark:bg-slate-900">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h4 className="font-bold text-slate-900 dark:text-white">Lecture Practice Quiz</h4>
-        {!questions && available && <button type="button" onClick={load} disabled={loading} className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-60">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Load practice questions
-        </button>}
+        <div><h4 className="font-bold text-slate-900 dark:text-white">Lecture Practice Quiz</h4>{selectedQuizTitle && <p className="mt-1 text-xs text-slate-500">{selectedQuizTitle}</p>}</div>
+        {!questions && available && <div className="flex flex-wrap items-center gap-2">
+          {quizChoices.length > 0 && <select aria-label="Choose a quiz" value={selectedQuizId} onChange={(event) => { setSelectedQuizId(event.target.value); setQuestions(null); setSelectedQuizTitle(''); }} className="rounded-xl border bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800">{quizChoices.map((quiz) => <option key={quiz.id} value={quiz.id}>Quiz {quiz.quiz_number}: {quiz.title}</option>)}</select>}
+          <button type="button" onClick={load} disabled={loading || (quizChoices.length > 0 && !selectedQuizId)} className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-60">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} {quizChoices.length ? 'Start selected quiz' : 'Load practice questions'}
+          </button>
+        </div>}
       </div>
       {available === null && <p className="mt-3 text-xs text-slate-500">Checking lecture question bank…</p>}
       {error && <div role="alert" className="mt-3 text-sm text-rose-600"><p>{error}</p>{retrySeconds > 0 && <p className="mt-1 text-xs">Try again in {retrySeconds}s.</p>}{report && <button type="button" onClick={submit} disabled={loading || retrySeconds > 0 || !selected} className="mt-2 rounded-lg border px-3 py-1.5 text-xs font-semibold disabled:opacity-50">{retrySeconds > 0 ? `Try again in ${retrySeconds}s` : 'Retry feedback'}</button>}</div>}

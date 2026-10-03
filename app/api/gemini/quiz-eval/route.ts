@@ -5,6 +5,8 @@ import { parseBank } from '@/lib/ai/quizBank';
 import { loadMaterial, generateJson, noStoreJson } from '@/lib/ai/pipeline';
 import { AI_MESSAGES, aiError } from '@/lib/ai/messages';
 import { MODULE_RULES, SAFETY_RULES, dataBlock } from '@/lib/ai/modulePrompts';
+import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
+import type { BankQuestion } from '@/lib/ai/quizBank';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,10 +18,22 @@ export async function POST(request: NextRequest) {
   if ('response' in auth) return auth.response;
   let body: any;
   try { body = await request.json(); } catch { return aiError('glitch', 400); }
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body?.material_id || '') || !Array.isArray(body?.answers) || body.answers.length > 50 || body.answers.some((a: any) => !a || typeof a.qid !== 'string' || a.qid.length > 500 || typeof a.choice !== 'string' || a.choice.length > 500)) return aiError('glitch', 400);
-  const loaded = await loadMaterial(body.material_id);
+  const materialIdValid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body?.material_id || '');
+  const quizIdValid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body?.quiz_id || '');
+  if ((!materialIdValid && !quizIdValid) || !Array.isArray(body?.answers) || body.answers.length > 50 || body.answers.some((a: any) => !a || typeof a.qid !== 'string' || a.qid.length > 500 || typeof a.choice !== 'string' || a.choice.length > 500)) return aiError('glitch', 400);
+  let structuredQuestions: BankQuestion[] | null = null;
+  let targetMaterialId: string = body.material_id;
+  if (quizIdValid) {
+    const admin = createSupabaseAdmin();
+    if (!admin) return aiError('glitch', 503);
+    const { data: quiz, error } = await admin.from('lecture_quizzes').select('material_id,questions').eq('id', body.quiz_id).eq('is_published', true).maybeSingle();
+    if (error || !quiz?.material_id || !Array.isArray(quiz.questions)) return aiError('glitch', 404);
+    targetMaterialId = quiz.material_id;
+    structuredQuestions = quiz.questions as unknown as BankQuestion[];
+  }
+  const loaded = await loadMaterial(targetMaterialId);
   if ('response' in loaded) return loaded.response;
-  const bank = parseBank(loaded.material.raw_quiz_text || '');
+  const bank = structuredQuestions || parseBank(loaded.material.raw_quiz_text || '');
   if (!bank.length) return noStoreJson({ kind: 'fallback' });
   const results: { question_id: string; question: string; topic: string; is_correct: boolean; student_answer: string; correct_answer: string; explanation: string }[] = body.answers.flatMap((answer: any) => {
     const question = bank.find((item) => item.id === answer.qid);

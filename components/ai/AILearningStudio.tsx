@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Sparkles,
   BookOpen,
@@ -17,14 +17,10 @@ import {
 } from 'lucide-react';
 import { cardClass } from '@/lib/ui';
 import { authenticatedHeaders, redirectAfterSessionExpiry } from '@/lib/authHeaders';
-import { MODULE_TITLES, type ModuleName, type Material } from '@/types';
+import { MODULE_TITLES, type ModuleName } from '@/types';
 import AiDisclaimer from '@/components/ai/AiDisclaimer';
 import MaterialQuiz from '@/components/quiz/MaterialQuiz';
-
-function contextFileLabel(type: string | null | undefined) {
-  const labels: Record<string, string> = { lec_pdf: 'Lecture PDF', record_g1: 'G1 recording transcript', record_g2: 'G2 recording transcript', audio_recording: 'Audio transcript', mindmap: 'Mind map', qbank: 'Question bank', practical_pdf: 'Practical PDF' };
-  return labels[type || ''] || (type ? type.replaceAll('_', ' ') : 'Resource');
-}
+import SharedContextSelector, { type ContextFile } from '@/components/ai/SharedContextSelector';
 
 interface AILearningStudioProps {
   initialModule?: ModuleName;
@@ -56,7 +52,7 @@ export default function AILearningStudio({
   // Quiz Eval State (Server-Graded to prevent network answer leakage)
 
   // Lecture Raw Feed State
-  const [moduleMaterials, setModuleMaterials] = useState<Material[]>([]);
+  const [moduleMaterials, setModuleMaterials] = useState<ContextFile[]>([]);
   const [selectedMaterialId, setSelectedMaterialId] = useState<string>('');
   const [rawFeedText, setRawFeedText] = useState<string>('');
   const [useCustomRawFeed, setUseCustomRawFeed] = useState<boolean>(false);
@@ -67,26 +63,8 @@ export default function AILearningStudio({
     return () => window.clearTimeout(timer);
   }, [retrySeconds]);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function loadModuleMaterials() {
-      try {
-        const response = await fetch(`/api/ai/contexts?module=${encodeURIComponent(selectedModule)}`, { headers: await authenticatedHeaders(), cache: 'no-store' });
-        if (!response.ok) throw new Error(`Context request failed (${response.status})`);
-        const result = await response.json() as { files?: Material[] };
-        if (!cancelled) setModuleMaterials(result.files || []);
-      } catch (e) {
-        console.warn('Failed to load module materials for AI feed:', e);
-      }
-    }
-    loadModuleMaterials();
-    setSelectedMaterialId('');
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedModule]);
-
-  const contextGroups = Array.from(new Map(moduleMaterials.map((material) => [material.title, material.title])).entries());
+  const updateContextFiles = useCallback((files: ContextFile[]) => setModuleMaterials(files), []);
+  useEffect(() => { setSelectedMaterialId(''); }, [selectedModule]);
 
   const fetchCaseStudy = async () => {
     setCreditNotice(null);
@@ -300,20 +278,7 @@ export default function AILearningStudio({
 
             {!useCustomRawFeed ? (
               <div className="flex flex-wrap items-center gap-2.5">
-                <select
-                  value={selectedMaterialId}
-                  onChange={(e) => setSelectedMaterialId(e.target.value)}
-                  className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                >
-                  <option value="">Choose a lecture with AI context</option>
-                  {contextGroups.map(([title]) => (
-                    <optgroup key={title} label={`[${selectedModule}] ${title}`}>
-                      {moduleMaterials.filter((material) => material.title === title).map((material) => (
-                        <option key={material.id} value={material.id}>{title} — {contextFileLabel(material.type)}</option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
+                <SharedContextSelector value={selectedMaterialId} onChange={setSelectedMaterialId} module={selectedModule} onFilesChange={updateContextFiles} placeholder="Choose a lecture with AI context" />
                 {selectedMaterialId && (
                   <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300">
                     <CheckCircle2 className="h-3 w-3 text-emerald-600" />
@@ -587,20 +552,7 @@ export default function AILearningStudio({
 
             {!useCustomRawFeed ? (
               <div className="flex flex-wrap items-center gap-2.5">
-                <select
-                  value={selectedMaterialId}
-                  onChange={(e) => setSelectedMaterialId(e.target.value)}
-                  className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                >
-                  <option value="">Choose a lecture with AI context</option>
-                  {contextGroups.map(([title]) => (
-                    <optgroup key={title} label={`[${selectedModule}] ${title}`}>
-                      {moduleMaterials.filter((material) => material.title === title).map((material) => (
-                        <option key={material.id} value={material.id}>{title} — {contextFileLabel(material.type)}</option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
+                <SharedContextSelector value={selectedMaterialId} onChange={setSelectedMaterialId} module={selectedModule} onFilesChange={updateContextFiles} placeholder="Choose a lecture with AI context" />
                 {selectedMaterialId && (
                   <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300">
                     <CheckCircle2 className="h-3 w-3 text-emerald-600" />

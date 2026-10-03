@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkBreaks from 'remark-breaks';
 import {
   MessageSquare,
   Send,
@@ -19,7 +21,7 @@ import {
 import { cardClass } from '@/lib/ui';
 import { authenticatedHeaders, redirectAfterSessionExpiry } from '@/lib/authHeaders';
 import AiDisclaimer from '@/components/ai/AiDisclaimer';
-import { supabase } from '@/lib/supabase';
+import SharedContextSelector from '@/components/ai/SharedContextSelector';
 
 interface Message {
   id: string;
@@ -41,7 +43,6 @@ export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolea
   const [isDismissed, setIsDismissed] = useState(false);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [materials, setMaterials] = useState<{ id: string; title: string }[]>([]);
   const [materialId, setMaterialId] = useState('');
   const [retrySeconds, setRetrySeconds] = useState(0);
   const [messages, setMessages] = useState<Message[]>([
@@ -54,18 +55,6 @@ export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolea
   ]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    supabase.from('materials').select('id,title').order('title', { ascending: true }).then(({ data }) => {
-      if (!cancelled && data) {
-        const rows = data as unknown as { id: string; title: string }[];
-        setMaterials(rows);
-        setMaterialId(rows[0]?.id || '');
-      }
-    });
-    return () => { cancelled = true; };
-  }, []);
 
   useEffect(() => {
     if (!retrySeconds) return;
@@ -260,8 +249,8 @@ export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolea
                   Micro 301 Tutor
                 </span>
               </div>
-              <p className="text-[10px] text-slate-300">
-                Gemini Multi-Turn Clinical Reasoning
+                <p className="text-[10px] text-slate-300">
+                Multi-provider clinical reasoning
               </p>
             </div>
           </div>
@@ -322,7 +311,9 @@ export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolea
                         : 'border border-slate-200 bg-white text-slate-800 rounded-tl-none dark:border-white/10 dark:bg-slate-800 dark:text-slate-100'
                     }`}
                   >
-                    <div className="whitespace-pre-wrap">{msg.text}</div>
+                    <div className="break-words [&_a]:underline [&_h1]:mb-1 [&_h1]:text-sm [&_h1]:font-bold [&_h2]:mb-1 [&_h2]:font-bold [&_li]:ml-4 [&_li]:list-disc [&_ol_li]:list-decimal [&_p]:mb-2 last:[&_p]:mb-0 [&_strong]:font-bold [&_ul]:my-1">
+                      <ReactMarkdown remarkPlugins={[remarkBreaks]}>{msg.text}</ReactMarkdown>
+                    </div>
                     <div
                       className={`mt-1 text-[9px] ${
                         msg.role === 'user' ? 'text-blue-200 text-right' : 'text-slate-400'
@@ -376,10 +367,7 @@ export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolea
             <div className="border-t border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-slate-900">
               <label className="mb-2 block text-xs font-semibold text-slate-600 dark:text-slate-300">
                 Lecture source
-                <select value={materialId} onChange={(event) => setMaterialId(event.target.value)} className="ml-2 max-w-[75%] rounded-lg border bg-white px-2 py-1 text-xs dark:bg-slate-800">
-                  <option value="">Select a lecture</option>
-                  {materials.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
-                </select>
+                <SharedContextSelector value={materialId} onChange={setMaterialId} showModuleSelector placeholder="Select a lecture with AI context" />
               </label>
               {retrySeconds > 0 && <p className="mb-2 text-xs text-amber-700 dark:text-amber-300">Try again in {retrySeconds}s.</p>}
               <form

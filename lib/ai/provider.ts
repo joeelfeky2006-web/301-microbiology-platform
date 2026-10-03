@@ -81,12 +81,32 @@ async function generateAnthropic(prompt: string, schema: JsonObject, timeoutMs: 
   });
 }
 
-/** Provider-neutral structured JSON generation. Set AI_PROVIDER to gemini, openai, or anthropic. */
+function isConfigured(provider: string) {
+  if (provider === 'gemini') return Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_MODEL);
+  if (provider === 'openai') return Boolean(process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL);
+  if (provider === 'anthropic') return Boolean(process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_MODEL);
+  return false;
+}
+
+/** Provider-neutral structured JSON generation with ordered failover across configured providers. */
 export async function generateStructuredJson(prompt: string, schema: JsonObject, timeoutMs = 25_000): Promise<JsonObject> {
-  switch ((process.env.AI_PROVIDER || 'gemini').trim().toLowerCase()) {
-    case 'gemini': return generateGemini(prompt, schema, timeoutMs);
-    case 'openai': return generateOpenAI(prompt, schema, timeoutMs);
-    case 'anthropic': return generateAnthropic(prompt, schema, timeoutMs);
-    default: throw new Error('Unsupported AI_PROVIDER. Use gemini, openai, or anthropic.');
+  const primary = (process.env.AI_PROVIDER || 'gemini').trim().toLowerCase();
+  const priority = (process.env.AI_PROVIDER_PRIORITY || `${primary},gemini,openai,anthropic`)
+    .split(',').map((item) => item.trim().toLowerCase()).filter((item, index, all) => item && all.indexOf(item) === index);
+  const providers = priority.filter(isConfigured);
+  if (!providers.length) throw new Error('No AI providers in AI_PROVIDER_PRIORITY are fully configured');
+
+  const errors: string[] = [];
+  for (const provider of providers) {
+    try {
+      if (provider === 'gemini') return await generateGemini(prompt, schema, timeoutMs);
+      if (provider === 'openai') return await generateOpenAI(prompt, schema, timeoutMs);
+      if (provider === 'anthropic') return await generateAnthropic(prompt, schema, timeoutMs);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'Unknown provider error';
+      errors.push(`${provider}: ${reason}`);
+      console.warn(`[ai-provider] ${provider} failed; trying next configured provider. ${reason}`);
+    }
   }
+  throw new Error(`All configured AI providers failed. ${errors.join(' | ')}`);
 }
