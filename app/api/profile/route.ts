@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticate } from '@/lib/apiAuth';
 import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { refreshUserCredits } from '@/lib/credits/refresh';
 import { rejectClientCreditMutation } from '@/lib/security/creditMutationGuard';
 
 export const runtime = 'nodejs';
@@ -20,18 +21,17 @@ export async function GET(request: NextRequest) {
     auth: { persistSession: false, autoRefreshToken: false },
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
-  const [{ data: userData, error: userError }, { data: credits, error: creditsError }, { data: history, error: historyError }] = await Promise.all([
+  const [{ data: userData, error: userError }, credits, { data: history, error: historyError }] = await Promise.all([
     client.auth.getUser(token),
-    client.from('user_credits').select('daily_remaining,daily_limit,monthly_remaining,monthly_limit,bonus_balance,created_at,updated_at').eq('user_id', identity.userId).maybeSingle(),
+    refreshUserCredits(client, identity.userId),
     client.from('user_credit_history').select('id,event_type,action,amount,daily_remaining,monthly_remaining,created_at,metadata').eq('user_id', identity.userId).order('created_at', { ascending: false }).limit(20),
   ]);
   if (userError || !userData.user) return NextResponse.json({ error: 'Could not load your account profile.' }, { status: 401 });
-  if (creditsError || historyError) console.error('Some profile data is unavailable:', creditsError?.message || historyError?.message);
+  if (!credits || historyError) console.error('Some profile data is unavailable:', !credits ? 'credits refresh failed' : historyError?.message);
 
   const user = userData.user;
   const creditRow = credits
-    ? { ...credits, bonus_balance: Number((credits as { bonus_balance?: number }).bonus_balance || 0) }
-    : { daily_remaining: 0, daily_limit: 8, monthly_remaining: 0, monthly_limit: 80, bonus_balance: 0 };
+    ?? { daily_remaining: 0, daily_limit: 8, monthly_remaining: 0, monthly_limit: 80, bonus_balance: 0 };
   return NextResponse.json({
     profile: {
       id: user.id,
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       last_sign_in_at: user.last_sign_in_at,
     },
     credits: creditRow,
-    credits_available: !creditsError && Boolean(credits),
+    credits_available: Boolean(credits),
     history: history || [],
     history_available: !historyError,
   }, { headers: { 'Cache-Control': 'no-store' } });

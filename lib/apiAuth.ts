@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server';
 import 'server-only';
 import { AI_MESSAGES, aiError } from '@/lib/ai/messages';
 import { ACTION_COSTS, isAIAction, type AIAction } from '@/lib/ai/actions';
+import { refreshUserCredits } from '@/lib/credits/refresh';
 import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export type CreditBalance = {
@@ -49,19 +50,7 @@ function creditPayload(result: any): CreditBalance | undefined {
 async function readBalance(userId: string): Promise<CreditBalance | null> {
   const admin = createSupabaseAdmin();
   if (!admin) return null;
-  const { data: row } = await admin
-    .from('user_credits')
-    .select('daily_remaining,monthly_remaining,daily_limit,monthly_limit,bonus_balance')
-    .eq('user_id', userId)
-    .maybeSingle();
-  if (!row) return null;
-  return {
-    daily_remaining: Number(row.daily_remaining),
-    monthly_remaining: Number(row.monthly_remaining),
-    daily_limit: Number(row.daily_limit),
-    monthly_limit: Number(row.monthly_limit),
-    bonus_balance: Number(row.bonus_balance || 0),
-  };
+  return refreshUserCredits(admin, userId);
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
