@@ -1,7 +1,7 @@
 import 'server-only';
 
 export const AI_MESSAGES = {
-  busy: 'AI provider is temporarily rate-limited (high traffic). This is not a platform bug — wait about 60 seconds and try again.',
+  busy: "Dr. Atlas is catching his breath. Let's give it another try in a moment!",
   glitch: "Dr. Atlas hit a temporary error. Your credit is refunded if one was charged — try again in a moment.",
   limit: "You've used your AI credits for now. They refresh soon, so keep practicing with the question bank in the meantime!",
   auth: 'Please sign in to continue with Dr. Atlas.',

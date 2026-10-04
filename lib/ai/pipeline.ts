@@ -121,22 +121,17 @@ export async function guardAiAccess(
   const sinceMinute = new Date(now - 60_000).toISOString();
   const sinceHour = new Date(now - 3_600_000).toISOString();
 
+  // Count only real AI attempts — never 'blocked', or retries would self-amplify the limit.
+  const counted = ['success', 'error', 'refunded'] as const;
   const [{ count: minuteCount, error: minuteError }, { count: hourCount, error: hourError }] = await Promise.all([
-    admin.from('ai_usage').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('created_at', sinceMinute),
-    admin.from('ai_usage').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('created_at', sinceHour),
+    admin.from('ai_usage').select('id', { count: 'exact', head: true }).eq('user_id', userId).in('status', [...counted]).gte('created_at', sinceMinute),
+    admin.from('ai_usage').select('id', { count: 'exact', head: true }).eq('user_id', userId).in('status', [...counted]).gte('created_at', sinceHour),
   ]);
 
   if (minuteError || hourError) {
-    // Fail closed for rate-limit reads as well — safer under load.
-    recordAiUsage({
-      userId, feature, materialId, status: 'blocked', errorCode: 'rate_check_failed', creditsCharged: 0,
-    });
-    return {
-      response: Response.json(
-        { ok: false, kind: 'busy', message: AI_MESSAGES.busy, retry_after_seconds: 60 },
-        { status: 429, headers: { 'Cache-Control': 'no-store' } },
-      ),
-    };
+    // Fail OPEN if ai_usage is missing/unreadable so a pending migration does not brick AI.
+    console.error(JSON.stringify({ kind: 'rate_check_failed', feature, code: minuteError?.code || hourError?.code || 'db' }));
+    return { ok: true };
   }
 
   if ((minuteCount ?? 0) >= AI_RATE_PER_MINUTE || (hourCount ?? 0) >= AI_RATE_PER_HOUR) {
