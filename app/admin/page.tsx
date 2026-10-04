@@ -33,6 +33,7 @@ import { DEFAULT_PLATFORM_SETTINGS, invalidateSettingsCache, useSettings } from 
 import { PRIMARY_ADMIN_EMAIL } from '@/lib/admin';
 import PublishMaterial from '@/components/admin/PublishMaterial';
 import QuizManager from '@/components/admin/QuizManager';
+import FlashcardManager from '@/components/admin/FlashcardManager';
 import SiteContentEditor from '@/components/admin/SiteContentEditor';
 import AnalyticsDashboard from '@/components/admin/AnalyticsDashboard';
 import { cardClass, inputClass, labelClass } from '@/lib/ui';
@@ -79,7 +80,7 @@ export default function AdminDashboardPage() {
   const router = useRouter();
 
   // Active navigation tab
-  const [activeTab, setActiveTab] = useState<'materials' | 'publish' | 'quizzes' | 'analytics' | 'roles' | 'settings'>('materials');
+  const [activeTab, setActiveTab] = useState<'materials' | 'publish' | 'quizzes' | 'flashcards' | 'analytics' | 'roles' | 'settings'>('materials');
 
   // Materials state
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -96,6 +97,7 @@ export default function AdminDashboardPage() {
   const [externalUrl, setExternalUrl] = useState('');
   const [aiContext, setAiContext] = useState('');
   const [rawQuizText, setRawQuizText] = useState('');
+  const [rawFlashcardText, setRawFlashcardText] = useState('');
   const [customSystemPrompt, setCustomSystemPrompt] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
@@ -246,6 +248,7 @@ export default function AdminDashboardPage() {
         file_url: finalFileUrl,
         ai_context: aiContext.trim() || null,
         raw_quiz_text: rawQuizText.trim() || null,
+        raw_flashcard_text: rawFlashcardText.trim() || null,
         custom_system_prompt: customSystemPrompt.trim() || null,
       };
 
@@ -261,6 +264,7 @@ export default function AdminDashboardPage() {
       setExternalUrl('');
       setAiContext('');
       setRawQuizText('');
+      setRawFlashcardText('');
       setCustomSystemPrompt('');
       setFile(null);
       setFileInputKey((k) => k + 1);
@@ -292,6 +296,7 @@ export default function AdminDashboardPage() {
         subtitle: editingMaterial.subtitle?.trim() || null,
         ai_context: editingMaterial.ai_context?.trim() || null,
         raw_quiz_text: editingMaterial.raw_quiz_text?.trim() || null,
+        raw_flashcard_text: editingMaterial.raw_flashcard_text?.trim() || null,
         custom_system_prompt: editingMaterial.custom_system_prompt?.trim() || null,
         rename_all_matching: true,
       };
@@ -331,6 +336,7 @@ export default function AdminDashboardPage() {
           subtitle: changes.subtitle,
           ai_context: changes.ai_context,
           raw_quiz_text: changes.raw_quiz_text,
+          raw_flashcard_text: changes.raw_flashcard_text,
           custom_system_prompt: changes.custom_system_prompt,
         }).eq('id', editingMaterial.id);
 
@@ -644,6 +650,19 @@ export default function AdminDashboardPage() {
             Multi-Quiz Manager
           </button>
 
+          <button
+            type="button"
+            onClick={() => setActiveTab('flashcards')}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${
+              activeTab === 'flashcards'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-900 dark:text-slate-300'
+            }`}
+          >
+            <Layers className="h-4 w-4" />
+            Flashcard Decks
+          </button>
+
           {userIsSuperAdmin && (
             <>
               <button
@@ -767,9 +786,9 @@ export default function AdminDashboardPage() {
                                 {mat.subtitle}
                               </p>
                             )}
-                            {(mat.ai_context || mat.raw_quiz_text || mat.custom_system_prompt) && (
+                            {(mat.ai_context || mat.raw_quiz_text || mat.raw_flashcard_text || mat.custom_system_prompt) && (
                               <span className="inline-flex items-center gap-1 mt-0.5 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">
-                                <Sparkles className="h-3 w-3" /> AI Knowledge Attached
+                                <Sparkles className="h-3 w-3" /> AI / banks attached
                               </span>
                             )}
                             <span className="font-mono text-[10px] text-slate-400 truncate max-w-xs block">
@@ -861,6 +880,7 @@ export default function AdminDashboardPage() {
         {/* TAB 2: Publish & Upload Center */}
         {activeTab === 'publish' && <PublishMaterial materials={materials} onPublished={loadMaterials} />}
         {activeTab === 'quizzes' && <QuizManager />}
+        {activeTab === 'flashcards' && <FlashcardManager />}
         {activeTab === 'analytics' && userIsSuperAdmin && <AnalyticsDashboard />}
 
         {/* TAB 3: RBAC Roles & Permissions (Super Admin only) */}
@@ -1337,6 +1357,11 @@ export default function AdminDashboardPage() {
                   <label className={labelClass} title="Paste raw text questions, choice options, and explanation keys here.">Raw Quiz Bank &amp; Explanations</label>
                   <textarea rows={5} value={editingMaterial.raw_quiz_text ?? ''} onChange={(e) => setEditingMaterial({ ...editingMaterial, raw_quiz_text: e.target.value })} className={inputClass} />
                   <p className="mt-1 text-[11px] text-slate-500">Paste raw text questions, choice options, and explanation keys here.</p>
+                </div>
+                <div>
+                  <label className={labelClass} title="Paste flashcards as Q: front / A: back blocks.">Raw Flashcard Bank</label>
+                  <textarea rows={5} value={editingMaterial.raw_flashcard_text ?? ''} onChange={(e) => setEditingMaterial({ ...editingMaterial, raw_flashcard_text: e.target.value })} className={inputClass} placeholder={"Q: Front?\nA: Back\nHINT: optional\nTAG: culture"} />
+                  <p className="mt-1 text-[11px] text-slate-500">Format: Q: front, A: back. Optional HINT: and TAG: lines. Students study free with spaced repetition.</p>
                 </div>
                 <div>
                   <label className={labelClass}>Custom AI System Prompt (Optional)</label>

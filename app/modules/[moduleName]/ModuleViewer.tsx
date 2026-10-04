@@ -19,6 +19,7 @@ import AdSlot from '@/components/marketing/AdSlot';
 import AILearningStudio from '@/components/ai/AILearningStudio';
 import { useModuleProgress } from '@/lib/progress';
 import MaterialQuiz from '@/components/quiz/MaterialQuiz';
+import MaterialFlashcards from '@/components/flashcards/MaterialFlashcards';
 import { useSettings } from '@/lib/useSettings';
 import { authenticatedHeaders } from '@/lib/authHeaders';
 import { useSession } from '@/lib/useSession';
@@ -203,6 +204,7 @@ function Section({
                 })}
               </div>
               <MaterialQuiz material={materials.find((m) => Boolean(m.raw_quiz_text?.trim() || m.ai_context?.trim())) ?? materials[0]} />
+              <MaterialFlashcards material={materials.find((m) => Boolean(m.raw_flashcard_text?.trim())) ?? materials[0]} />
             </div>
           ))}
         </div>
