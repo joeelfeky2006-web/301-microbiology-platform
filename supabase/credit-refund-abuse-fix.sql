@@ -263,8 +263,9 @@ grant execute on function public.refund_spend(uuid, uuid) to service_role;
 -- ------------------------------------------------------------------------------
 -- 5. Remove the abusive refund_user_credit entry points
 -- ------------------------------------------------------------------------------
-revoke all on function public.refund_user_credit(integer) from public, anon, authenticated;
-revoke all on function public.refund_user_credit(integer, text) from public, anon, authenticated;
+-- REVOKE fails hard if a signature is absent (42883). Live DBs often only have
+-- refund_user_credit(integer, text) from profile-credit-history.sql, not (integer).
+-- DROP FUNCTION IF EXISTS is enough — privileges go away with the function.
 drop function if exists public.refund_user_credit(integer);
 drop function if exists public.refund_user_credit(integer, text);
 
