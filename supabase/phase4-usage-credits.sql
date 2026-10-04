@@ -39,4 +39,10 @@ alter table public.ai_usage enable row level security;
 revoke all on public.ai_usage from public, anon, authenticated;
 grant select, insert, update, delete on public.ai_usage to service_role;
 
+-- ------------------------------------------------------------------------------
+-- ITEM 2 — AI kill switch on platform_settings
+-- ------------------------------------------------------------------------------
+alter table public.platform_settings
+  add column if not exists ai_enabled boolean not null default true;
+
 commit;

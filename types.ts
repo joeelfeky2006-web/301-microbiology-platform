@@ -103,6 +103,7 @@ export interface PlatformSettings {
   announcement_text: string;
   announcement_active: boolean;
   maintenance_mode: boolean;
+  ai_enabled: boolean;
   whatsapp_number: string;
   registration_open: boolean;
   support_content: SupportContent;

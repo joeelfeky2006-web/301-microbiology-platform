@@ -7,6 +7,7 @@ export const AI_MESSAGES = {
   auth: 'Please sign in to continue with Dr. Atlas.',
   fallback: 'No practice questions are available for this lecture yet.',
   unavailable: 'This study feature is temporarily unavailable. Please try again shortly.',
+  maintenance: 'Dr. Atlas is resting for a short while. Your study materials are still available!',
 } as const;
 
 export function aiError(kind: keyof typeof AI_MESSAGES, status: number) {

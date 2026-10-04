@@ -7,6 +7,8 @@ import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { aiError } from './messages';
 import { loadLectureSource } from './loadSource';
 import { generateStructuredJson, type GenerateResult } from './provider';
+import { AI_MAINTENANCE_MESSAGE, AI_RATE_PER_HOUR, AI_RATE_PER_MINUTE } from './limits';
+import { AI_MESSAGES } from './messages';
 import { errorCodeFromUnknown, logUsage, type AiUsageEntry, type AiUsageStatus } from './usage';
 
 export type AIBody = Record<string, unknown>;
@@ -58,4 +60,96 @@ export function featureCost(action: AIAction): number {
 /** Convenience logger used by AI routes — never awaits. */
 export function recordAiUsage(entry: AiUsageEntry): void {
   logUsage(entry);
+}
+
+type GuardOk = { ok: true };
+type GuardBlocked = { response: Response };
+
+/**
+ * Kill switch + DB-backed rate limit. Call BEFORE authorizeAndSpend.
+ * Fail CLOSED if platform_settings cannot be read.
+ */
+export async function guardAiAccess(
+  userId: string,
+  feature: string,
+  materialId?: string | null,
+): Promise<GuardOk | GuardBlocked> {
+  const admin = createSupabaseAdmin();
+  if (!admin) {
+    recordAiUsage({
+      userId, feature, materialId, status: 'blocked', errorCode: 'settings_unavailable', creditsCharged: 0,
+    });
+    return {
+      response: Response.json(
+        { ok: false, kind: 'maintenance', message: AI_MAINTENANCE_MESSAGE },
+        { status: 503, headers: { 'Cache-Control': 'no-store' } },
+      ),
+    };
+  }
+
+  const { data: settings, error: settingsError } = await admin
+    .from('platform_settings')
+    .select('ai_enabled')
+    .eq('id', 1)
+    .maybeSingle();
+
+  if (settingsError || !settings) {
+    recordAiUsage({
+      userId, feature, materialId, status: 'blocked', errorCode: 'settings_unavailable', creditsCharged: 0,
+    });
+    return {
+      response: Response.json(
+        { ok: false, kind: 'maintenance', message: AI_MAINTENANCE_MESSAGE },
+        { status: 503, headers: { 'Cache-Control': 'no-store' } },
+      ),
+    };
+  }
+
+  if (settings.ai_enabled === false) {
+    recordAiUsage({
+      userId, feature, materialId, status: 'blocked', errorCode: 'ai_disabled', creditsCharged: 0,
+    });
+    return {
+      response: Response.json(
+        { ok: false, kind: 'maintenance', message: AI_MESSAGES.maintenance },
+        { status: 503, headers: { 'Cache-Control': 'no-store' } },
+      ),
+    };
+  }
+
+  const now = Date.now();
+  const sinceMinute = new Date(now - 60_000).toISOString();
+  const sinceHour = new Date(now - 3_600_000).toISOString();
+
+  const [{ count: minuteCount, error: minuteError }, { count: hourCount, error: hourError }] = await Promise.all([
+    admin.from('ai_usage').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('created_at', sinceMinute),
+    admin.from('ai_usage').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('created_at', sinceHour),
+  ]);
+
+  if (minuteError || hourError) {
+    // Fail closed for rate-limit reads as well — safer under load.
+    recordAiUsage({
+      userId, feature, materialId, status: 'blocked', errorCode: 'rate_check_failed', creditsCharged: 0,
+    });
+    return {
+      response: Response.json(
+        { ok: false, kind: 'busy', message: AI_MESSAGES.busy, retry_after_seconds: 60 },
+        { status: 429, headers: { 'Cache-Control': 'no-store' } },
+      ),
+    };
+  }
+
+  if ((minuteCount ?? 0) >= AI_RATE_PER_MINUTE || (hourCount ?? 0) >= AI_RATE_PER_HOUR) {
+    recordAiUsage({
+      userId, feature, materialId, status: 'blocked', errorCode: 'user_rate_limit', creditsCharged: 0,
+    });
+    return {
+      response: Response.json(
+        { ok: false, kind: 'busy', message: AI_MESSAGES.busy, retry_after_seconds: 60 },
+        { status: 429, headers: { 'Cache-Control': 'no-store' } },
+      ),
+    };
+  }
+
+  return { ok: true };
 }

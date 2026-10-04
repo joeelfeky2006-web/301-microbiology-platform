@@ -417,6 +417,7 @@ export default function AdminDashboardPage() {
       announcement_text: settings.announcement_text,
       announcement_active: settings.announcement_active,
       maintenance_mode: settings.maintenance_mode,
+      ai_enabled: settings.ai_enabled !== false,
       whatsapp_number: settings.whatsapp_number,
       registration_open: settings.registration_open,
       support_content: settings.support_content,
@@ -1121,6 +1122,19 @@ export default function AdminDashboardPage() {
                   <div className="flex items-center gap-3">
                     <input type="checkbox" id="maintenanceMode" checked={settings.maintenance_mode} onChange={(e) => setSettings({ ...settings, maintenance_mode: e.target.checked })} className="h-4 w-4 rounded text-blue-600" />
                     <label htmlFor="maintenanceMode" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Enable maintenance mode for students</label>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="aiEnabled"
+                      checked={settings.ai_enabled !== false}
+                      onChange={(e) => setSettings({ ...settings, ai_enabled: e.target.checked })}
+                      className="h-4 w-4 rounded text-blue-600"
+                    />
+                    <label htmlFor="aiEnabled" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      AI features enabled
+                    </label>
                   </div>
 
                   <div className="border-t border-slate-200 pt-4 dark:border-white/10">
