@@ -23,6 +23,7 @@ import MaterialFlashcards from '@/components/flashcards/MaterialFlashcards';
 import { useSettings } from '@/lib/useSettings';
 import { authenticatedHeaders } from '@/lib/authHeaders';
 import { useSession } from '@/lib/useSession';
+import { trackClient } from '@/lib/analytics/client';
 import type { GroupSection } from '@/types';
 
 type Tone = 'blue' | 'emerald' | 'purple';
@@ -222,6 +223,10 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
   const [showAIStudio, setShowAIStudio] = useState(false);
   const session = useSession();
   const [selectedCohort, setSelectedCohort] = useState<'ALL' | 'G1' | 'G2'>('ALL');
+
+  useEffect(() => {
+    trackClient('lecture_opened', { module: moduleName });
+  }, [moduleName]);
 
   const { isComplete, toggle, stats } = useModuleProgress(materials);
   const currentModStats = stats.byModule[moduleName];

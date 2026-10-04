@@ -233,6 +233,19 @@ export async function handleWebhook(providerName: PaymentProviderName, request: 
   const { data: fulfill, error } = await admin.rpc('fulfill_payment_order', { p_order_id: orderId });
   if (error) return { ok: false, orderId, reason: error.message, status: 'paid' };
   const row = Array.isArray(fulfill) ? fulfill[0] : fulfill;
+  if (row?.success) {
+    try {
+      const { trackServer } = await import('@/lib/analytics/server');
+      const { data: orderRow } = await admin.from('payment_orders').select('user_id,package_id,credits').eq('id', orderId).maybeSingle();
+      trackServer('purchase_completed', {
+        package_id: orderRow?.package_id,
+        credits: orderRow?.credits,
+        provider: providerName,
+      }, { userId: orderRow?.user_id });
+    } catch {
+      /* analytics optional */
+    }
+  }
   return {
     ok: Boolean(row?.success),
     orderId,

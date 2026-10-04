@@ -10,6 +10,7 @@ import { generateStructuredJson, type GenerateResult } from './provider';
 import { AI_MAINTENANCE_MESSAGE, AI_RATE_PER_HOUR, AI_RATE_PER_MINUTE } from './limits';
 import { AI_MESSAGES } from './messages';
 import { errorCodeFromUnknown, logUsage, type AiUsageEntry, type AiUsageStatus } from './usage';
+import { trackServer } from '@/lib/analytics/server';
 
 export type AIBody = Record<string, unknown>;
 export type LoadedMaterial = { id: string; module: string; title?: string | null; ai_context?: string | null; raw_quiz_text?: string | null; custom_system_prompt?: string | null };
@@ -60,6 +61,29 @@ export function featureCost(action: AIAction): number {
 /** Convenience logger used by AI routes — never awaits. */
 export function recordAiUsage(entry: AiUsageEntry): void {
   logUsage(entry);
+  // Product analytics (hashed user id; no prompts / lecture text).
+  if (entry.status === 'success') {
+    trackServer('ai_request_success', {
+      feature: entry.feature,
+      provider: entry.provider || undefined,
+      credits: entry.creditsCharged ?? 0,
+      latency_ms: entry.latencyMs ?? undefined,
+    }, { userId: entry.userId });
+    if ((entry.creditsCharged || 0) > 0) {
+      trackServer('credits_used', { feature: entry.feature, credits: entry.creditsCharged }, { userId: entry.userId });
+    }
+    if (entry.feature === 'summarize') trackServer('summary_generated', { cached: entry.provider === 'cache' }, { userId: entry.userId });
+    if (entry.feature === 'chat') trackServer('chat_started', {}, { userId: entry.userId });
+    if (entry.feature === 'case-study') trackServer('mcq_generated', { feature: 'case-study' }, { userId: entry.userId });
+  } else if (entry.status === 'error' || entry.status === 'refunded') {
+    trackServer('ai_request_error', {
+      feature: entry.feature,
+      error_code: entry.errorCode || 'unknown',
+      status: entry.status,
+    }, { userId: entry.userId });
+  } else if (entry.status === 'blocked') {
+    trackServer('ai_request', { feature: entry.feature, blocked: true, error_code: entry.errorCode || undefined }, { userId: entry.userId });
+  }
 }
 
 type GuardOk = { ok: true };

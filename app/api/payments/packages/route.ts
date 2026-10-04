@@ -5,11 +5,13 @@ import {
   publicPackageView,
 } from '@/lib/payments/packages';
 import { paymentsLiveEnabled } from '@/lib/payments/paymentService';
+import { trackServer } from '@/lib/analytics/server';
 
 export const dynamic = 'force-dynamic';
 
 /** Public catalog — prices/credits from central config. No secrets. */
 export async function GET() {
+  trackServer('package_viewed', { surface: 'api_packages' });
   return Response.json(
     {
       live: paymentsLiveEnabled(),

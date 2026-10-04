@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { authenticate } from '@/lib/apiAuth';
 import { createPaymentOrder, paymentsLiveEnabled } from '@/lib/payments/paymentService';
+import { trackServer } from '@/lib/analytics/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +35,11 @@ export async function POST(request: NextRequest) {
       packageId,
       idempotencyKey,
     });
+    trackServer('checkout_started', {
+      package_id: packageId,
+      live: order.live,
+      status: order.status,
+    }, { userId: auth.userId });
     return Response.json(
       { order, live: paymentsLiveEnabled() },
       { status: 201, headers: { 'Cache-Control': 'private, no-store' } },
