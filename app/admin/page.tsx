@@ -117,6 +117,11 @@ export default function AdminDashboardPage() {
   const [grantReason, setGrantReason] = useState('');
   const [grantBusy, setGrantBusy] = useState(false);
   const [grantMessage, setGrantMessage] = useState('');
+  const [memberEmail, setMemberEmail] = useState('');
+  const [memberPlan, setMemberPlan] = useState('pro_monthly');
+  const [memberReason, setMemberReason] = useState('');
+  const [memberBusy, setMemberBusy] = useState(false);
+  const [memberMessage, setMemberMessage] = useState('');
 
   const applyAdminUsers = (data: unknown) => {
     const users = Array.isArray(data) ? data : [];
@@ -438,6 +443,35 @@ export default function AdminDashboardPage() {
     }
     setGrantMessage(`Granted. New pack balance for that student: ${data}`);
     setGrantReason('');
+  };
+
+  const handleAssignMembership = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = memberEmail.trim().toLowerCase();
+    const reason = memberReason.trim();
+    if (!email || !reason || !memberPlan) {
+      setMemberMessage('Enter student email, plan, and reason.');
+      return;
+    }
+    if (!window.confirm(`Assign “${memberPlan}” membership to ${email}? Recurring billing is OFF — this is a manual period.`)) return;
+    setMemberBusy(true);
+    setMemberMessage('');
+    try {
+      const response = await fetch('/api/admin/memberships', {
+        method: 'POST',
+        headers: { ...(await authenticatedHeaders()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, plan: memberPlan, reason, grant_credits: true }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Could not assign membership.');
+      const exp = result.membership?.expires_at ? new Date(result.membership.expires_at).toLocaleDateString() : 'period end';
+      setMemberMessage(`Membership assigned. Expires ${exp}. Period credits granted if allocation > 0.`);
+      setMemberReason('');
+    } catch (cause) {
+      setMemberMessage(cause instanceof Error ? cause.message : 'Could not assign membership.');
+    } finally {
+      setMemberBusy(false);
+    }
   };
 
   // Handle Save Settings
@@ -961,6 +995,33 @@ export default function AdminDashboardPage() {
                         {grantBusy ? 'Granting…' : 'Grant credits'}
                       </button>
                       {grantMessage && <p role="status" className="text-xs font-semibold text-slate-600 dark:text-slate-300">{grantMessage}</p>}
+                    </form>
+                  </div>
+
+                  <div className="mt-8 border-t border-slate-200 pt-6 dark:border-white/10">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Assign membership</h3>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Phase 8 model — plan, dates, monthly allocation. Recurring billing is not enabled; this creates a timed active period and can grant the period’s credits once.
+                    </p>
+                    <form onSubmit={handleAssignMembership} className="mt-4 space-y-3">
+                      <div>
+                        <label className={labelClass}>Student email</label>
+                        <input type="email" required value={memberEmail} onChange={(e) => setMemberEmail(e.target.value)} placeholder="student@example.com" className={inputClass} />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Plan</label>
+                        <select value={memberPlan} onChange={(e) => setMemberPlan(e.target.value)} className={inputClass}>
+                          <option value="pro_monthly">Pro Monthly (800 credits / 30 days)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelClass}>Reason</label>
+                        <input type="text" required maxLength={500} value={memberReason} onChange={(e) => setMemberReason(e.target.value)} placeholder="Beta Pro access / scholarship" className={inputClass} />
+                      </div>
+                      <button type="submit" disabled={memberBusy} className="w-full rounded-xl bg-violet-600 py-2.5 text-xs font-bold text-white shadow hover:bg-violet-700 disabled:opacity-60">
+                        {memberBusy ? 'Assigning…' : 'Assign membership'}
+                      </button>
+                      {memberMessage && <p role="status" className="text-xs font-semibold text-slate-600 dark:text-slate-300">{memberMessage}</p>}
                     </form>
                   </div>
                 </div>
