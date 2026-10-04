@@ -9,7 +9,8 @@
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start -p 3000",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:credits": "node scripts/test-credit-refund.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.25.0",

@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       credits: access.credits,
     });
   } catch (error: any) {
-    const refunded = await refundCredit(request, 'case-study');
+    const refunded = await refundCredit(access.userId, access.requestId);
     const busy = /429|RESOURCE_EXHAUSTED|rate.?limit/i.test(String(error?.message || error));
     const misconfig = /CASE_SEAL_SECRET/i.test(String(error?.message || error));
     console.info(JSON.stringify({ action: 'case-study', material_id: loaded.material.id, kind: busy ? 'busy' : 'glitch', latency_ms: Date.now() - started, misconfig }));

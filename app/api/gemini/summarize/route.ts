@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     console.info(JSON.stringify({ action: 'summarize', material_id: loaded.material.id, kind: 'ok', latency_ms: Date.now() - started }));
     return noStoreJson({ success: true, summary: { ...parsed, module: moduleCode, moduleTitle: moduleCode }, credits: access.credits });
   } catch (error: any) {
-    const refunded = await refundCredit(request, 'summarize');
+    const refunded = await refundCredit(access.userId, access.requestId);
     const busy = /429|RESOURCE_EXHAUSTED|rate.?limit/i.test(String(error?.message || error));
     console.info(JSON.stringify({ action: 'summarize', material_id: loaded.material.id, kind: busy ? 'busy' : 'glitch', latency_ms: Date.now() - started }));
     return noStoreJson({ ok: false, kind: busy ? 'busy' : 'glitch', message: busy ? AI_MESSAGES.busy : AI_MESSAGES.glitch, credits: refunded || access.credits }, 503);

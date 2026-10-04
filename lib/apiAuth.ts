@@ -1,8 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
+import { randomUUID } from 'crypto';
 import type { NextRequest } from 'next/server';
 import 'server-only';
 import { AI_MESSAGES, aiError } from '@/lib/ai/messages';
 import { ACTION_COSTS, isAIAction, type AIAction } from '@/lib/ai/actions';
+import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export type CreditBalance = {
   daily_remaining: number;
@@ -11,7 +13,13 @@ export type CreditBalance = {
   monthly_limit?: number;
 };
 
-export type AuthIdentity = { userId: string; email?: string; credits?: CreditBalance };
+export type AuthIdentity = {
+  userId: string;
+  email?: string;
+  credits?: CreditBalance;
+  /** Present after a successful authorizeAndSpend; required for refund_spend. */
+  requestId?: string;
+};
 type Authorization = AuthIdentity | { response: Response };
 
 export async function authenticate(request: NextRequest): Promise<Authorization> {
@@ -36,7 +44,24 @@ function creditPayload(result: any): CreditBalance | undefined {
   };
 }
 
-/** Verify the caller and atomically spend server-side AI credits. */
+async function readBalance(userId: string): Promise<CreditBalance | null> {
+  const admin = createSupabaseAdmin();
+  if (!admin) return null;
+  const { data: row } = await admin
+    .from('user_credits')
+    .select('daily_remaining,monthly_remaining,daily_limit,monthly_limit')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (!row) return null;
+  return {
+    daily_remaining: Number(row.daily_remaining),
+    monthly_remaining: Number(row.monthly_remaining),
+    daily_limit: Number(row.daily_limit),
+    monthly_limit: Number(row.monthly_limit),
+  };
+}
+
+/** Verify the caller and atomically spend server-side AI credits. Returns requestId for refunds. */
 export async function authorizeAndSpend(request: NextRequest, action: AIAction): Promise<Authorization> {
   const auth = await authenticate(request);
   if ('response' in auth) return auth;
@@ -48,9 +73,16 @@ export async function authorizeAndSpend(request: NextRequest, action: AIAction):
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
   if (!isAIAction(action)) return { response: aiError('glitch', 400) };
-  const { data, error } = await client.rpc('deduct_user_credit', { p_user_id: auth.userId, p_cost: ACTION_COSTS[action], p_action: action });
+
+  const requestId = randomUUID();
+  const { data, error } = await client.rpc('deduct_user_credit', {
+    p_user_id: auth.userId,
+    p_cost: ACTION_COSTS[action],
+    p_action: action,
+    p_request_id: requestId,
+  });
   if (error) {
-    console.error(JSON.stringify({ action: 'credit', material_id: null, kind: 'glitch', latency_ms: 0 }));
+    console.error(JSON.stringify({ action: 'credit', material_id: null, kind: 'glitch', latency_ms: 0, message: error.message }));
     return { response: aiError('glitch', 503) };
   }
   const result = Array.isArray(data) ? data[0] : data;
@@ -63,36 +95,34 @@ export async function authorizeAndSpend(request: NextRequest, action: AIAction):
       ),
     };
   }
-  return { ...auth, credits };
+  return { ...auth, credits, requestId };
 }
 
-export async function refundCredit(request: NextRequest, action: AIAction): Promise<CreditBalance | null> {
-  const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!token || !url || !anonKey) return null;
-  const client = createClient(url, anonKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  });
-  const { data: userData } = await client.auth.getUser(token);
-  const userId = userData.user?.id;
-  const { data, error } = await client.rpc('refund_user_credit', { p_cost: ACTION_COSTS[action], p_action: action });
-  if (error || data !== true) {
-    console.error(JSON.stringify({ action, kind: 'refund_failed', message: error?.message || 'Refund RPC returned false' }));
+/**
+ * Refund a prior spend by request_id via service-role refund_spend.
+ * Students cannot call refund_spend; this must never use the user JWT client.
+ */
+export async function refundCredit(userId: string, requestId: string | undefined): Promise<CreditBalance | null> {
+  if (!userId || !requestId) {
+    console.error(JSON.stringify({ kind: 'refund_failed', message: 'Missing userId or requestId' }));
     return null;
   }
-  if (!userId) return null;
-  const { data: row } = await client
-    .from('user_credits')
-    .select('daily_remaining,monthly_remaining,daily_limit,monthly_limit')
-    .eq('user_id', userId)
-    .maybeSingle();
-  if (!row) return null;
-  return {
-    daily_remaining: Number(row.daily_remaining),
-    monthly_remaining: Number(row.monthly_remaining),
-    daily_limit: Number(row.daily_limit),
-    monthly_limit: Number(row.monthly_limit),
-  };
+  const admin = createSupabaseAdmin();
+  if (!admin) {
+    console.error(JSON.stringify({ kind: 'refund_failed', message: 'Service role client unavailable' }));
+    return null;
+  }
+  const { data, error } = await admin.rpc('refund_spend', {
+    p_user_id: userId,
+    p_request_id: requestId,
+  });
+  if (error) {
+    console.error(JSON.stringify({ kind: 'refund_failed', message: error.message, requestId }));
+    return null;
+  }
+  if (data !== true) {
+    // Idempotent no-op (already refunded / unknown request) — still return current balance when possible.
+    return readBalance(userId);
+  }
+  return readBalance(userId);
 }

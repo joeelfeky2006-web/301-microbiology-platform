@@ -34,8 +34,8 @@ export async function beginAction(request: NextRequest, action: AIAction) {
   return authorizeAndSpend(request, action);
 }
 
-export async function refund(request: NextRequest, action: AIAction) {
-  return refundCredit(request, action);
+export async function refund(userId: string, requestId: string | undefined) {
+  return refundCredit(userId, requestId);
 }
 
 export function noStoreJson(data: unknown, status = 200) {
