@@ -5,7 +5,7 @@ Nothing in this folder is wired into the website yet. Once the identity is appro
 | Folder | What's inside |
 | --- | --- |
 | `logo/svg`, `logo/png` | Horizontal, stacked, wordmark and symbol versions, each in **color** (light backgrounds), **reversed** (dark), **mono-black** and **mono-white**. Also app-icon tiles and the `micro301-beta` product badge. Text is outlined, so the SVGs need no fonts. PNGs are transparent. |
-| `icons` | `icon-512/192.png`, `apple-icon-180.png`, `icon-maskable-512.png`, `favicon-16/32/48.png`, plus SVG sources (`favicon-small.svg` is the heavier cut for 16–32 px). |
+| `icons` | `icon-512/192.png`, `apple-icon-180.png`, `icon-maskable-512.png`, `favicon.ico` (16/32/48), `favicon-16/32/48.png`, plus SVG sources (`favicon-small.svg` is the heavier cut for 16–32 px). |
 | `tokens.css` | Colour, font and texture tokens (Agar grid, lens ring, chips). |
 | `fonts` | Sora, Inter, IBM Plex Sans Arabic, IBM Plex Mono (Google Fonts, OFL). |
 | `guidelines` | One-page brand guidelines: `MedAtlas-Brand-Guidelines.pdf` / `.png`, with the editable `.html` source. |
