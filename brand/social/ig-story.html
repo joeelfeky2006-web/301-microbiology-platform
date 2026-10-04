@@ -1,0 +1,28 @@
+<!doctype html>
+<!-- Instagram / Facebook story 1080×1920. Keep text out of the top 250px and bottom 300px (app UI). -->
+<html data-size="1080x1920"><head><meta charset="utf-8"><link rel="stylesheet" href="social.css">
+<style>
+  :root { --w: 1080px; --h: 1920px; --h1: 112px; }
+  .lens { width: 1300px; height: 1300px; left: -110px; top: 700px; --lens-w: 80px; opacity: .85; }
+  .copy { position: absolute; left: 80px; right: 80px; top: 280px; text-align: center; }
+  .copy .ar.h1 { font-size: 84px; }
+  .chip { background: rgba(255,255,255,.08); color: var(--teal); font-size: 30px; border: 1px solid rgba(33,227,192,.3); margin-bottom: 40px; }
+  .phone { --pw: 560px; left: 260px; top: 860px; }
+  .fade { position: absolute; left: 0; right: 0; bottom: 0; height: 820px; background: linear-gradient(transparent, rgba(6,10,28,.92) 45%, var(--night)); }
+  .bottom { position: absolute; left: 0; right: 0; bottom: 330px; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+</style></head>
+<body class="agar"><div class="frame">
+  <div class="lens"></div>
+  <img class="logo" src="../logo/svg/medatlas-horizontal-reversed.svg" style="left:50%;transform:translateX(-50%);top:120px;height:120px">
+  <div class="copy">
+    <span class="chip"><span class="dot"></span>Micro 301 · BETA</span>
+    <p class="ar h1">امتحان المايكرو قرّب؟</p>
+    <div class="h1" style="margin-top:16px">Your <span class="grad-text">AI study partner</span> is here.</div>
+  </div>
+  <div class="phone"><div class="screen"><div class="bar"><img src="../logo/svg/medatlas-horizontal-reversed.svg"></div><img class="site" src="assets/site-home-dark.jpg"></div></div>
+  <div class="fade"></div>
+  <div class="bottom">
+    <span class="cta" style="--cta:40px"><span class="ar">التسجيل مجاني دلوقتي</span> <span class="arrow">→</span></span>
+    <span class="url">301-microbiology-platform.vercel.app</span>
+  </div>
+</div></body></html>
