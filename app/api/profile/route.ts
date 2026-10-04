@@ -21,13 +21,16 @@ export async function GET(request: NextRequest) {
   });
   const [{ data: userData, error: userError }, { data: credits, error: creditsError }, { data: history, error: historyError }] = await Promise.all([
     client.auth.getUser(token),
-    client.from('user_credits').select('daily_remaining,daily_limit,monthly_remaining,monthly_limit,created_at,updated_at').eq('user_id', identity.userId).maybeSingle(),
-    client.from('user_credit_history').select('id,event_type,action,amount,daily_remaining,monthly_remaining,created_at').eq('user_id', identity.userId).order('created_at', { ascending: false }).limit(20),
+    client.from('user_credits').select('daily_remaining,daily_limit,monthly_remaining,monthly_limit,bonus_balance,created_at,updated_at').eq('user_id', identity.userId).maybeSingle(),
+    client.from('user_credit_history').select('id,event_type,action,amount,daily_remaining,monthly_remaining,created_at,metadata').eq('user_id', identity.userId).order('created_at', { ascending: false }).limit(20),
   ]);
   if (userError || !userData.user) return NextResponse.json({ error: 'Could not load your account profile.' }, { status: 401 });
   if (creditsError || historyError) console.error('Some profile data is unavailable:', creditsError?.message || historyError?.message);
 
   const user = userData.user;
+  const creditRow = credits
+    ? { ...credits, bonus_balance: Number((credits as { bonus_balance?: number }).bonus_balance || 0) }
+    : { daily_remaining: 0, daily_limit: 8, monthly_remaining: 0, monthly_limit: 80, bonus_balance: 0 };
   return NextResponse.json({
     profile: {
       id: user.id,
@@ -38,7 +41,7 @@ export async function GET(request: NextRequest) {
       created_at: user.created_at,
       last_sign_in_at: user.last_sign_in_at,
     },
-    credits: credits || { daily_remaining: 0, daily_limit: 8, monthly_remaining: 0, monthly_limit: 80 },
+    credits: creditRow,
     credits_available: !creditsError && Boolean(credits),
     history: history || [],
     history_available: !historyError,

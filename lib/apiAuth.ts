@@ -11,6 +11,7 @@ export type CreditBalance = {
   monthly_remaining: number;
   daily_limit?: number;
   monthly_limit?: number;
+  bonus_balance?: number;
 };
 
 export type AuthIdentity = {
@@ -41,6 +42,7 @@ function creditPayload(result: any): CreditBalance | undefined {
   return {
     daily_remaining: Number(result.daily_remaining),
     monthly_remaining: Number(result.monthly_remaining),
+    bonus_balance: result.bonus_remaining != null ? Number(result.bonus_remaining) : undefined,
   };
 }
 
@@ -49,7 +51,7 @@ async function readBalance(userId: string): Promise<CreditBalance | null> {
   if (!admin) return null;
   const { data: row } = await admin
     .from('user_credits')
-    .select('daily_remaining,monthly_remaining,daily_limit,monthly_limit')
+    .select('daily_remaining,monthly_remaining,daily_limit,monthly_limit,bonus_balance')
     .eq('user_id', userId)
     .maybeSingle();
   if (!row) return null;
@@ -58,6 +60,7 @@ async function readBalance(userId: string): Promise<CreditBalance | null> {
     monthly_remaining: Number(row.monthly_remaining),
     daily_limit: Number(row.daily_limit),
     monthly_limit: Number(row.monthly_limit),
+    bonus_balance: Number(row.bonus_balance || 0),
   };
 }
 
@@ -121,7 +124,6 @@ export async function refundCredit(userId: string, requestId: string | undefined
     return null;
   }
   if (data !== true) {
-    // Idempotent no-op (already refunded / unknown request) — still return current balance when possible.
     return readBalance(userId);
   }
   return readBalance(userId);

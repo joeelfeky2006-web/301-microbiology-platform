@@ -5,6 +5,7 @@ export type CreditSnapshot = {
   daily_limit: number;
   monthly_remaining: number;
   monthly_limit: number;
+  bonus_balance?: number;
 };
 
 /** Notify the header CreditBadge. Pass a snapshot for instant UI; badge also refetches. */

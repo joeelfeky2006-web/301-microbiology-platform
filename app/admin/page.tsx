@@ -110,6 +110,11 @@ export default function AdminDashboardPage() {
   const [adminUsers, setAdminUsers] = useState<Array<{ email: string; role: UserRole; name?: string; university_id?: string }>>([]);
   const [newRoleEmail, setNewRoleEmail] = useState('');
   const [newRoleChoice, setNewRoleChoice] = useState<UserRole>('editor');
+  const [grantEmail, setGrantEmail] = useState('');
+  const [grantAmount, setGrantAmount] = useState('50');
+  const [grantReason, setGrantReason] = useState('');
+  const [grantBusy, setGrantBusy] = useState(false);
+  const [grantMessage, setGrantMessage] = useState('');
 
   const applyAdminUsers = (data: unknown) => {
     const users = Array.isArray(data) ? data : [];
@@ -398,6 +403,35 @@ export default function AdminDashboardPage() {
     const { data } = await supabase.rpc('admin_list_users');
     applyAdminUsers(data);
     setNewRoleEmail('');
+  };
+
+  const handleGrantCredits = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = grantEmail.trim().toLowerCase();
+    const amount = Number(grantAmount);
+    const reason = grantReason.trim();
+    if (!email || !reason || !Number.isFinite(amount) || amount < 1 || amount > 5000) {
+      setGrantMessage('Enter a student email, amount (1–5000), and reason.');
+      return;
+    }
+    if (!window.confirm(`Grant ${amount} pack credits to ${email}?`)) return;
+    setGrantBusy(true);
+    setGrantMessage('');
+    const { data, error } = await supabase.rpc('grant_user_credits', {
+      p_target_email: email,
+      p_amount: Math.floor(amount),
+      p_reason: reason,
+    });
+    setGrantBusy(false);
+    if (error) {
+      const msg = (error.message || '').toLowerCase();
+      if (msg.includes('not found')) setGrantMessage('No student account matches that email.');
+      else if (msg.includes('not authorized') || msg.includes('authentication')) setGrantMessage('Only super admins can grant credits.');
+      else setGrantMessage('Could not grant credits. Check the details and try again.');
+      return;
+    }
+    setGrantMessage(`Granted. New pack balance for that student: ${data}`);
+    setGrantReason('');
   };
 
   // Handle Save Settings
@@ -886,6 +920,29 @@ export default function AdminDashboardPage() {
                       Save Role Assignment
                     </button>
                   </form>
+
+                  <div className="mt-8 border-t border-slate-200 pt-6 dark:border-white/10">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Grant pack credits</h3>
+                    <p className="mt-1 text-xs text-slate-500">Manual pre-payment path. Adds bonus pack credits (not free daily/monthly).</p>
+                    <form onSubmit={handleGrantCredits} className="mt-4 space-y-3">
+                      <div>
+                        <label className={labelClass}>Student email</label>
+                        <input type="email" required value={grantEmail} onChange={(e) => setGrantEmail(e.target.value)} placeholder="student@example.com" className={inputClass} />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Amount (1–5000)</label>
+                        <input type="number" min={1} max={5000} required value={grantAmount} onChange={(e) => setGrantAmount(e.target.value)} className={inputClass} />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Reason</label>
+                        <input type="text" required maxLength={500} value={grantReason} onChange={(e) => setGrantReason(e.target.value)} placeholder="Midterm pack / support bonus" className={inputClass} />
+                      </div>
+                      <button type="submit" disabled={grantBusy} className="w-full rounded-xl bg-emerald-600 py-2.5 text-xs font-bold text-white shadow hover:bg-emerald-700 disabled:opacity-60">
+                        {grantBusy ? 'Granting…' : 'Grant credits'}
+                      </button>
+                      {grantMessage && <p role="status" className="text-xs font-semibold text-slate-600 dark:text-slate-300">{grantMessage}</p>}
+                    </form>
+                  </div>
                 </div>
 
                 {/* Right: Active Roles & Matrix */}

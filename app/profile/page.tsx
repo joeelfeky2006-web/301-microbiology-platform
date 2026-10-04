@@ -11,9 +11,9 @@ import { MODULE_NAMES, MODULE_TITLES, type ModuleName } from '@/types';
 
 type ProfilePayload = {
   profile: { id: string; name: string; university_id: string; email: string; email_confirmed: boolean; created_at: string; last_sign_in_at: string | null };
-  credits: { daily_remaining: number; daily_limit: number; monthly_remaining: number; monthly_limit: number };
+  credits: { daily_remaining: number; daily_limit: number; monthly_remaining: number; monthly_limit: number; bonus_balance?: number };
   credits_available: boolean;
-  history: { id: string; event_type: 'spend' | 'refund'; action: string; amount: number; daily_remaining: number; monthly_remaining: number; created_at: string }[];
+  history: { id: string; event_type: 'spend' | 'refund' | 'grant'; action: string; amount: number; daily_remaining: number; monthly_remaining: number; created_at: string }[];
   history_available: boolean;
 };
 
@@ -163,7 +163,13 @@ export default function ProfilePage() {
               <div className="rounded-xl bg-blue-50 p-4 dark:bg-blue-950/40"><p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Daily balance</p><p className="mt-1 font-mono text-2xl font-black text-slate-900 dark:text-white">{data?.credits_available ? data.credits.daily_remaining : 'Unavailable'}{data?.credits_available && <span className="text-sm text-slate-400"> / {data.credits.daily_limit}</span>}</p></div>
               <div className="rounded-xl bg-indigo-50 p-4 dark:bg-indigo-950/40"><p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Monthly balance</p><p className="mt-1 font-mono text-2xl font-black text-slate-900 dark:text-white">{data?.credits_available ? data.credits.monthly_remaining : 'Unavailable'}{data?.credits_available && <span className="text-sm text-slate-400"> / {data.credits.monthly_limit}</span>}</p></div>
             </div>
-            <p className="mt-3 text-xs text-slate-500">Balances refresh on the daily and monthly reset schedule.</p>
+            {data?.credits_available && (data.credits.bonus_balance || 0) > 0 && (
+              <div className="mt-3 rounded-xl bg-emerald-50 p-4 dark:bg-emerald-950/40">
+                <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">Pack credits</p>
+                <p className="mt-1 font-mono text-2xl font-black text-emerald-900 dark:text-emerald-200">+{data.credits.bonus_balance}</p>
+              </div>
+            )}
+            <p className="mt-3 text-xs text-slate-500">Free balances refresh on the daily and monthly reset schedule. Pack credits do not expire yet.</p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-slate-900 sm:p-6">
@@ -176,8 +182,8 @@ export default function ProfilePage() {
         </section>
 
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-slate-900">
-          <div className="flex items-center gap-2 border-b border-slate-200 p-5 dark:border-white/10"><Activity className="h-5 w-5 text-blue-600 dark:text-cyan-300" /><div><h2 className="font-bold text-slate-900 dark:text-white">Recent credit activity</h2><p className="text-xs text-slate-500">Latest 20 spend and refund events</p></div></div>
-          {!data?.history_available ? <p className="p-5 text-sm text-amber-700 dark:text-amber-300">Credit history is not set up yet. The profile and account editor still work; ask an administrator to apply the credit-history migration.</p> : !data.history.length ? <p className="p-5 text-sm text-slate-500">No credit activity recorded yet.</p> : <ul className="divide-y divide-slate-100 dark:divide-white/5">{data.history.map((event) => <li key={event.id} className="flex flex-wrap items-center justify-between gap-3 p-4 sm:px-5"><div className="flex min-w-0 items-center gap-3"><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${event.event_type === 'refund' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-300'}`}>{event.event_type === 'refund' ? <CheckCircle2 className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}</span><div className="min-w-0"><p className="truncate text-sm font-semibold capitalize text-slate-800 dark:text-slate-200">{event.action.replace('-', ' ')} · {event.event_type}</p><p className="flex items-center gap-1 text-xs text-slate-500"><Clock3 className="h-3 w-3" />{new Date(event.created_at).toLocaleString()}</p></div></div><div className="text-right"><p className={`font-mono text-sm font-bold ${event.event_type === 'refund' ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-800 dark:text-slate-200'}`}>{event.event_type === 'refund' ? '+' : '−'}{event.amount} credit{event.amount === 1 ? '' : 's'}</p><p className="text-[10px] text-slate-500">{event.daily_remaining} daily · {event.monthly_remaining} monthly left</p></div></li>)}</ul>}
+          <div className="flex items-center gap-2 border-b border-slate-200 p-5 dark:border-white/10"><Activity className="h-5 w-5 text-blue-600 dark:text-cyan-300" /><div><h2 className="font-bold text-slate-900 dark:text-white">Recent credit activity</h2><p className="text-xs text-slate-500">Latest 20 spend, refund, and grant events</p></div></div>
+          {!data?.history_available ? <p className="p-5 text-sm text-amber-700 dark:text-amber-300">Credit history is not set up yet. The profile and account editor still work; ask an administrator to apply the credit-history migration.</p> : !data.history.length ? <p className="p-5 text-sm text-slate-500">No credit activity recorded yet.</p> : <ul className="divide-y divide-slate-100 dark:divide-white/5">{data.history.map((event) => <li key={event.id} className="flex flex-wrap items-center justify-between gap-3 p-4 sm:px-5"><div className="flex min-w-0 items-center gap-3"><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${event.event_type === 'refund' || event.event_type === 'grant' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-300'}`}>{event.event_type === 'spend' ? <Sparkles className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}</span><div className="min-w-0"><p className="truncate text-sm font-semibold capitalize text-slate-800 dark:text-slate-200">{event.action.replace('-', ' ')} · {event.event_type}</p><p className="flex items-center gap-1 text-xs text-slate-500"><Clock3 className="h-3 w-3" />{new Date(event.created_at).toLocaleString()}</p></div></div><div className="text-right"><p className={`font-mono text-sm font-bold ${event.event_type === 'spend' ? 'text-slate-800 dark:text-slate-200' : 'text-emerald-700 dark:text-emerald-300'}`}>{event.event_type === 'spend' ? '−' : '+'}{event.amount} credit{event.amount === 1 ? '' : 's'}</p><p className="text-[10px] text-slate-500">{event.daily_remaining} daily · {event.monthly_remaining} monthly left</p></div></li>)}</ul>}
           <div className="border-t border-slate-100 p-4 dark:border-white/5"><Link href={`/modules/${preferredModule}`} className="inline-flex items-center gap-2 text-xs font-bold text-blue-700 hover:underline dark:text-cyan-300">Continue with {preferredModule} <ArrowLeft className="h-3.5 w-3.5 rotate-180" /></Link></div>
         </section>
       </div>
