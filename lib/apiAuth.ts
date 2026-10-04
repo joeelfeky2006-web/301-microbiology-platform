@@ -64,8 +64,14 @@ async function readBalance(userId: string): Promise<CreditBalance | null> {
   };
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 /** Verify the caller and atomically spend server-side AI credits. Returns requestId for refunds. */
-export async function authorizeAndSpend(request: NextRequest, action: AIAction): Promise<Authorization> {
+export async function authorizeAndSpend(
+  request: NextRequest,
+  action: AIAction,
+  idempotencyKey?: string | null,
+): Promise<Authorization> {
   const auth = await authenticate(request);
   if ('response' in auth) return auth;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -77,7 +83,9 @@ export async function authorizeAndSpend(request: NextRequest, action: AIAction):
   });
   if (!isAIAction(action)) return { response: aiError('glitch', 400) };
 
-  const requestId = randomUUID();
+  const requestId = typeof idempotencyKey === 'string' && UUID_RE.test(idempotencyKey)
+    ? idempotencyKey
+    : randomUUID();
   const { data, error } = await client.rpc('deduct_user_credit', {
     p_user_id: auth.userId,
     p_cost: ACTION_COSTS[action],

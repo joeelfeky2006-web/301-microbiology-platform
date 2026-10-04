@@ -1,7 +1,8 @@
 import 'server-only';
 import { NextRequest } from 'next/server';
-import { authenticate, authorizeAndSpend, refundCredit } from '@/lib/apiAuth';
-import { errorCodeFromUnknown, featureCost, generateJson, guardAiAccess, loadMaterial, noStoreJson, recordAiUsage } from '@/lib/ai/pipeline';
+import { authenticate, refundCredit } from '@/lib/apiAuth';
+import { errorCodeFromUnknown, featureCost, generateJson, loadMaterial, noStoreJson, recordAiUsage } from '@/lib/ai/pipeline';
+import { prepareAiCall, readIdempotencyKey } from '@/lib/ai/router';
 import { AI_MESSAGES, aiError } from '@/lib/ai/messages';
 import { MODULE_RULES, SAFETY_RULES, dataBlock } from '@/lib/ai/modulePrompts';
 
@@ -24,9 +25,10 @@ export async function POST(request: NextRequest) {
   if ('response' in loaded) return loaded.response;
   const source = `${loaded.material.ai_context || ''}\n${loaded.material.raw_quiz_text || ''}`.trim();
   if (!source) return noStoreJson({ kind: 'fallback', message: 'Choose a lecture with AI context or a question bank to continue.' });
-  const gate = await guardAiAccess(auth.userId, 'chat', loaded.material.id);
-  if ('response' in gate) return gate.response;
-  const access = await authorizeAndSpend(request, 'chat');
+  const access = await prepareAiCall(request, 'chat', {
+    materialId: loaded.material.id,
+    idempotencyKey: readIdempotencyKey(body),
+  });
   if ('response' in access) return access.response;
   try {
     const moduleCode = loaded.material.module;

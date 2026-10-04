@@ -5,3 +5,6 @@ out
 .vercel
 *.tsbuildinfo
 next-env.d.ts
+
+# Local-only security / ops notes (public repo — do not commit)
+/docs/

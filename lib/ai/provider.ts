@@ -124,8 +124,43 @@ async function generateAnthropic(prompt: string, schema: JsonObject, timeoutMs: 
   });
 }
 
+/** Groq OpenAI-compatible chat completions (configured fallback after Gemini). */
+async function generateGroq(prompt: string, schema: JsonObject, timeoutMs: number): Promise<GenerateResult> {
+  const apiKey = process.env.GROQ_API_KEY;
+  const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+  if (!apiKey) throw new Error('Groq provider is not configured');
+  return withTimeout(timeoutMs, async (signal) => {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST', signal,
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: `${prompt}\n\nReturn a JSON object matching this schema: ${JSON.stringify(normalizeSchema(schema))}` }],
+        response_format: { type: 'json_object' },
+        temperature: 0.2,
+      }),
+    });
+    if (!response.ok) throw new Error(`Groq request failed (${response.status})`);
+    const payload = await response.json();
+    const content = payload?.choices?.[0]?.message?.content;
+    if (typeof content !== 'string') throw new Error('Groq returned no JSON content');
+    const usage = payload?.usage;
+    return {
+      data: validateResult(JSON.parse(content), schema),
+      provider: 'groq',
+      model,
+      usage: {
+        input: Number(usage?.prompt_tokens || 0) || 0,
+        output: Number(usage?.completion_tokens || 0) || 0,
+        total: Number(usage?.total_tokens || 0) || 0,
+      },
+    };
+  });
+}
+
 function isConfigured(provider: string) {
   if (provider === 'gemini') return Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_MODEL);
+  if (provider === 'groq') return Boolean(process.env.GROQ_API_KEY);
   if (provider === 'openai') return Boolean(process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL);
   if (provider === 'anthropic') return Boolean(process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_MODEL);
   return false;
@@ -134,7 +169,8 @@ function isConfigured(provider: string) {
 /** Provider-neutral structured JSON generation with ordered failover across configured providers. */
 export async function generateStructuredJson(prompt: string, schema: JsonObject, timeoutMs = 25_000): Promise<GenerateResult> {
   const primary = (process.env.AI_PROVIDER || 'gemini').trim().toLowerCase();
-  const priority = (process.env.AI_PROVIDER_PRIORITY || `${primary},gemini,openai,anthropic`)
+  // Preferred: Gemini primary, Groq fallback. Optional OpenAI/Anthropic remain env-gated.
+  const priority = (process.env.AI_PROVIDER_PRIORITY || `${primary},groq,openai,anthropic`)
     .split(',').map((item) => item.trim().toLowerCase()).filter((item, index, all) => item && all.indexOf(item) === index);
   const providers = priority.filter(isConfigured);
   if (!providers.length) throw new Error('No AI providers in AI_PROVIDER_PRIORITY are fully configured');
@@ -143,6 +179,7 @@ export async function generateStructuredJson(prompt: string, schema: JsonObject,
   for (const provider of providers) {
     try {
       if (provider === 'gemini') return await generateGemini(prompt, schema, timeoutMs);
+      if (provider === 'groq') return await generateGroq(prompt, schema, timeoutMs);
       if (provider === 'openai') return await generateOpenAI(prompt, schema, timeoutMs);
       if (provider === 'anthropic') return await generateAnthropic(prompt, schema, timeoutMs);
     } catch (error) {

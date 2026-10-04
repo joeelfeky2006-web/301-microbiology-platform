@@ -35,10 +35,10 @@ export async function loadMaterial(id: unknown) {
   return { material: await loadLectureSource(admin, data as unknown as import('./loadSource').SourceRow) };
 }
 
-export async function beginAction(request: NextRequest, action: AIAction) {
+export async function beginAction(request: NextRequest, action: AIAction, idempotencyKey?: string | null) {
   const identity = await authenticate(request);
   if ('response' in identity) return identity;
-  return authorizeAndSpend(request, action);
+  return authorizeAndSpend(request, action, idempotencyKey);
 }
 
 export async function refund(userId: string, requestId: string | undefined) {
