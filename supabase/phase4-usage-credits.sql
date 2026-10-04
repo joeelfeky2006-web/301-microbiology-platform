@@ -363,4 +363,21 @@ $$;
 revoke all on function public.grant_user_credits(text, integer, text) from public, anon;
 grant execute on function public.grant_user_credits(text, integer, text) to authenticated;
 
+-- ------------------------------------------------------------------------------
+-- ITEM 4 — summary cache (lecture content only; never student prompts)
+-- ------------------------------------------------------------------------------
+create table if not exists public.ai_summary_cache (
+  material_id uuid not null,
+  content_hash text not null,
+  prompt_version text not null,
+  model text,
+  summary jsonb not null,
+  created_at timestamptz not null default now(),
+  primary key (material_id, content_hash, prompt_version)
+);
+
+alter table public.ai_summary_cache enable row level security;
+revoke all on public.ai_summary_cache from public, anon, authenticated;
+grant select, insert, update, delete on public.ai_summary_cache to service_role;
+
 commit;
