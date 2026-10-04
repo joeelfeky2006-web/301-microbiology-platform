@@ -1,7 +1,7 @@
 import 'server-only';
 import { NextRequest } from 'next/server';
 import { authenticate, authorizeAndSpend, refundCredit } from '@/lib/apiAuth';
-import { loadMaterial, generateJson, noStoreJson } from '@/lib/ai/pipeline';
+import { errorCodeFromUnknown, featureCost, generateJson, loadMaterial, noStoreJson, recordAiUsage } from '@/lib/ai/pipeline';
 import { AI_MESSAGES, aiError } from '@/lib/ai/messages';
 import { MODULE_RULES, SAFETY_RULES, dataBlock } from '@/lib/ai/modulePrompts';
 
@@ -27,14 +27,41 @@ export async function POST(request: NextRequest) {
   try {
     const moduleCode = loaded.material.module;
     const topic = typeof body.topic === 'string' ? body.topic.slice(0, 500) : loaded.material.title || 'Lecture summary';
-    const parsed = await generateJson(`You are Dr. Atlas. ${SAFETY_RULES}\n${MODULE_RULES[moduleCode] || ''}\nCreate an exam-focused summary only from the source. Do not invent facts absent from it; identify thin areas briefly. Topic: ${dataBlock('STUDENT INPUT', topic)} ${dataBlock('SOURCE MATERIAL', source)} ${loaded.material.custom_system_prompt ? dataBlock('ADMIN OVERLAY', loaded.material.custom_system_prompt) : ''}`, schema);
+    const generated = await generateJson(`You are Dr. Atlas. ${SAFETY_RULES}\n${MODULE_RULES[moduleCode] || ''}\nCreate an exam-focused summary only from the source. Do not invent facts absent from it; identify thin areas briefly. Topic: ${dataBlock('STUDENT INPUT', topic)} ${dataBlock('SOURCE MATERIAL', source)} ${loaded.material.custom_system_prompt ? dataBlock('ADMIN OVERLAY', loaded.material.custom_system_prompt) : ''}`, schema);
+    const parsed = generated.data;
     if (!Array.isArray(parsed.keyPathogens) || !Array.isArray(parsed.examTraps) || !Array.isArray(parsed.diagnosticAlgorithms)) throw new Error('shape');
-    console.info(JSON.stringify({ action: 'summarize', material_id: loaded.material.id, kind: 'ok', latency_ms: Date.now() - started }));
+    const latency = Date.now() - started;
+    console.info(JSON.stringify({ action: 'summarize', material_id: loaded.material.id, kind: 'ok', latency_ms: latency }));
+    recordAiUsage({
+      userId: access.userId,
+      requestId: access.requestId,
+      feature: 'summarize',
+      materialId: loaded.material.id,
+      provider: generated.provider,
+      model: generated.model,
+      inputTokens: generated.usage.input,
+      outputTokens: generated.usage.output,
+      totalTokens: generated.usage.total,
+      creditsCharged: featureCost('summarize'),
+      latencyMs: latency,
+      status: 'success',
+    });
     return noStoreJson({ success: true, summary: { ...parsed, module: moduleCode, moduleTitle: moduleCode }, credits: access.credits });
   } catch (error: any) {
     const refunded = await refundCredit(access.userId, access.requestId);
     const busy = /429|RESOURCE_EXHAUSTED|rate.?limit/i.test(String(error?.message || error));
-    console.info(JSON.stringify({ action: 'summarize', material_id: loaded.material.id, kind: busy ? 'busy' : 'glitch', latency_ms: Date.now() - started }));
+    const latency = Date.now() - started;
+    console.info(JSON.stringify({ action: 'summarize', material_id: loaded.material.id, kind: busy ? 'busy' : 'glitch', latency_ms: latency }));
+    recordAiUsage({
+      userId: access.userId,
+      requestId: access.requestId,
+      feature: 'summarize',
+      materialId: loaded.material.id,
+      creditsCharged: 0,
+      latencyMs: latency,
+      status: 'refunded',
+      errorCode: errorCodeFromUnknown(error),
+    });
     return noStoreJson({ ok: false, kind: busy ? 'busy' : 'glitch', message: busy ? AI_MESSAGES.busy : AI_MESSAGES.glitch, credits: refunded || access.credits }, 503);
   }
 }

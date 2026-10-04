@@ -1,14 +1,19 @@
 import 'server-only';
 import type { NextRequest } from 'next/server';
 import type { AIAction } from './actions';
+import { ACTION_COSTS } from './actions';
 import { authenticate, authorizeAndSpend, refundCredit } from '@/lib/apiAuth';
 import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { aiError } from './messages';
 import { loadLectureSource } from './loadSource';
-import { generateStructuredJson } from './provider';
+import { generateStructuredJson, type GenerateResult } from './provider';
+import { errorCodeFromUnknown, logUsage, type AiUsageEntry, type AiUsageStatus } from './usage';
 
 export type AIBody = Record<string, unknown>;
 export type LoadedMaterial = { id: string; module: string; title?: string | null; ai_context?: string | null; raw_quiz_text?: string | null; custom_system_prompt?: string | null };
+
+export { logUsage, errorCodeFromUnknown };
+export type { AiUsageEntry, AiUsageStatus, GenerateResult };
 
 export async function parseObject(request: NextRequest, limits: { message?: boolean; answers?: boolean } = {}) {
   let body: AIBody;
@@ -42,6 +47,15 @@ export function noStoreJson(data: unknown, status = 200) {
   return Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 }
 
-export async function generateJson(prompt: string, schema: Record<string, unknown>, timeoutMs = 25_000) {
+export async function generateJson(prompt: string, schema: Record<string, unknown>, timeoutMs = 25_000): Promise<GenerateResult> {
   return generateStructuredJson(prompt, schema, timeoutMs);
+}
+
+export function featureCost(action: AIAction): number {
+  return ACTION_COSTS[action];
+}
+
+/** Convenience logger used by AI routes — never awaits. */
+export function recordAiUsage(entry: AiUsageEntry): void {
+  logUsage(entry);
 }

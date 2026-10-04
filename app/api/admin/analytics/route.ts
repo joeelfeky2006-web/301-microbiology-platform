@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 async function resolveSuperAdmin(
-  userClient: { rpc: (fn: string) => Promise<{ data: unknown; error: unknown }>; from: (table: string) => any },
+  userClient: { rpc: (fn: string) => any; from: (table: string) => any },
   userId: string,
   userEmail?: string,
 ): Promise<boolean> {
