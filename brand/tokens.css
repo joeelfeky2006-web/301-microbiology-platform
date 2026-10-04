@@ -1,0 +1,70 @@
+/* MedAtlas Egypt brand tokens. Font paths resolve relative to this file. */
+@font-face { font-family: "Sora"; src: url("fonts/Sora-Variable.ttf") format("truetype"); font-weight: 100 800; }
+@font-face { font-family: "Inter"; src: url("fonts/Inter-Variable.ttf") format("truetype"); font-weight: 100 900; }
+@font-face { font-family: "IBM Plex Sans Arabic"; src: url("fonts/IBMPlexSansArabic-Regular.ttf") format("truetype"); font-weight: 400; }
+@font-face { font-family: "IBM Plex Sans Arabic"; src: url("fonts/IBMPlexSansArabic-SemiBold.ttf") format("truetype"); font-weight: 600; }
+@font-face { font-family: "IBM Plex Sans Arabic"; src: url("fonts/IBMPlexSansArabic-Bold.ttf") format("truetype"); font-weight: 700; }
+@font-face { font-family: "IBM Plex Mono"; src: url("fonts/IBMPlexMono-Medium.ttf") format("truetype"); font-weight: 500; }
+
+:root {
+  /* core */
+  --ink: #0B1230;          /* Midnight Ink — primary dark, text on light */
+  --night: #060A1C;        /* Deep Night — darkest surface */
+  --nile: #2350FF;         /* Nile Blue — primary action */
+  --indigo: #5B3DF5;       /* Atlas Indigo — gradient partner */
+  --teal: #21E3C0;         /* Culture Teal — AI / highlight, use sparingly */
+  --papyrus: #F4EBD9;      /* Papyrus — warm neutral */
+  --cloud: #F6F8FC;        /* Cloud — light surface */
+  --slate: #5B6785;        /* Slate — secondary text */
+  --white: #FFFFFF;
+  /* module accents (kept from the platform) */
+  --cns: #7C5CFF;
+  --urs: #14C3E0;
+  --rep: #FF5C7A;
+  --gold: #F5B83D;         /* Capstone Gold — offers & badges only */
+
+  --grad-atlas: linear-gradient(135deg, var(--nile) 0%, var(--indigo) 100%);
+  --grad-glow: radial-gradient(60% 60% at 70% 20%, rgba(33, 227, 192, .22), transparent 70%);
+
+  --font-display: "Sora", "IBM Plex Sans Arabic", system-ui, sans-serif;
+  --font-body: "Inter", "IBM Plex Sans Arabic", system-ui, sans-serif;
+  --font-ar: "IBM Plex Sans Arabic", "Sora", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --radius-s: 10px;
+  --radius-m: 18px;
+  --radius-l: 28px;
+}
+
+.ar { font-family: var(--font-ar); direction: rtl; }
+.mono { font-family: var(--font-mono); }
+
+/* "Agar grid" — the signature background texture: dot grid + faint meridians */
+.agar {
+  background-color: var(--night);
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, .07) 1px, transparent 1.5px),
+    var(--grad-glow);
+  background-size: 28px 28px, 100% 100%;
+}
+.agar-light {
+  background-color: var(--cloud);
+  background-image: radial-gradient(circle at 1px 1px, rgba(11, 18, 48, .08) 1px, transparent 1.5px);
+  background-size: 28px 28px;
+}
+
+/* lens ring graphic — oversized, cropped by the frame */
+.lens {
+  position: absolute; border-radius: 50%;
+  border: var(--lens-w, 40px) solid transparent;
+  background: var(--grad-atlas) border-box;
+  -webkit-mask: linear-gradient(#000 0 0) padding-box exclude, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) padding-box exclude, linear-gradient(#000 0 0);
+}
+
+.chip {
+  display: inline-flex; align-items: center; gap: .5em;
+  border-radius: 999px; padding: .45em 1em;
+  font: 600 1em/1 var(--font-display);
+}
+.chip .dot { width: .55em; height: .55em; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 .25em rgba(33, 227, 192, .2); }

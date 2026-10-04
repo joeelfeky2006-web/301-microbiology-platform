@@ -1,0 +1,39 @@
+@import url("../tokens.css");
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: var(--w); height: var(--h); overflow: hidden; }
+body { position: relative; color: var(--white); font-family: var(--font-body); -webkit-font-smoothing: antialiased; }
+
+.frame { position: absolute; inset: 0; overflow: hidden; }
+.logo { position: absolute; }
+.h1 { font: 700 var(--h1, 96px)/1.04 var(--font-display); letter-spacing: -0.03em; }
+.h1 .ar, .ar.h1 { font-weight: 700; letter-spacing: 0; line-height: 1.25; }
+.grad-text { background: linear-gradient(90deg, #7FA0FF, var(--teal)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.sub { font: 500 var(--sub, 34px)/1.4 var(--font-body); color: rgba(255, 255, 255, .72); }
+.cta {
+  display: inline-flex; align-items: center; gap: 18px;
+  background: var(--white); color: var(--ink);
+  border-radius: 999px; padding: 22px 36px;
+  font: 700 var(--cta, 34px)/1 var(--font-display);
+}
+.cta .ar { font-weight: 700; }
+.cta .arrow { width: 1.3em; height: 1.3em; border-radius: 50%; background: var(--grad-atlas); display: grid; place-items: center; color: #fff; font-size: .7em; }
+.url { font: 500 var(--url, 26px)/1 var(--font-mono); color: rgba(255, 255, 255, .6); letter-spacing: .02em; }
+
+/* phone mockup showing the real site */
+.phone {
+  position: absolute; width: var(--pw, 420px); aspect-ratio: 390 / 844;
+  border-radius: calc(var(--pw, 420px) * .14); padding: calc(var(--pw, 420px) * .03);
+  background: linear-gradient(160deg, #2a3358, #0d1330 60%);
+  box-shadow: 0 40px 120px rgba(0, 0, 0, .55), 0 0 0 2px rgba(255, 255, 255, .08) inset;
+}
+.screen { position: relative; width: 100%; height: 100%; border-radius: calc(var(--pw, 420px) * .115); overflow: hidden; background: #070b14; }
+.screen .site { position: absolute; left: 0; top: calc(var(--pw, 420px) * .2); width: 100%; }
+.screen .bar {
+  position: absolute; left: 0; right: 0; top: 0; height: calc(var(--pw, 420px) * .2);
+  display: flex; align-items: flex-end; padding: 0 6% 4.5%; z-index: 2;
+  background: rgba(6, 10, 28, .92); border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+.screen .bar img { height: 42%; }
+.screen.light { background: #f8fafc; }
+.screen.light .bar { background: rgba(255, 255, 255, .95); border-color: rgba(11, 18, 48, .08); }
