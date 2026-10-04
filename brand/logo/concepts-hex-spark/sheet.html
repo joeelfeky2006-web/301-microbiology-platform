@@ -1,0 +1,156 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../tokens.css"><style>
+  * { box-sizing: border-box; margin: 0; }
+  body { width: 1800px; height: 1060px; background: #E9EDF6; font-family: Inter; padding: 0 0 30px; }
+  .top { background: #060A1C; color: #fff; padding: 26px 44px; display: flex; justify-content: space-between; align-items: center; }
+  .top b { font: 700 32px Sora; } .top span { font: 500 16px "IBM Plex Mono"; color: #21E3C0; letter-spacing: .08em; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; padding: 26px 34px; }
+  .card { background: #fff; border-radius: 26px; padding: 26px; display: grid; grid-template-columns: 260px 1fr; grid-template-rows: auto auto 1fr; column-gap: 22px; box-shadow: 0 10px 30px rgba(11,18,48,.06); }
+  .hero { grid-row: 1 / 2; background: #F6F8FC; border-radius: 20px; height: 290px; display: grid; place-items: center; }
+  .side { display: flex; flex-direction: column; gap: 14px; justify-content: center; }
+  .tile { width: 120px; height: 120px; border-radius: 28px; background: linear-gradient(135deg, #0B1230, #141C46); display: grid; place-items: center; box-shadow: 0 10px 24px rgba(11,18,48,.25); }
+  .lock { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 14px; border: 1px solid #E3E8F3; }
+  .lock img { height: 46px; } .lock.dark { background: #0B1230; border-color: #0B1230; }
+  h3 { grid-column: 1 / -1; font: 700 26px Sora; color: #0B1230; margin-top: 18px; letter-spacing: -.02em; }
+  p { grid-column: 1 / -1; font: 400 17px/1.45 Inter; color: #5B6785; margin-top: 6px; }
+</style></head><body>
+  <div class="top"><b>MedAtlas Egypt · Hex Cell + AI spark</b><span>PICK ONE OR MIX · FOR REVIEW</span></div>
+  <div class="grid">
+      <div class="card">
+        <div class="hero"><svg viewBox="0 0 128 128" width="230" height="230" style="color:#0B1230;overflow:visible">
+      <defs><mask id="k1a" maskUnits="userSpaceOnUse" x="-10" y="-10" width="148" height="148"><rect x="-10" y="-10" width="148" height="148" fill="#fff"/><path d="M109 21 C113.59 33.41 113.59 33.41 126 38 C113.59 42.59 113.59 42.59 109 55 C104.41 42.59 104.41 42.59 92 38 C104.41 33.41 104.41 33.41 109 21 Z" fill="#000" stroke="#000" stroke-width="10" stroke-linejoin="round"/><path d="M122 12 C123.62 16.38 123.62 16.38 128 18 C123.62 19.62 123.62 19.62 122 24 C120.38 19.62 120.38 19.62 116 18 C120.38 16.38 120.38 16.38 122 12 Z" fill="#000" stroke="#000" stroke-width="10" stroke-linejoin="round"/></mask></defs>
+      <g mask="url(#k1a)"><path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="none" stroke="#2350FF" stroke-width="9" stroke-linejoin="round"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <path d="M109 21 C113.59 33.41 113.59 33.41 126 38 C113.59 42.59 113.59 42.59 109 55 C104.41 42.59 104.41 42.59 92 38 C104.41 33.41 104.41 33.41 109 21 Z" fill="#21E3C0"/><path d="M122 12 C123.62 16.38 123.62 16.38 128 18 C123.62 19.62 123.62 19.62 122 24 C120.38 19.62 120.38 19.62 116 18 C120.38 16.38 120.38 16.38 122 12 Z" fill="#21E3C0"/></svg></div>
+        <div class="side">
+          <div class="tile"><svg viewBox="0 0 128 128" width="86" height="86" style="color:#fff;overflow:visible">
+      <defs><mask id="k1b" maskUnits="userSpaceOnUse" x="-10" y="-10" width="148" height="148"><rect x="-10" y="-10" width="148" height="148" fill="#fff"/><path d="M109 21 C113.59 33.41 113.59 33.41 126 38 C113.59 42.59 113.59 42.59 109 55 C104.41 42.59 104.41 42.59 92 38 C104.41 33.41 104.41 33.41 109 21 Z" fill="#000" stroke="#000" stroke-width="10" stroke-linejoin="round"/><path d="M122 12 C123.62 16.38 123.62 16.38 128 18 C123.62 19.62 123.62 19.62 122 24 C120.38 19.62 120.38 19.62 116 18 C120.38 16.38 120.38 16.38 122 12 Z" fill="#000" stroke="#000" stroke-width="10" stroke-linejoin="round"/></mask></defs>
+      <g mask="url(#k1b)"><path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="none" stroke="#2350FF" stroke-width="9" stroke-linejoin="round"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <path d="M109 21 C113.59 33.41 113.59 33.41 126 38 C113.59 42.59 113.59 42.59 109 55 C104.41 42.59 104.41 42.59 92 38 C104.41 33.41 104.41 33.41 109 21 Z" fill="#21E3C0"/><path d="M122 12 C123.62 16.38 123.62 16.38 128 18 C123.62 19.62 123.62 19.62 122 24 C120.38 19.62 120.38 19.62 116 18 C120.38 16.38 120.38 16.38 122 12 Z" fill="#21E3C0"/></svg></div>
+          <div class="lock dark"><svg viewBox="0 0 128 128" width="46" height="46" style="color:#fff;overflow:visible">
+      <defs><mask id="k1c" maskUnits="userSpaceOnUse" x="-10" y="-10" width="148" height="148"><rect x="-10" y="-10" width="148" height="148" fill="#fff"/><path d="M109 21 C113.59 33.41 113.59 33.41 126 38 C113.59 42.59 113.59 42.59 109 55 C104.41 42.59 104.41 42.59 92 38 C104.41 33.41 104.41 33.41 109 21 Z" fill="#000" stroke="#000" stroke-width="10" stroke-linejoin="round"/><path d="M122 12 C123.62 16.38 123.62 16.38 128 18 C123.62 19.62 123.62 19.62 122 24 C120.38 19.62 120.38 19.62 116 18 C120.38 16.38 120.38 16.38 122 12 Z" fill="#000" stroke="#000" stroke-width="10" stroke-linejoin="round"/></mask></defs>
+      <g mask="url(#k1c)"><path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="none" stroke="#2350FF" stroke-width="9" stroke-linejoin="round"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <path d="M109 21 C113.59 33.41 113.59 33.41 126 38 C113.59 42.59 113.59 42.59 109 55 C104.41 42.59 104.41 42.59 92 38 C104.41 33.41 104.41 33.41 109 21 Z" fill="#21E3C0"/><path d="M122 12 C123.62 16.38 123.62 16.38 128 18 C123.62 19.62 123.62 19.62 122 24 C120.38 19.62 120.38 19.62 116 18 C120.38 16.38 120.38 16.38 122 12 Z" fill="#21E3C0"/></svg><img src="../svg/medatlas-wordmark-reversed.svg"></div>
+          <div class="lock"><svg viewBox="0 0 128 128" width="46" height="46" style="color:#0B1230;overflow:visible">
+      <defs><mask id="k1d" maskUnits="userSpaceOnUse" x="-10" y="-10" width="148" height="148"><rect x="-10" y="-10" width="148" height="148" fill="#fff"/><path d="M109 21 C113.59 33.41 113.59 33.41 126 38 C113.59 42.59 113.59 42.59 109 55 C104.41 42.59 104.41 42.59 92 38 C104.41 33.41 104.41 33.41 109 21 Z" fill="#000" stroke="#000" stroke-width="10" stroke-linejoin="round"/><path d="M122 12 C123.62 16.38 123.62 16.38 128 18 C123.62 19.62 123.62 19.62 122 24 C120.38 19.62 120.38 19.62 116 18 C120.38 16.38 120.38 16.38 122 12 Z" fill="#000" stroke="#000" stroke-width="10" stroke-linejoin="round"/></mask></defs>
+      <g mask="url(#k1d)"><path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="none" stroke="#2350FF" stroke-width="9" stroke-linejoin="round"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <path d="M109 21 C113.59 33.41 113.59 33.41 126 38 C113.59 42.59 113.59 42.59 109 55 C104.41 42.59 104.41 42.59 92 38 C104.41 33.41 104.41 33.41 109 21 Z" fill="#21E3C0"/><path d="M122 12 C123.62 16.38 123.62 16.38 128 18 C123.62 19.62 123.62 19.62 122 24 C120.38 19.62 120.38 19.62 116 18 C120.38 16.38 120.38 16.38 122 12 Z" fill="#21E3C0"/></svg><img src="../svg/medatlas-wordmark-color.svg"></div>
+        </div>
+        <h3>4A · Spark on the corner</h3><p>The top-right corner of the cell becomes the AI spark, with a tiny second sparkle beside it.</p>
+      </div>
+      <div class="card">
+        <div class="hero"><svg viewBox="0 0 128 128" width="230" height="230" style="color:#0B1230;overflow:visible">
+      <path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="none" stroke="#2350FF" stroke-width="9" stroke-linejoin="round"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M92 16 C95.24 24.759999999999998 95.24 24.759999999999998 104 28 C95.24 31.240000000000002 95.24 31.240000000000002 92 40 C88.76 31.240000000000002 88.76 31.240000000000002 80 28 C88.76 24.759999999999998 88.76 24.759999999999998 92 16 Z" fill="#21E3C0"/><path d="M104 41 C105.35 44.65 105.35 44.65 109 46 C105.35 47.35 105.35 47.35 104 51 C102.65 47.35 102.65 47.35 99 46 C102.65 44.65 102.65 44.65 104 41 Z" fill="#21E3C0" opacity=".8"/></svg></div>
+        <div class="side">
+          <div class="tile"><svg viewBox="0 0 128 128" width="86" height="86" style="color:#fff;overflow:visible">
+      <path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="none" stroke="#2350FF" stroke-width="9" stroke-linejoin="round"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M92 16 C95.24 24.759999999999998 95.24 24.759999999999998 104 28 C95.24 31.240000000000002 95.24 31.240000000000002 92 40 C88.76 31.240000000000002 88.76 31.240000000000002 80 28 C88.76 24.759999999999998 88.76 24.759999999999998 92 16 Z" fill="#21E3C0"/><path d="M104 41 C105.35 44.65 105.35 44.65 109 46 C105.35 47.35 105.35 47.35 104 51 C102.65 47.35 102.65 47.35 99 46 C102.65 44.65 102.65 44.65 104 41 Z" fill="#21E3C0" opacity=".8"/></svg></div>
+          <div class="lock dark"><svg viewBox="0 0 128 128" width="46" height="46" style="color:#fff;overflow:visible">
+      <path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="none" stroke="#2350FF" stroke-width="9" stroke-linejoin="round"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M92 16 C95.24 24.759999999999998 95.24 24.759999999999998 104 28 C95.24 31.240000000000002 95.24 31.240000000000002 92 40 C88.76 31.240000000000002 88.76 31.240000000000002 80 28 C88.76 24.759999999999998 88.76 24.759999999999998 92 16 Z" fill="#21E3C0"/><path d="M104 41 C105.35 44.65 105.35 44.65 109 46 C105.35 47.35 105.35 47.35 104 51 C102.65 47.35 102.65 47.35 99 46 C102.65 44.65 102.65 44.65 104 41 Z" fill="#21E3C0" opacity=".8"/></svg><img src="../svg/medatlas-wordmark-reversed.svg"></div>
+          <div class="lock"><svg viewBox="0 0 128 128" width="46" height="46" style="color:#0B1230;overflow:visible">
+      <path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="none" stroke="#2350FF" stroke-width="9" stroke-linejoin="round"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M92 16 C95.24 24.759999999999998 95.24 24.759999999999998 104 28 C95.24 31.240000000000002 95.24 31.240000000000002 92 40 C88.76 31.240000000000002 88.76 31.240000000000002 80 28 C88.76 24.759999999999998 88.76 24.759999999999998 92 16 Z" fill="#21E3C0"/><path d="M104 41 C105.35 44.65 105.35 44.65 109 46 C105.35 47.35 105.35 47.35 104 51 C102.65 47.35 102.65 47.35 99 46 C102.65 44.65 102.65 44.65 104 41 Z" fill="#21E3C0" opacity=".8"/></svg><img src="../svg/medatlas-wordmark-color.svg"></div>
+        </div>
+        <h3>4B · Spark inside the cell</h3><p>The cell stays whole and the spark sits above the tall peak, like an idea lighting up.</p>
+      </div>
+      <div class="card">
+        <div class="hero"><svg viewBox="0 0 128 128" width="230" height="230" style="color:#0B1230;overflow:visible">
+      <defs><mask id="k2a" maskUnits="userSpaceOnUse" x="-10" y="-10" width="148" height="148"><rect x="-10" y="-10" width="148" height="148" fill="#fff"/><path d="M77 20 C81.32 31.68 81.32 31.68 93 36 C81.32 40.32 81.32 40.32 77 52 C72.68 40.32 72.68 40.32 61 36 C72.68 31.68 72.68 31.68 77 20 Z" fill="#000" stroke="#000" stroke-width="9" stroke-linejoin="round"/></mask></defs>
+      <g mask="url(#k2a)"><path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="none" stroke="#2350FF" stroke-width="9" stroke-linejoin="round"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <path d="M77 20 C81.32 31.68 81.32 31.68 93 36 C81.32 40.32 81.32 40.32 77 52 C72.68 40.32 72.68 40.32 61 36 C72.68 31.68 72.68 31.68 77 20 Z" fill="#21E3C0"/></svg></div>
+        <div class="side">
+          <div class="tile"><svg viewBox="0 0 128 128" width="86" height="86" style="color:#fff;overflow:visible">
+      <defs><mask id="k2b" maskUnits="userSpaceOnUse" x="-10" y="-10" width="148" height="148"><rect x="-10" y="-10" width="148" height="148" fill="#fff"/><path d="M77 20 C81.32 31.68 81.32 31.68 93 36 C81.32 40.32 81.32 40.32 77 52 C72.68 40.32 72.68 40.32 61 36 C72.68 31.68 72.68 31.68 77 20 Z" fill="#000" stroke="#000" stroke-width="9" stroke-linejoin="round"/></mask></defs>
+      <g mask="url(#k2b)"><path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="none" stroke="#2350FF" stroke-width="9" stroke-linejoin="round"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <path d="M77 20 C81.32 31.68 81.32 31.68 93 36 C81.32 40.32 81.32 40.32 77 52 C72.68 40.32 72.68 40.32 61 36 C72.68 31.68 72.68 31.68 77 20 Z" fill="#21E3C0"/></svg></div>
+          <div class="lock dark"><svg viewBox="0 0 128 128" width="46" height="46" style="color:#fff;overflow:visible">
+      <defs><mask id="k2c" maskUnits="userSpaceOnUse" x="-10" y="-10" width="148" height="148"><rect x="-10" y="-10" width="148" height="148" fill="#fff"/><path d="M77 20 C81.32 31.68 81.32 31.68 93 36 C81.32 40.32 81.32 40.32 77 52 C72.68 40.32 72.68 40.32 61 36 C72.68 31.68 72.68 31.68 77 20 Z" fill="#000" stroke="#000" stroke-width="9" stroke-linejoin="round"/></mask></defs>
+      <g mask="url(#k2c)"><path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="none" stroke="#2350FF" stroke-width="9" stroke-linejoin="round"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <path d="M77 20 C81.32 31.68 81.32 31.68 93 36 C81.32 40.32 81.32 40.32 77 52 C72.68 40.32 72.68 40.32 61 36 C72.68 31.68 72.68 31.68 77 20 Z" fill="#21E3C0"/></svg><img src="../svg/medatlas-wordmark-reversed.svg"></div>
+          <div class="lock"><svg viewBox="0 0 128 128" width="46" height="46" style="color:#0B1230;overflow:visible">
+      <defs><mask id="k2d" maskUnits="userSpaceOnUse" x="-10" y="-10" width="148" height="148"><rect x="-10" y="-10" width="148" height="148" fill="#fff"/><path d="M77 20 C81.32 31.68 81.32 31.68 93 36 C81.32 40.32 81.32 40.32 77 52 C72.68 40.32 72.68 40.32 61 36 C72.68 31.68 72.68 31.68 77 20 Z" fill="#000" stroke="#000" stroke-width="9" stroke-linejoin="round"/></mask></defs>
+      <g mask="url(#k2d)"><path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="none" stroke="#2350FF" stroke-width="9" stroke-linejoin="round"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <path d="M77 20 C81.32 31.68 81.32 31.68 93 36 C81.32 40.32 81.32 40.32 77 52 C72.68 40.32 72.68 40.32 61 36 C72.68 31.68 72.68 31.68 77 20 Z" fill="#21E3C0"/></svg><img src="../svg/medatlas-wordmark-color.svg"></div>
+        </div>
+        <h3>4C · Spark on the summit</h3><p>The tall pyramid peak ends in the spark: AI at the top of your studying.</p>
+      </div>
+      <div class="card">
+        <div class="hero"><svg viewBox="0 0 128 128" width="230" height="230" style="color:#0B1230;overflow:visible">
+      <defs><mask id="k3a" maskUnits="userSpaceOnUse" x="-10" y="-10" width="148" height="148"><rect x="-10" y="-10" width="148" height="148" fill="#fff"/><path d="M109 21 C113.59 33.41 113.59 33.41 126 38 C113.59 42.59 113.59 42.59 109 55 C104.41 42.59 104.41 42.59 92 38 C104.41 33.41 104.41 33.41 109 21 Z" fill="#000" stroke="#000" stroke-width="10" stroke-linejoin="round"/></mask></defs>
+      <g mask="url(#k3a)"><path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="none" stroke="#2350FF" stroke-width="9" stroke-linejoin="round"/>
+        <path d="M64 12 L109 38" fill="none" stroke="#21E3C0" stroke-width="9" stroke-linecap="round"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <path d="M109 21 C113.59 33.41 113.59 33.41 126 38 C113.59 42.59 113.59 42.59 109 55 C104.41 42.59 104.41 42.59 92 38 C104.41 33.41 104.41 33.41 109 21 Z" fill="#21E3C0"/></svg></div>
+        <div class="side">
+          <div class="tile"><svg viewBox="0 0 128 128" width="86" height="86" style="color:#fff;overflow:visible">
+      <defs><mask id="k3b" maskUnits="userSpaceOnUse" x="-10" y="-10" width="148" height="148"><rect x="-10" y="-10" width="148" height="148" fill="#fff"/><path d="M109 21 C113.59 33.41 113.59 33.41 126 38 C113.59 42.59 113.59 42.59 109 55 C104.41 42.59 104.41 42.59 92 38 C104.41 33.41 104.41 33.41 109 21 Z" fill="#000" stroke="#000" stroke-width="10" stroke-linejoin="round"/></mask></defs>
+      <g mask="url(#k3b)"><path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="none" stroke="#2350FF" stroke-width="9" stroke-linejoin="round"/>
+        <path d="M64 12 L109 38" fill="none" stroke="#21E3C0" stroke-width="9" stroke-linecap="round"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <path d="M109 21 C113.59 33.41 113.59 33.41 126 38 C113.59 42.59 113.59 42.59 109 55 C104.41 42.59 104.41 42.59 92 38 C104.41 33.41 104.41 33.41 109 21 Z" fill="#21E3C0"/></svg></div>
+          <div class="lock dark"><svg viewBox="0 0 128 128" width="46" height="46" style="color:#fff;overflow:visible">
+      <defs><mask id="k3c" maskUnits="userSpaceOnUse" x="-10" y="-10" width="148" height="148"><rect x="-10" y="-10" width="148" height="148" fill="#fff"/><path d="M109 21 C113.59 33.41 113.59 33.41 126 38 C113.59 42.59 113.59 42.59 109 55 C104.41 42.59 104.41 42.59 92 38 C104.41 33.41 104.41 33.41 109 21 Z" fill="#000" stroke="#000" stroke-width="10" stroke-linejoin="round"/></mask></defs>
+      <g mask="url(#k3c)"><path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="none" stroke="#2350FF" stroke-width="9" stroke-linejoin="round"/>
+        <path d="M64 12 L109 38" fill="none" stroke="#21E3C0" stroke-width="9" stroke-linecap="round"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <path d="M109 21 C113.59 33.41 113.59 33.41 126 38 C113.59 42.59 113.59 42.59 109 55 C104.41 42.59 104.41 42.59 92 38 C104.41 33.41 104.41 33.41 109 21 Z" fill="#21E3C0"/></svg><img src="../svg/medatlas-wordmark-reversed.svg"></div>
+          <div class="lock"><svg viewBox="0 0 128 128" width="46" height="46" style="color:#0B1230;overflow:visible">
+      <defs><mask id="k3d" maskUnits="userSpaceOnUse" x="-10" y="-10" width="148" height="148"><rect x="-10" y="-10" width="148" height="148" fill="#fff"/><path d="M109 21 C113.59 33.41 113.59 33.41 126 38 C113.59 42.59 113.59 42.59 109 55 C104.41 42.59 104.41 42.59 92 38 C104.41 33.41 104.41 33.41 109 21 Z" fill="#000" stroke="#000" stroke-width="10" stroke-linejoin="round"/></mask></defs>
+      <g mask="url(#k3d)"><path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="none" stroke="#2350FF" stroke-width="9" stroke-linejoin="round"/>
+        <path d="M64 12 L109 38" fill="none" stroke="#21E3C0" stroke-width="9" stroke-linecap="round"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <path d="M109 21 C113.59 33.41 113.59 33.41 126 38 C113.59 42.59 113.59 42.59 109 55 C104.41 42.59 104.41 42.59 92 38 C104.41 33.41 104.41 33.41 109 21 Z" fill="#21E3C0"/></svg><img src="../svg/medatlas-wordmark-color.svg"></div>
+        </div>
+        <h3>4D · Teal edge + spark</h3><p>Keeps the teal AI edge from option 4 and finishes it with a spark on the corner.</p>
+      </div>
+      <div class="card">
+        <div class="hero"><svg viewBox="0 0 128 128" width="230" height="230" style="color:#0B1230;overflow:visible">
+      <defs><mask id="k4a" maskUnits="userSpaceOnUse" x="-10" y="-10" width="148" height="148"><rect x="-10" y="-10" width="148" height="148" fill="#fff"/><path d="M64 -5 C68.59 7.41 68.59 7.41 81 12 C68.59 16.59 68.59 16.59 64 29 C59.41 16.59 59.41 16.59 47 12 C59.41 7.41 59.41 7.41 64 -5 Z" fill="#000" stroke="#000" stroke-width="10" stroke-linejoin="round"/></mask></defs>
+      <g mask="url(#k4a)"><path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="none" stroke="#2350FF" stroke-width="9" stroke-linejoin="round"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <path d="M64 -5 C68.59 7.41 68.59 7.41 81 12 C68.59 16.59 68.59 16.59 64 29 C59.41 16.59 59.41 16.59 47 12 C59.41 7.41 59.41 7.41 64 -5 Z" fill="#21E3C0"/></svg></div>
+        <div class="side">
+          <div class="tile"><svg viewBox="0 0 128 128" width="86" height="86" style="color:#fff;overflow:visible">
+      <defs><mask id="k4b" maskUnits="userSpaceOnUse" x="-10" y="-10" width="148" height="148"><rect x="-10" y="-10" width="148" height="148" fill="#fff"/><path d="M64 -5 C68.59 7.41 68.59 7.41 81 12 C68.59 16.59 68.59 16.59 64 29 C59.41 16.59 59.41 16.59 47 12 C59.41 7.41 59.41 7.41 64 -5 Z" fill="#000" stroke="#000" stroke-width="10" stroke-linejoin="round"/></mask></defs>
+      <g mask="url(#k4b)"><path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="none" stroke="#2350FF" stroke-width="9" stroke-linejoin="round"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <path d="M64 -5 C68.59 7.41 68.59 7.41 81 12 C68.59 16.59 68.59 16.59 64 29 C59.41 16.59 59.41 16.59 47 12 C59.41 7.41 59.41 7.41 64 -5 Z" fill="#21E3C0"/></svg></div>
+          <div class="lock dark"><svg viewBox="0 0 128 128" width="46" height="46" style="color:#fff;overflow:visible">
+      <defs><mask id="k4c" maskUnits="userSpaceOnUse" x="-10" y="-10" width="148" height="148"><rect x="-10" y="-10" width="148" height="148" fill="#fff"/><path d="M64 -5 C68.59 7.41 68.59 7.41 81 12 C68.59 16.59 68.59 16.59 64 29 C59.41 16.59 59.41 16.59 47 12 C59.41 7.41 59.41 7.41 64 -5 Z" fill="#000" stroke="#000" stroke-width="10" stroke-linejoin="round"/></mask></defs>
+      <g mask="url(#k4c)"><path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="none" stroke="#2350FF" stroke-width="9" stroke-linejoin="round"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <path d="M64 -5 C68.59 7.41 68.59 7.41 81 12 C68.59 16.59 68.59 16.59 64 29 C59.41 16.59 59.41 16.59 47 12 C59.41 7.41 59.41 7.41 64 -5 Z" fill="#21E3C0"/></svg><img src="../svg/medatlas-wordmark-reversed.svg"></div>
+          <div class="lock"><svg viewBox="0 0 128 128" width="46" height="46" style="color:#0B1230;overflow:visible">
+      <defs><mask id="k4d" maskUnits="userSpaceOnUse" x="-10" y="-10" width="148" height="148"><rect x="-10" y="-10" width="148" height="148" fill="#fff"/><path d="M64 -5 C68.59 7.41 68.59 7.41 81 12 C68.59 16.59 68.59 16.59 64 29 C59.41 16.59 59.41 16.59 47 12 C59.41 7.41 59.41 7.41 64 -5 Z" fill="#000" stroke="#000" stroke-width="10" stroke-linejoin="round"/></mask></defs>
+      <g mask="url(#k4d)"><path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="none" stroke="#2350FF" stroke-width="9" stroke-linejoin="round"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <path d="M64 -5 C68.59 7.41 68.59 7.41 81 12 C68.59 16.59 68.59 16.59 64 29 C59.41 16.59 59.41 16.59 47 12 C59.41 7.41 59.41 7.41 64 -5 Z" fill="#21E3C0"/></svg><img src="../svg/medatlas-wordmark-color.svg"></div>
+        </div>
+        <h3>4E · Spark at the top</h3><p>The spark crowns the top point of the cell. Symmetrical and calm.</p>
+      </div>
+      <div class="card">
+        <div class="hero"><svg viewBox="0 0 128 128" width="230" height="230" style="color:#0B1230;overflow:visible">
+      <defs><linearGradient id="h1a" x1="19" y1="116" x2="109" y2="12" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2350FF"/><stop offset="1" stop-color="#5B3DF5"/></linearGradient><mask id="k5a" maskUnits="userSpaceOnUse" x="-10" y="-10" width="148" height="148"><rect x="-10" y="-10" width="148" height="148" fill="#fff"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="#000" stroke="#000" stroke-width="0" stroke-linejoin="round"/></mask></defs>
+      <path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="url(#h1a)" stroke="url(#h1a)" stroke-width="9" stroke-linejoin="round"/>
+      <path d="M6 80 H19" stroke="currentColor" stroke-width="9.5" stroke-linecap="round"/>
+      <path d="M109 80 H122" stroke="currentColor" stroke-width="9.5" stroke-linecap="round"/>
+      <path d="M19 80 H30 L45 50 L60 72 L77 40 L96 80 H109" fill="none" stroke="#fff" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M95 21 C98.51 30.49 98.51 30.49 108 34 C98.51 37.51 98.51 37.51 95 47 C91.49 37.51 91.49 37.51 82 34 C91.49 30.49 91.49 30.49 95 21 Z" fill="#21E3C0"/><path d="M106 46.5 C107.485 50.515 107.485 50.515 111.5 52 C107.485 53.485 107.485 53.485 106 57.5 C104.515 53.485 104.515 53.485 100.5 52 C104.515 50.515 104.515 50.515 106 46.5 Z" fill="#21E3C0" opacity=".85"/></svg></div>
+        <div class="side">
+          <div class="tile"><svg viewBox="0 0 128 128" width="86" height="86" style="color:#fff;overflow:visible">
+      <defs><linearGradient id="h1b" x1="19" y1="116" x2="109" y2="12" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2350FF"/><stop offset="1" stop-color="#5B3DF5"/></linearGradient><mask id="k5b" maskUnits="userSpaceOnUse" x="-10" y="-10" width="148" height="148"><rect x="-10" y="-10" width="148" height="148" fill="#fff"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="#000" stroke="#000" stroke-width="0" stroke-linejoin="round"/></mask></defs>
+      <path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="url(#h1b)" stroke="url(#h1b)" stroke-width="9" stroke-linejoin="round"/>
+      <path d="M6 80 H19" stroke="currentColor" stroke-width="9.5" stroke-linecap="round"/>
+      <path d="M109 80 H122" stroke="currentColor" stroke-width="9.5" stroke-linecap="round"/>
+      <path d="M19 80 H30 L45 50 L60 72 L77 40 L96 80 H109" fill="none" stroke="#fff" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M95 21 C98.51 30.49 98.51 30.49 108 34 C98.51 37.51 98.51 37.51 95 47 C91.49 37.51 91.49 37.51 82 34 C91.49 30.49 91.49 30.49 95 21 Z" fill="#21E3C0"/><path d="M106 46.5 C107.485 50.515 107.485 50.515 111.5 52 C107.485 53.485 107.485 53.485 106 57.5 C104.515 53.485 104.515 53.485 100.5 52 C104.515 50.515 104.515 50.515 106 46.5 Z" fill="#21E3C0" opacity=".85"/></svg></div>
+          <div class="lock dark"><svg viewBox="0 0 128 128" width="46" height="46" style="color:#fff;overflow:visible">
+      <defs><linearGradient id="h1c" x1="19" y1="116" x2="109" y2="12" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2350FF"/><stop offset="1" stop-color="#5B3DF5"/></linearGradient><mask id="k5c" maskUnits="userSpaceOnUse" x="-10" y="-10" width="148" height="148"><rect x="-10" y="-10" width="148" height="148" fill="#fff"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="#000" stroke="#000" stroke-width="0" stroke-linejoin="round"/></mask></defs>
+      <path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="url(#h1c)" stroke="url(#h1c)" stroke-width="9" stroke-linejoin="round"/>
+      <path d="M6 80 H19" stroke="currentColor" stroke-width="9.5" stroke-linecap="round"/>
+      <path d="M109 80 H122" stroke="currentColor" stroke-width="9.5" stroke-linecap="round"/>
+      <path d="M19 80 H30 L45 50 L60 72 L77 40 L96 80 H109" fill="none" stroke="#fff" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M95 21 C98.51 30.49 98.51 30.49 108 34 C98.51 37.51 98.51 37.51 95 47 C91.49 37.51 91.49 37.51 82 34 C91.49 30.49 91.49 30.49 95 21 Z" fill="#21E3C0"/><path d="M106 46.5 C107.485 50.515 107.485 50.515 111.5 52 C107.485 53.485 107.485 53.485 106 57.5 C104.515 53.485 104.515 53.485 100.5 52 C104.515 50.515 104.515 50.515 106 46.5 Z" fill="#21E3C0" opacity=".85"/></svg><img src="../svg/medatlas-wordmark-reversed.svg"></div>
+          <div class="lock"><svg viewBox="0 0 128 128" width="46" height="46" style="color:#0B1230;overflow:visible">
+      <defs><linearGradient id="h1d" x1="19" y1="116" x2="109" y2="12" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2350FF"/><stop offset="1" stop-color="#5B3DF5"/></linearGradient><mask id="k5d" maskUnits="userSpaceOnUse" x="-10" y="-10" width="148" height="148"><rect x="-10" y="-10" width="148" height="148" fill="#fff"/><path d="M6 80 H30 L45 50 L60 72 L77 40 L96 80 H122" fill="#000" stroke="#000" stroke-width="0" stroke-linejoin="round"/></mask></defs>
+      <path d="M64 12 L109 38 V90 L64 116 L19 90 V38 Z" fill="url(#h1d)" stroke="url(#h1d)" stroke-width="9" stroke-linejoin="round"/>
+      <path d="M6 80 H19" stroke="currentColor" stroke-width="9.5" stroke-linecap="round"/>
+      <path d="M109 80 H122" stroke="currentColor" stroke-width="9.5" stroke-linecap="round"/>
+      <path d="M19 80 H30 L45 50 L60 72 L77 40 L96 80 H109" fill="none" stroke="#fff" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M95 21 C98.51 30.49 98.51 30.49 108 34 C98.51 37.51 98.51 37.51 95 47 C91.49 37.51 91.49 37.51 82 34 C91.49 30.49 91.49 30.49 95 21 Z" fill="#21E3C0"/><path d="M106 46.5 C107.485 50.515 107.485 50.515 111.5 52 C107.485 53.485 107.485 53.485 106 57.5 C104.515 53.485 104.515 53.485 100.5 52 C104.515 50.515 104.515 50.515 106 46.5 Z" fill="#21E3C0" opacity=".85"/></svg><img src="../svg/medatlas-wordmark-color.svg"></div>
+        </div>
+        <h3>4F · Solid cell</h3><p>A filled gradient cell with a white pulse M and the spark. Boldest as an app icon.</p>
+      </div></div>
+</body></html>

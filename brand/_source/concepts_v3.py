@@ -2,6 +2,7 @@
 Writes brand/logo/concepts-v3/sheet.html (+ one SVG per option); render with render.js.
 Run: python3 brand/_source/concepts_v3.py"""
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -53,14 +54,14 @@ def svg(body, color="#0B1230", size=None):
     return f'<svg viewBox="0 0 128 128"{s} style="color:{color};overflow:visible">{body}</svg>'
 
 
-def main():
-    os.makedirs(OUT, exist_ok=True)
+def main(options=OPTIONS, out=OUT, title="MedAtlas Egypt · symbol options", height=1060):
+    os.makedirs(out, exist_ok=True)
     cards = []
-    for i, (name, desc, body) in enumerate(OPTIONS, 1):
-        with open(f"{OUT}/option-{i}.svg", "w") as fh:
+    for i, (name, desc, body) in enumerate(options, 1):
+        with open(f"{out}/option-{i}.svg", "w") as fh:
             fh.write(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" style="color:#0B1230">{body}</svg>\n')
         # ids must stay unique when an option appears several times on the page
-        uniq = lambda b, k: b.replace('id="m1"', f'id="m1{k}"').replace("url(#m1)", f"url(#m1{k})").replace('id="g3"', f'id="g3{k}"').replace("url(#g3)", f"url(#g3{k})").replace('id="g6"', f'id="g6{k}"').replace("url(#g6)", f"url(#g6{k})")
+        uniq = lambda b, k: re.sub(r'(id="|url\(#)([a-z]+\d+)', lambda m: f"{m.group(1)}{m.group(2)}{k}", b)
         cards.append(f'''
       <div class="card">
         <div class="hero">{svg(uniq(body, "a"), size=230)}</div>
@@ -73,7 +74,7 @@ def main():
       </div>''')
     html = f'''<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../tokens.css"><style>
   * {{ box-sizing: border-box; margin: 0; }}
-  body {{ width: 1800px; height: 1060px; background: #E9EDF6; font-family: Inter; padding: 0 0 30px; }}
+  body {{ width: 1800px; height: {height}px; background: #E9EDF6; font-family: Inter; padding: 0 0 30px; }}
   .top {{ background: #060A1C; color: #fff; padding: 26px 44px; display: flex; justify-content: space-between; align-items: center; }}
   .top b {{ font: 700 32px Sora; }} .top span {{ font: 500 16px "IBM Plex Mono"; color: #21E3C0; letter-spacing: .08em; }}
   .grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; padding: 26px 34px; }}
@@ -86,12 +87,12 @@ def main():
   h3 {{ grid-column: 1 / -1; font: 700 26px Sora; color: #0B1230; margin-top: 18px; letter-spacing: -.02em; }}
   p {{ grid-column: 1 / -1; font: 400 17px/1.45 Inter; color: #5B6785; margin-top: 6px; }}
 </style></head><body>
-  <div class="top"><b>MedAtlas Egypt · symbol options</b><span>PICK ONE OR MIX · FOR REVIEW</span></div>
+  <div class="top"><b>{title}</b><span>PICK ONE OR MIX · FOR REVIEW</span></div>
   <div class="grid">{"".join(cards)}</div>
 </body></html>'''
-    with open(f"{OUT}/sheet.html", "w") as fh:
+    with open(f"{out}/sheet.html", "w") as fh:
         fh.write(html)
-    print("wrote", OUT)
+    print("wrote", out)
 
 
 if __name__ == "__main__":
