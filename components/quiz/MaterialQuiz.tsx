@@ -63,7 +63,11 @@ function printFullReport(report: Report, quizTitle: string) {
       const h1 = doc.createElement('h1'); h1.textContent = 'MedAtlas Egypt · Quiz Report'; main.append(h1);
       const h2 = doc.createElement('h2'); h2.textContent = `${quizTitle} · ${report.module}`; main.append(h2);
       const note = doc.createElement('p'); note.textContent = 'Not saved on the server. Print or save this page now.'; main.append(note);
-      const score = doc.createElement('p'); score.innerHTML = `<strong>Score:</strong> ${report.score}%`; main.append(score);
+      const score = doc.createElement('p');
+      const scoreLabel = doc.createElement('strong');
+      scoreLabel.textContent = 'Score:';
+      score.append(scoreLabel, ` ${report.score}%`);
+      main.append(score);
       const feedback = doc.createElement('p'); feedback.textContent = report.feedback; main.append(feedback);
       if (report.weaknesses?.length) {
         const h = doc.createElement('h3'); h.textContent = 'Review areas'; main.append(h);
@@ -81,9 +85,19 @@ function printFullReport(report: Report, quizTitle: string) {
       (report.perQuestion || []).forEach((row, index) => {
         const block = doc.createElement('div');
         block.style.marginBottom = '1rem';
-        block.innerHTML = `<p><strong>${index + 1}. ${row.question}</strong></p>
-          <p class="${row.is_correct ? 'ok' : 'bad'}">Your answer: ${row.student_answer} · Correct: ${row.correct_answer}${row.is_correct ? ' ✓' : ''}</p>
-          ${row.explanation ? `<p>${row.explanation}</p>` : ''}`;
+        const q = doc.createElement('p');
+        const qStrong = doc.createElement('strong');
+        qStrong.textContent = `${index + 1}. ${row.question}`;
+        q.append(qStrong);
+        const ans = doc.createElement('p');
+        ans.className = row.is_correct ? 'ok' : 'bad';
+        ans.textContent = `Your answer: ${row.student_answer} · Correct: ${row.correct_answer}${row.is_correct ? ' ✓' : ''}`;
+        block.append(q, ans);
+        if (row.explanation) {
+          const exp = doc.createElement('p');
+          exp.textContent = row.explanation;
+          block.append(exp);
+        }
         main.append(block);
       });
       doc.body.append(main);

@@ -24,3 +24,17 @@ export async function GET(request: NextRequest) {
     },
   }, { headers: { 'Cache-Control': 'no-store' } });
 }
+
+/** Credits are server-determined via deduct/grant RPCs — never accept client mutations here. */
+export async function POST() {
+  return Response.json({ error: 'Credits cannot be modified from this endpoint.' }, { status: 405, headers: { Allow: 'GET', 'Cache-Control': 'no-store' } });
+}
+export async function PUT() {
+  return POST();
+}
+export async function PATCH() {
+  return POST();
+}
+export async function DELETE() {
+  return POST();
+}

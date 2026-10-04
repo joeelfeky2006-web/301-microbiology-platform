@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticate } from '@/lib/apiAuth';
 import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { rejectClientCreditMutation } from '@/lib/security/creditMutationGuard';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -59,6 +60,8 @@ export async function PATCH(request: NextRequest) {
 
   let body: any;
   try { body = await request.json(); } catch { return NextResponse.json({ error: 'Enter valid profile details.' }, { status: 400 }); }
+  const creditBlock = rejectClientCreditMutation(body);
+  if (creditBlock) return creditBlock;
   const name = typeof body?.name === 'string' ? body.name.trim() : '';
   const universityId = typeof body?.university_id === 'string' ? body.university_id.trim() : '';
   const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';

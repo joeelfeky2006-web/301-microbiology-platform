@@ -185,6 +185,11 @@ export async function handleWebhook(providerName: PaymentProviderName, request: 
   const provider = getProvider(providerName);
   const handled = await provider.handleWebhook(request, rawBody);
 
+  // Store a bounded summary — never keep unbounded provider payloads.
+  const rawSummary =
+    handled.rawEvent && typeof handled.rawEvent === 'object'
+      ? { keys: Object.keys(handled.rawEvent as object).slice(0, 24) }
+      : null;
   await admin.from('payment_events').insert({
     provider: providerName,
     event_type: handled.reason || (handled.ok ? 'webhook' : 'webhook_rejected'),
@@ -193,7 +198,8 @@ export async function handleWebhook(providerName: PaymentProviderName, request: 
       ok: handled.ok,
       reason: handled.reason,
       orderId: handled.orderId,
-      raw: handled.rawEvent ?? null,
+      raw_summary: rawSummary,
+      live: paymentsLiveEnabled(),
     },
     order_id: handled.orderId && UUID_RE.test(handled.orderId) ? handled.orderId : null,
   });
