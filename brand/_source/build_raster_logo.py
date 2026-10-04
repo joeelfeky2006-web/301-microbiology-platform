@@ -1,6 +1,6 @@
 """Builds the raster MedAtlas Egypt lockup: transparent chrome pyramids + snake icon
 with "MedAtlas Egypt" set in Space Grotesk Bold (the website font).
-Usage: python3 build_raster_logo.py <icon_cutout.png>  (needs Pillow, fonttools)"""
+Usage: python3 build_raster_logo.py <icon_cutout.png> [out_subdir] [file_prefix]  (needs Pillow, fonttools)"""
 import os
 import sys
 from fontTools.ttLib import TTFont
@@ -51,19 +51,20 @@ def lockup(icon, color, text_ratio=0.30, gap_ratio=0.16, pad_ratio=0.08):
     return canvas
 
 
-def main(src):
-    os.makedirs(OUT, exist_ok=True)
+def main(src, out=OUT, prefix="medatlas"):
+    os.makedirs(out, exist_ok=True)
     icon = Image.open(src).convert("RGBA")
     icon = icon.crop(icon.getbbox())
     pad = int(icon.height * 0.06)
     sq = max(icon.size) + 2 * pad
     square = Image.new("RGBA", (sq, sq), (0, 0, 0, 0))
     square.alpha_composite(icon, ((sq - icon.width) // 2, (sq - icon.height) // 2))
-    square.save(f"{OUT}/medatlas-icon-transparent.png", optimize=True)
+    square.save(f"{out}/{prefix}-icon-transparent.png", optimize=True)
     for name, color in COLORS.items():
-        lockup(icon, color).save(f"{OUT}/medatlas-logo-{name}-text-transparent.png", optimize=True)
-    print("\n".join(sorted(os.listdir(OUT))))
+        lockup(icon, color).save(f"{out}/{prefix}-logo-{name}-text-transparent.png", optimize=True)
+    print("\n".join(sorted(os.listdir(out))))
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    out = os.path.join(ROOT, "logo", sys.argv[2]) if len(sys.argv) > 2 else OUT
+    main(sys.argv[1], out, sys.argv[3] if len(sys.argv) > 3 else "medatlas")
