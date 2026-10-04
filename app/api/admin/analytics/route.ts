@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { authenticate } from '@/lib/apiAuth';
 import { PRIMARY_ADMIN_EMAIL } from '@/lib/admin';
 import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { collectObservability } from '@/lib/observability/collect';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -160,6 +161,8 @@ export async function GET(request: NextRequest) {
   }));
   const withUniversityId = roster.filter((row) => row.university_id).length;
 
+  const observability = await collectObservability(admin, { days: 7, totalUsers: totalAccounts });
+
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
     users: {
@@ -168,6 +171,7 @@ export async function GET(request: NextRequest) {
       editors,
       superAdmins,
       withUniversityId,
+      active7d: observability.users.active7d,
     },
     credits: {
       rows: credits.length,
@@ -187,6 +191,7 @@ export async function GET(request: NextRequest) {
     sponsor,
     roster,
     recentActivity: recentResult.data || [],
+    observability,
     links: {
       vercel:
         process.env.NEXT_PUBLIC_VERCEL_PROJECT_URL
@@ -203,6 +208,9 @@ export async function GET(request: NextRequest) {
       sponsorResult.error?.message,
       authUsersResult.error?.message,
       studentsResult.error?.message,
+      ...Object.entries(observability.availability)
+        .filter(([, ok]) => !ok)
+        .map(([name]) => `observability:${name} unavailable (apply related SQL)`),
     ].filter(Boolean),
   });
 }
