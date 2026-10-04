@@ -35,7 +35,7 @@ export async function beginAction(request: NextRequest, action: AIAction) {
 }
 
 export async function refund(request: NextRequest, action: AIAction) {
-  await refundCredit(request, action);
+  return refundCredit(request, action);
 }
 
 export function noStoreJson(data: unknown, status = 200) {

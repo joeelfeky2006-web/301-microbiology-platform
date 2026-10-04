@@ -120,9 +120,10 @@ export async function POST(request: NextRequest) {
         weaknesses: critique.weaknesses.slice(0, 8).map((x: unknown) => String(x).slice(0, 300)),
         studyRecommendations: critique.studyRecommendations.slice(0, 8).map((x: unknown) => String(x).slice(0, 300)),
       },
+      credits: access.credits,
     });
   } catch (error: any) {
-    await refundCredit(request, 'quiz-eval');
+    const refunded = await refundCredit(request, 'quiz-eval');
     const busy = /429|RESOURCE_EXHAUSTED|rate.?limit/i.test(String(error?.message || error));
     console.info(JSON.stringify({ action: 'quiz-eval', material_id: loaded.material.id, kind: busy ? 'busy' : 'glitch', latency_ms: Date.now() - started }));
     return noStoreJson({
@@ -132,6 +133,7 @@ export async function POST(request: NextRequest) {
       },
       kind: busy ? 'busy' : 'glitch',
       message: busy ? AI_MESSAGES.busy : AI_MESSAGES.glitch,
+      credits: refunded || access.credits,
     }, 503);
   }
 }

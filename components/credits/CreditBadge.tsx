@@ -4,36 +4,67 @@ import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CircleGauge, Clock, X, HeartHandshake } from 'lucide-react';
 import { authenticatedHeaders } from '@/lib/authHeaders';
+import type { CreditSnapshot } from '@/lib/creditsClient';
 import { cardClass } from '@/lib/ui';
 
 interface CreditBadgeProps { compact?: boolean; className?: string; onOpenSupport?: () => void }
-type Credits = { daily_remaining: number; daily_limit: number; monthly_remaining: number; monthly_limit: number };
 
 export default function CreditBadge({ compact = false, className = '', onOpenSupport }: CreditBadgeProps) {
-  const [credits, setCredits] = useState<Credits | null>(null);
+  const [credits, setCredits] = useState<CreditSnapshot | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+
   const refresh = useCallback(async () => {
     try {
       const response = await fetch('/api/credits', { headers: await authenticatedHeaders(), cache: 'no-store' });
       if (response.status === 401) return;
       const data = await response.json();
-      if (response.ok && data.credits) setCredits(data.credits as Credits);
+      if (response.ok && data.credits) setCredits(data.credits as CreditSnapshot);
     } catch { /* The server enforces balances even when the badge cannot refresh. */ }
   }, []);
 
   useEffect(() => {
     void refresh();
-    window.addEventListener('credits_updated', refresh);
+
+    const applyDetail = (detail: unknown) => {
+      if (!detail || typeof detail !== 'object') return;
+      const snap = detail as Partial<CreditSnapshot>;
+      if (typeof snap.daily_remaining !== 'number' || typeof snap.monthly_remaining !== 'number') return;
+      setCredits((prev) => ({
+        daily_remaining: snap.daily_remaining!,
+        monthly_remaining: snap.monthly_remaining!,
+        daily_limit: typeof snap.daily_limit === 'number' ? snap.daily_limit : prev?.daily_limit ?? 8,
+        monthly_limit: typeof snap.monthly_limit === 'number' ? snap.monthly_limit : prev?.monthly_limit ?? 80,
+      }));
+    };
+
+    const onCreditsUpdated = (event: Event) => {
+      applyDetail((event as CustomEvent).detail);
+      void refresh();
+      window.setTimeout(() => void refresh(), 350);
+      window.setTimeout(() => void refresh(), 1200);
+    };
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void refresh();
+    };
+
+    window.addEventListener('credits_updated', onCreditsUpdated);
     window.addEventListener('focus', refresh);
-    return () => { window.removeEventListener('credits_updated', refresh); window.removeEventListener('focus', refresh); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('credits_updated', onCreditsUpdated);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [refresh]);
 
   useEffect(() => {
     if (!modalOpen) return;
+    void refresh();
     const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setModalOpen(false); };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [modalOpen]);
+  }, [modalOpen, refresh]);
 
   if (!credits) return null;
   const dailyPercent = Math.round((credits.daily_remaining / Math.max(1, credits.daily_limit)) * 100);

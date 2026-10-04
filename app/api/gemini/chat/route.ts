@@ -31,11 +31,11 @@ export async function POST(request: NextRequest) {
     const parsed = await generateJson(`You are Dr. Atlas, a supportive Micro 301 tutor. ${SAFETY_RULES}\n${MODULE_RULES[moduleCode] || ''}\nAnswer only from the source where lecture-specific facts are needed; if source is insufficient, say so. ${dataBlock('SOURCE MATERIAL', source)}\n${dataBlock('STUDENT INPUT', body.message)}\nConversation context: ${dataBlock('STUDENT INPUT', JSON.stringify(history))}`, schema);
     if (typeof parsed.reply !== 'string' || parsed.reply.length > 5000) throw new Error('shape');
     console.info(JSON.stringify({ action: 'chat', material_id: loaded.material.id, kind: 'ok', latency_ms: Date.now() - started }));
-    return noStoreJson({ reply: parsed.reply });
+    return noStoreJson({ reply: parsed.reply, credits: access.credits });
   } catch (error: any) {
-    await refundCredit(request, 'chat');
+    const refunded = await refundCredit(request, 'chat');
     const busy = /429|RESOURCE_EXHAUSTED|rate.?limit/i.test(String(error?.message || error));
     console.info(JSON.stringify({ action: 'chat', material_id: loaded.material.id, kind: busy ? 'busy' : 'glitch', latency_ms: Date.now() - started }));
-    return noStoreJson({ ok: false, kind: busy ? 'busy' : 'glitch', message: busy ? AI_MESSAGES.busy : AI_MESSAGES.glitch }, 503);
+    return noStoreJson({ ok: false, kind: busy ? 'busy' : 'glitch', message: busy ? AI_MESSAGES.busy : AI_MESSAGES.glitch, credits: refunded || access.credits }, 503);
   }
 }

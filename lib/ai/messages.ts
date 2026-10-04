@@ -1,8 +1,8 @@
 import 'server-only';
 
 export const AI_MESSAGES = {
-  busy: 'Dr. Atlas is handling a high volume of student questions right now! Take a quick 60-second break, review your notes, and try again.',
-  glitch: "Dr. Atlas is catching his breath. Let's give it another try in a moment!",
+  busy: 'AI provider is temporarily rate-limited (high traffic). This is not a platform bug — wait about 60 seconds and try again.',
+  glitch: "Dr. Atlas hit a temporary error. Your credit is refunded if one was charged — try again in a moment.",
   limit: "You've used your AI credits for now. They refresh soon, so keep practicing with the question bank in the meantime!",
   auth: 'Please sign in to continue with Dr. Atlas.',
   fallback: 'No practice questions are available for this lecture yet.',

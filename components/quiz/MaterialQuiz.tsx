@@ -257,16 +257,17 @@ export default function MaterialQuiz({ material }: { material: Pick<Material, 'i
       });
       const data = await response.json();
       if (response.status === 401) { await redirectAfterSessionExpiry(); return; }
-      window.dispatchEvent(new Event('credits_updated'));
+      const { notifyCreditsUpdated } = await import('@/lib/creditsClient');
+      notifyCreditsUpdated(data.credits);
       if (!response.ok) {
         if (data.kind === 'busy') setRetrySeconds(60);
-        setError(typeof data.message === 'string' ? data.message : 'Dr. Atlas is catching his breath. Try again in a moment.');
+        setError(typeof data.message === 'string' ? data.message : 'Dr. Atlas hit a temporary error. Try again in a moment.');
         if (data.report) setReport(data.report);
         return;
       }
       if (data.report) setReport(data.report);
     } catch {
-      setError('Dr. Atlas is catching his breath. Try again in a moment.');
+      setError('Dr. Atlas hit a temporary error. Try again in a moment.');
     } finally {
       setCritiqueLoading(false);
     }

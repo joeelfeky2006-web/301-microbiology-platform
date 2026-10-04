@@ -21,6 +21,8 @@ import { useModuleProgress } from '@/lib/progress';
 import MaterialQuiz from '@/components/quiz/MaterialQuiz';
 import { useSettings } from '@/lib/useSettings';
 import { authenticatedHeaders } from '@/lib/authHeaders';
+import { useSession } from '@/lib/useSession';
+import type { GroupSection } from '@/types';
 
 type Tone = 'blue' | 'emerald' | 'purple';
 
@@ -216,26 +218,51 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [showAIStudio, setShowAIStudio] = useState(false);
+  const session = useSession();
   const [selectedCohort, setSelectedCohort] = useState<'ALL' | 'G1' | 'G2'>('ALL');
 
   const { isComplete, toggle, stats } = useModuleProgress(materials);
   const currentModStats = stats.byModule[moduleName];
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('student_group_preference');
-      if (stored === 'G1' || stored === 'G2') {
-        setSelectedCohort(stored);
-      }
-      const handleGroupChange = (e: any) => {
-        if (e.detail === 'G1' || e.detail === 'G2') {
-          setSelectedCohort(e.detail);
-        }
-      };
-      window.addEventListener('student_group_changed', handleGroupChange);
-      return () => window.removeEventListener('student_group_changed', handleGroupChange);
+  const setCohort = (grp: 'ALL' | 'G1' | 'G2') => {
+    setSelectedCohort(grp);
+    if (typeof window === 'undefined') return;
+    if (grp === 'G1' || grp === 'G2') {
+      localStorage.setItem('student_group_preference', grp);
+      window.dispatchEvent(new CustomEvent('student_group_changed', { detail: grp }));
     }
-  }, []);
+  };
+
+  /** Hide the other section's lecture recordings when a cohort is selected. */
+  const matchesCohort = (m: Material) => {
+    if (selectedCohort === 'ALL') return true;
+    if (selectedCohort === 'G1' && m.type === 'record_g2') return false;
+    if (selectedCohort === 'G2' && m.type === 'record_g1') return false;
+    // Legacy audio_recording / practical_record rows are not typed per cohort.
+    if (m.type === 'audio_recording' || m.type === 'practical_record') {
+      const label = `${m.title || ''} ${m.subtitle || ''}`.toLowerCase();
+      if (selectedCohort === 'G1' && (/\bg2\b/.test(label) || label.includes('group 2'))) return false;
+      if (selectedCohort === 'G2' && (/\bg1\b/.test(label) || label.includes('group 1'))) return false;
+    }
+    return true;
+  };
+
+  // Keep module cohort aligned with Header: explicit local preference, else auth group_section.
+  useEffect(() => {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('student_group_preference') : null;
+    const fromAuth = session?.user?.user_metadata?.group_section;
+    const preferred =
+      (stored === 'G1' || stored === 'G2' ? stored : null)
+      || (fromAuth === 'G1' || fromAuth === 'G2' ? (fromAuth as GroupSection) : null);
+    if (preferred) setSelectedCohort(preferred);
+
+    const handleGroupChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail === 'G1' || detail === 'G2') setSelectedCohort(detail);
+    };
+    window.addEventListener('student_group_changed', handleGroupChange);
+    return () => window.removeEventListener('student_group_changed', handleGroupChange);
+  }, [session]);
 
   useEffect(() => {
     let cancelled = false;
@@ -423,12 +450,7 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
                     <button
                       key={grp}
                       type="button"
-                      onClick={() => {
-                        setSelectedCohort(grp);
-                        if (typeof window !== 'undefined' && grp !== 'ALL') {
-                          localStorage.setItem('student_group_preference', grp);
-                        }
-                      }}
+                      onClick={() => setCohort(grp)}
                       className={`rounded-lg px-3 py-1.5 text-xs font-black transition-all ${
                         selectedCohort === grp
                           ? 'bg-blue-600 text-white shadow-xs'
@@ -441,15 +463,24 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
                 </div>
               </div>
 
+              {selectedCohort !== 'ALL' && (
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Showing {selectedCohort} lecture recording only
+                  {' · '}
+                  {
+                    materials.filter((m) => matchesCohort(m) && (m.type === 'record_g1' || m.type === 'record_g2' || m.type === 'audio_recording')).length
+                  }{' '}
+                  recording(s) for this filter.
+                  {materials.filter((m) => m.type === 'lec_pdf').length > 1 && (
+                    <span className="ml-1">(Shared lecture PDFs appear for both groups.)</span>
+                  )}
+                </p>
+              )}
+
               <Section
                 heading="Theory & Lectures"
                 tone="blue"
-                items={materials.filter((m) => {
-                  if (!THEORY_TYPES.includes(m.type)) return false;
-                  if (selectedCohort === 'G1' && m.type === 'record_g2') return false;
-                  if (selectedCohort === 'G2' && m.type === 'record_g1') return false;
-                  return true;
-                })}
+                items={materials.filter((m) => THEORY_TYPES.includes(m.type) && matchesCohort(m))}
                 emptyText={
                   selectedCohort !== 'ALL'
                     ? `No theory materials uploaded for Group ${selectedCohort} yet in ${moduleTitle}.`
@@ -461,7 +492,7 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
               <Section
                 heading="Practicals & OSPE"
                 tone="emerald"
-                items={materials.filter((m) => PRACTICAL_TYPES.includes(m.type))}
+                items={materials.filter((m) => PRACTICAL_TYPES.includes(m.type) && matchesCohort(m))}
                 emptyText={`No practical materials uploaded yet for ${moduleTitle}.`}
                 isComplete={isComplete}
                 onToggleComplete={toggle}
@@ -469,7 +500,7 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
               <Section
                 heading="Exam Vault"
                 tone="purple"
-                items={materials.filter((m) => EXAM_TYPES.includes(m.type))}
+                items={materials.filter((m) => EXAM_TYPES.includes(m.type) && matchesCohort(m))}
                 emptyText={`No exam materials uploaded yet for ${moduleTitle}.`}
                 isComplete={isComplete}
                 onToggleComplete={toggle}
@@ -477,7 +508,7 @@ export default function ModuleViewer({ moduleName }: { moduleName: ModuleName })
               <Section
                 heading="Other Resources"
                 tone="blue"
-                items={materials.filter((m) => !categorizedTypes.has(m.type))}
+                items={materials.filter((m) => !categorizedTypes.has(m.type) && matchesCohort(m))}
                 emptyText="No other resources are available for this module."
                 isComplete={isComplete}
                 onToggleComplete={toggle}
