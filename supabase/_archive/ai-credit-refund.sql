@@ -1,3 +1,4 @@
+-- OBSOLETE: do not run. Superseded by credit-refund-abuse-fix.sql.
 -- Run manually after deploying the application. Refunds can only restore the
 -- authenticated caller's balance, capped at that account's configured limits.
 create or replace function public.refund_user_credit(p_cost int)

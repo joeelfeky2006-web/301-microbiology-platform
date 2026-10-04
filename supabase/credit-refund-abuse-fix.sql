@@ -1,6 +1,11 @@
 -- ==============================================================================
 -- MedAtlas — P0 credit refund abuse fix (REVIEW BEFORE APPLYING)
 -- ==============================================================================
+-- SINGLE SOURCE OF TRUTH for credit RPCs (deduct_user_credit / refund_spend).
+-- Obsolete predecessors live in supabase/_archive/ — do not run them.
+-- If this file was already applied before credit-fix-2 hardenings, also review
+-- supabase/credit-fix-2.sql (incremental; do not auto-run).
+--
 -- Do NOT auto-run. Apply in the Supabase SQL Editor in the same release as the
 -- app that calls deduct_user_credit(..., p_request_id) and refund_spend via
 -- service_role. Applying this migration closes the student refill hole immediately
@@ -55,8 +60,10 @@ create index if not exists user_credit_history_user_request_idx
 -- ------------------------------------------------------------------------------
 -- 2. Table privileges: students may SELECT own rows only (RLS); no writes
 -- ------------------------------------------------------------------------------
-revoke insert, update, delete, truncate on public.user_credits from public, anon, authenticated;
-revoke insert, update, delete, truncate on public.user_credit_history from public, anon, authenticated;
+revoke insert, update, delete, truncate, references, trigger on public.user_credits from public, anon, authenticated;
+revoke insert, update, delete, truncate, references, trigger on public.user_credit_history from public, anon, authenticated;
+revoke select on public.user_credits from public, anon;
+revoke select on public.user_credit_history from public, anon;
 grant select on public.user_credits to authenticated;
 grant select on public.user_credit_history to authenticated;
 -- Service role keeps write access for SECURITY DEFINER callers / server admin paths.
@@ -107,7 +114,7 @@ begin
   -- Idempotent re-call with the same spend request_id: return current balances.
   if exists (
     select 1 from public.user_credit_history
-    where request_id = p_request_id and event_type = 'spend'
+    where request_id = p_request_id and event_type = 'spend' and user_id = p_user_id
   ) then
     select * into v_rec from public.user_credits where user_id = p_user_id;
     if not found then

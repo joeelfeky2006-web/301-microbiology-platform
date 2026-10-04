@@ -1,9 +1,6 @@
+-- OBSOLETE: do not run. Superseded by credit-refund-abuse-fix.sql.
 -- Run after credits-and-analytics.sql and ai-credit-refund.sql.
 -- Stores a bounded, per-user activity ledger without exposing user_credits broadly.
---
--- SUPERSEDED FOR RPCs: if you are applying the P0 refund fix, run
--- supabase/credit-refund-abuse-fix.sql instead. Re-running this file recreates
--- the student-callable refund_user_credit hole that P0 removes.
 begin;
 
 create table if not exists public.user_credit_history (

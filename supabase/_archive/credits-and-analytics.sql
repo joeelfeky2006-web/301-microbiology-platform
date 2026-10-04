@@ -1,3 +1,4 @@
+-- OBSOLETE: do not run. Superseded by credit-refund-abuse-fix.sql.
 -- ==============================================================================
 -- MedAtlas Egypt (Micro 301) — AI Credit Economy & Sponsor Analytics Script
 -- ==============================================================================
