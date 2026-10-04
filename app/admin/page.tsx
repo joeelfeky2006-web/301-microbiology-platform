@@ -621,7 +621,7 @@ export default function AdminDashboardPage() {
                 }`}
               >
                 <BarChart3 className="h-4 w-4" />
-                Analytics
+                Platform Analytics
               </button>
 
               <button
@@ -889,9 +889,19 @@ export default function AdminDashboardPage() {
 
                 {/* Right: Active Roles & Matrix */}
                 <div className={`${cardClass} p-6 md:col-span-2 space-y-5`}>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Current Configured Roles
-                  </h3>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                      Current Configured Roles
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('analytics')}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-800"
+                    >
+                      <BarChart3 className="h-3.5 w-3.5" />
+                      Open Platform Analytics
+                    </button>
+                  </div>
 
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
