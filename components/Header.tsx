@@ -29,6 +29,9 @@ import CreditBadge from './credits/CreditBadge';
 import SupportModal from './community/SupportModal';
 import { useOnClickOutside } from '@/lib/useOnClickOutside';
 import { SHOW_SUPPORT } from '@/lib/siteConfig';
+import { hasFirstPulse } from '@/lib/firstPulse';
+import BrandMark from './brand/BrandMark';
+import FirstPulseBadge from './brand/FirstPulseBadge';
 
 export default function Header() {
   const session = useSession();
@@ -87,6 +90,7 @@ export default function Header() {
   const userEmail = session?.user?.email;
   const userName = session?.user?.user_metadata?.name || userEmail?.split('@')[0] || 'Student';
   const hasAdminAccess = userRole === 'super_admin' || userRole === 'editor';
+  const firstPulse = hasFirstPulse(session?.user?.created_at);
 
   return (
     <>
@@ -99,7 +103,9 @@ export default function Header() {
               href="/"
               className="flex items-center gap-1.5 text-base sm:text-lg font-black tracking-tight text-slate-900 transition hover:opacity-90 dark:text-white"
             >
-              <img src={site.brand.logo || '/logo.svg'} alt="" width={30} height={30} className="h-7 w-7 rounded object-contain" onError={(e) => { e.currentTarget.src = '/logo.svg'; }} />
+              {!site.brand.logo || site.brand.logo === '/logo.svg'
+                ? <BrandMark className="h-6 w-auto sm:h-7" />
+                : <img src={site.brand.logo} alt="" width={30} height={30} className="h-7 w-7 rounded object-contain" onError={(e) => { e.currentTarget.src = '/logo.svg'; }} />}
               <span>{site.brand.shortName}</span>
               <span className="inline-flex rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
                 301
@@ -129,7 +135,7 @@ export default function Header() {
 
           {/* Navigation Controls */}
           <nav className="flex items-center gap-1 sm:gap-2">
-            {/* Live Student AI Credits */}
+            {/* Live Atlas Credits */}
             <CreditBadge onOpenSupport={SHOW_SUPPORT ? () => setSupportModalOpen(true) : undefined} />
 
             {/* Support Community Link */}
@@ -176,7 +182,7 @@ export default function Header() {
                     <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 font-bold text-white">{userName.charAt(0).toUpperCase()}</span><span className="max-w-20 truncate">{userName}</span>
                   </summary>
                   <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-white/10 dark:bg-slate-900">
-                    <div className="border-b border-slate-200 px-3 py-2 dark:border-white/10"><p className="truncate text-xs font-bold">{userName}</p><p className="truncate text-[11px] text-slate-500">{userEmail}</p></div>
+                    <div className="border-b border-slate-200 px-3 py-2 dark:border-white/10"><p className="truncate text-xs font-bold">{userName}</p><p className="truncate text-[11px] text-slate-500">{userEmail}</p>{firstPulse && <FirstPulseBadge size="sm" className="mt-1.5" />}</div>
                     <Link href="/profile" className="mt-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800"><User className="h-4 w-4" />My Profile</Link>
                     <Link href="/#modules" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800"><Layers className="h-4 w-4" />My Modules</Link>
                     {hasAdminAccess && <Link href="/admin" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800"><Shield className="h-4 w-4" />Admin</Link>}
@@ -220,6 +226,7 @@ export default function Header() {
                         <p className="truncate text-[10px] text-slate-500 dark:text-slate-400">
                           {userEmail}
                         </p>
+                        {firstPulse && <FirstPulseBadge size="sm" className="mt-1" />}
                       </div>
                     </div>
                     <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800 dark:bg-cyan-900/60 dark:text-cyan-300">

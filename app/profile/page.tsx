@@ -8,6 +8,9 @@ import { authenticatedHeaders, redirectAfterSessionExpiry } from '@/lib/authHead
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/useSession';
 import { MODULE_NAMES, MODULE_TITLES, type ModuleName } from '@/types';
+import { hasFirstPulse } from '@/lib/firstPulse';
+import AtlasCoin from '@/components/brand/AtlasCoin';
+import FirstPulseBadge from '@/components/brand/FirstPulseBadge';
 
 type ProfilePayload = {
   profile: { id: string; name: string; university_id: string; email: string; email_confirmed: boolean; created_at: string; last_sign_in_at: string | null };
@@ -139,7 +142,7 @@ export default function ProfilePage() {
         <Link href="/" className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:underline dark:text-cyan-300"><ArrowLeft className="h-4 w-4" />Back to dashboard</Link>
         <div className="flex flex-col gap-4 rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50 to-indigo-50 p-6 shadow-sm dark:border-white/10 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/40 sm:flex-row sm:items-center sm:p-8">
           <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/20"><UserRound className="h-7 w-7" /></span>
-          <div className="min-w-0 flex-1"><p className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-cyan-300">Student profile</p><h1 className="mt-1 break-words text-2xl font-black text-slate-900 dark:text-white sm:text-3xl">{data?.profile.name || session?.user?.user_metadata?.name || 'Your account'}</h1><p className="mt-1 flex items-center gap-2 break-all text-sm text-slate-600 dark:text-slate-300"><Mail className="h-4 w-4 shrink-0" />{data?.profile.email || session?.user?.email}</p>{data?.profile.university_id && <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">University ID: {data.profile.university_id}</p>}</div>
+          <div className="min-w-0 flex-1"><p className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-cyan-300">Student profile</p><h1 className="mt-1 break-words text-2xl font-black text-slate-900 dark:text-white sm:text-3xl">{data?.profile.name || session?.user?.user_metadata?.name || 'Your account'}</h1><p className="mt-1 flex items-center gap-2 break-all text-sm text-slate-600 dark:text-slate-300"><Mail className="h-4 w-4 shrink-0" />{data?.profile.email || session?.user?.email}</p>{data?.profile.university_id && <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">University ID: {data.profile.university_id}</p>}{hasFirstPulse(data?.profile.created_at ?? session?.user?.created_at) && <div className="mt-3 flex flex-wrap items-center gap-2"><FirstPulseBadge /><span className="text-xs text-slate-500 dark:text-slate-400">Joined during the beta</span></div>}</div>
           <div className={`inline-flex w-fit items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold ${data?.profile.email_confirmed ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200'}`}><ShieldCheck className="h-4 w-4" />{data?.profile.email_confirmed ? 'Email confirmed' : 'Email confirmation pending'}</div>
         </div>
 
@@ -158,7 +161,7 @@ export default function ProfilePage() {
 
         <section className="grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-slate-900 sm:p-6">
-            <div className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-indigo-600 dark:text-cyan-300" /><h2 className="font-bold text-slate-900 dark:text-white">AI credit wallet</h2></div>
+            <div className="flex items-center gap-2"><AtlasCoin className="h-5 w-5" /><h2 className="font-bold text-slate-900 dark:text-white">Atlas Credits</h2></div>
             <div className="mt-5 grid grid-cols-2 gap-3">
               <div className="rounded-xl bg-blue-50 p-4 dark:bg-blue-950/40"><p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Daily balance</p><p className="mt-1 font-mono text-2xl font-black text-slate-900 dark:text-white">{data?.credits_available ? data.credits.daily_remaining : 'Unavailable'}{data?.credits_available && <span className="text-sm text-slate-400"> / {data.credits.daily_limit}</span>}</p></div>
               <div className="rounded-xl bg-indigo-50 p-4 dark:bg-indigo-950/40"><p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Monthly balance</p><p className="mt-1 font-mono text-2xl font-black text-slate-900 dark:text-white">{data?.credits_available ? data.credits.monthly_remaining : 'Unavailable'}{data?.credits_available && <span className="text-sm text-slate-400"> / {data.credits.monthly_limit}</span>}</p></div>

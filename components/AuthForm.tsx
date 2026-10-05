@@ -7,6 +7,8 @@ import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/useSession';
 import { useSettings } from '@/lib/useSettings';
 import { cardClass, inputClass, labelClass } from '@/lib/ui';
+import { firstPulseOpen } from '@/lib/firstPulse';
+import FirstPulseBadge from './brand/FirstPulseBadge';
 
 function safeRedirect(value: string | null) {
   return value && value.startsWith('/') && !value.startsWith('//') ? value : '/';
@@ -101,6 +103,16 @@ export default function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
     <div className={`${cardClass} w-full max-w-md p-8`}>
       <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">{confirmationPending ? 'Check your email' : isSignUp ? settings.site_content.auth.signUpTitle : settings.site_content.auth.signInTitle}</h1>
       <p className="mb-6 mt-1 text-slate-500 dark:text-slate-400">{confirmationPending ? `We sent a confirmation link to ${email}.` : isSignUp ? settings.site_content.auth.signUpHelp : settings.site_content.auth.signInHelp}</p>
+      {isSignUp && !confirmationPending && settings.registration_open && firstPulseOpen() && (
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-brand-nile/20 bg-gradient-to-r from-brand-nile/5 to-brand-indigo/10 p-3.5 dark:border-brand-teal/20 dark:from-brand-nile/10 dark:to-brand-indigo/20">
+          <FirstPulseBadge />
+          <div className="min-w-0 text-sm">
+            <p className="font-bold text-slate-900 dark:text-white">Sign up is free now</p>
+            <p className="text-xs text-slate-600 dark:text-slate-300">Beta students get the First Pulse badge on their profile.</p>
+            <p dir="rtl" lang="ar" className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">سجّل ببلاش دلوقتي وخد بادج First Pulse</p>
+          </div>
+        </div>
+      )}
       {!isSignUp && params.get('confirmed') === '1' && <p role="status" className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">Email confirmed. You can sign in now.</p>}
       {!isSignUp && params.get('password_reset') === '1' && <p role="status" className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">Password updated. Sign in with your new password.</p>}
       {!isSignUp && params.get('message') === 'session-expired' && <p role="status" className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">Your session expired. Sign in again to continue where you left off.</p>}
