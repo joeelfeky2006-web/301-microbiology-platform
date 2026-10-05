@@ -45,12 +45,13 @@ def load_font():
     build_logos._fonts["SG700"] = f
 
 
-def mark(mode, w=10, small_spark=True):
+def mark(mode, w=10, small_spark=True, big_spark=(SX, SY, 13)):
     line, s1, s2, _ = MODES[mode]
     out = (GRAD if line.startswith("url") else "")
     out += (f'<path d="{LINE}" fill="none" stroke="{line}" stroke-width="{w}" '
             f'stroke-linecap="round" stroke-linejoin="round"/>')
-    out += f'<path d="{spark(SX, SY, 13)}" fill="{s1}"/>'
+    if big_spark:
+        out += f'<path d="{spark(*big_spark)}" fill="{s1}"/>'
     if small_spark:
         out += f'<path d="{spark(TX, TY, 5.5)}" fill="{s2}" opacity=".85"/>'
     return out
@@ -88,19 +89,25 @@ def symbol(mode):
     return write(f"medatlas-mark-{mode}.svg", (MX, MY, MW, MH), mark(mode))
 
 
-def tile(scale=.74, w=11, small_spark=True, rx=30, inset=6):
+def tile(scale=.74, w=11, small_spark=True, big_spark=(SX, SY, 13), rx=30, inset=6, pivot=(67, 62)):
+    """`pivot` is the mark's optical centre (between its bounding-box centre and its ink centroid,
+    which sits right and low because of the sparks and the S dip); it is placed at the tile centre."""
     size = 128 - 2 * inset
-    white = mark("reversed", w, small_spark)
+    white = mark("reversed", w, small_spark, big_spark)
     return (f'<defs><linearGradient id="tg" x1="0" y1="128" x2="128" y2="0" gradientUnits="userSpaceOnUse">'
             f'<stop offset="0" stop-color="{NILE}"/><stop offset="1" stop-color="{INDIGO}"/></linearGradient></defs>'
             f'<rect x="{inset}" y="{inset}" width="{size}" height="{size}" rx="{rx}" fill="url(#tg)"/>'
-            f'<g transform="translate(64 66) scale({scale}) translate(-64 -57)">{white}</g>')
+            f'<g transform="translate(64 64) scale({scale}) translate({-pivot[0]} {-pivot[1]})">{white}</g>')
 
 
 def icons():
     write("medatlas-app-icon.svg", (0, 0, 128, 128), tile())
-    # small sizes: heavier line, no small spark, tile fills the canvas
-    write("medatlas-favicon.svg", (0, 0, 128, 128), tile(scale=.8, w=16, small_spark=False, rx=28, inset=0))
+    # 32/48 px: heavier line, no small spark, spark pushed up-right so a clear gap survives
+    write("medatlas-favicon.svg", (0, 0, 128, 128),
+          tile(scale=.8, w=16, small_spark=False, big_spark=(104, 14, 15), rx=28, inset=0))
+    # 16 px: the spark can't stay separate from the peak at this size, so it is dropped
+    write("medatlas-favicon-16.svg", (0, 0, 128, 128),
+          tile(scale=.84, w=19, small_spark=False, big_spark=None, rx=28, inset=0, pivot=(64, 64)))
     # maskable: full-bleed background, mark inside the 80% safe zone
     write("medatlas-icon-maskable.svg", (0, 0, 128, 128),
           tile(scale=.62, inset=-1, rx=0))
@@ -139,13 +146,13 @@ def main():
         ("medatlas-icon-maskable.svg", 180, "apple-icon-180.png"),
         ("medatlas-favicon.svg", 48, "favicon-48.png"),
         ("medatlas-favicon.svg", 32, "favicon-32.png"),
-        ("medatlas-favicon.svg", 16, "favicon-16.png"),
+        ("medatlas-favicon-16.svg", 16, "favicon-16.png"),
     ]:
         render(svg_name, os.path.join(ICONS, out), px, px, 1)
 
     from PIL import Image
-    Image.open(os.path.join(ICONS, "favicon-48.png")).save(
-        os.path.join(ICONS, "favicon.ico"), sizes=[(16, 16), (32, 32), (48, 48)])
+    ico = [Image.open(os.path.join(ICONS, f"favicon-{n}.png")) for n in (48, 32, 16)]
+    ico[0].save(os.path.join(ICONS, "favicon.ico"), sizes=[(48, 48), (32, 32), (16, 16)], append_images=ico[1:])
     sheet()
     print("wrote", OUT)
 
@@ -171,7 +178,7 @@ def sheet():
                        for s, px, lab in [("medatlas-app-icon.svg", 160, "App icon"),
                                           ("medatlas-icon-maskable.svg", 160, "Maskable / Apple"),
                                           ("medatlas-favicon.svg", 48, "Favicon 48"),
-                                          ("medatlas-favicon.svg", 32, "32"), ("medatlas-favicon.svg", 16, "16")])
+                                          ("medatlas-favicon.svg", 32, "32"), ("medatlas-favicon-16.svg", 16, "16")])
     html = f'''<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../tokens.css"><style>
   * {{ box-sizing: border-box; margin: 0; }}
   body {{ width: 1800px; background: #E9EDF6; font-family: Inter; padding-bottom: 34px; }}
