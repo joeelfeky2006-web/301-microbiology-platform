@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
   // Attempt 1: Fetch comprehensive columns
   const preferredColumns = admin
     ? '*'
-    : 'id,module,type,title,subtitle,file_url,format,source_type,ai_context,raw_quiz_text,custom_system_prompt';
+    : 'id,module,type,title,subtitle,file_url,format,source_type,ai_context,raw_quiz_text,raw_flashcard_text,custom_system_prompt';
 
   let fetchError: any = null;
   for (let from = 0; ; from += pageSize) {
@@ -164,6 +164,7 @@ export async function POST(request: NextRequest) {
   const sourceType = typeof body.source_type === 'string' ? body.source_type.trim() : null;
   const aiContext = typeof body.ai_context === 'string' ? body.ai_context.trim() : null;
   const rawQuizText = typeof body.raw_quiz_text === 'string' ? body.raw_quiz_text.trim() : null;
+  const rawFlashcardText = typeof body.raw_flashcard_text === 'string' ? body.raw_flashcard_text.trim() : null;
   const customSystemPrompt = typeof body.custom_system_prompt === 'string' ? body.custom_system_prompt.trim() : null;
   const syncAiToLecture = Boolean(body.sync_ai_to_lecture);
 
@@ -185,14 +186,15 @@ export async function POST(request: NextRequest) {
   const admin = createSupabaseAdmin();
   const db = admin || userClient;
 
-  // Sync AI fields to all materials in this lecture if requested
-  if (syncAiToLecture && (aiContext || rawQuizText || customSystemPrompt)) {
+  // Sync AI / bank fields to all materials in this lecture if requested
+  if (syncAiToLecture && (aiContext || rawQuizText || rawFlashcardText || customSystemPrompt)) {
     try {
       await db
         .from('materials')
         .update({
           ai_context: aiContext || null,
           raw_quiz_text: rawQuizText || null,
+          raw_flashcard_text: rawFlashcardText || null,
           custom_system_prompt: customSystemPrompt || null,
         })
         .eq('module', moduleName)
@@ -213,6 +215,7 @@ export async function POST(request: NextRequest) {
     author_email: identity.email || null,
     ai_context: aiContext || null,
     raw_quiz_text: rawQuizText || null,
+    raw_flashcard_text: rawFlashcardText || null,
     custom_system_prompt: customSystemPrompt || null,
   };
 
@@ -300,6 +303,7 @@ export async function PATCH(request: NextRequest) {
   if (body.source_type !== undefined) updates.source_type = typeof body.source_type === 'string' ? body.source_type.trim() || null : null;
   if (body.ai_context !== undefined) updates.ai_context = typeof body.ai_context === 'string' ? body.ai_context.trim() || null : null;
   if (body.raw_quiz_text !== undefined) updates.raw_quiz_text = typeof body.raw_quiz_text === 'string' ? body.raw_quiz_text.trim() || null : null;
+  if (body.raw_flashcard_text !== undefined) updates.raw_flashcard_text = typeof body.raw_flashcard_text === 'string' ? body.raw_flashcard_text.trim() || null : null;
   if (body.custom_system_prompt !== undefined) updates.custom_system_prompt = typeof body.custom_system_prompt === 'string' ? body.custom_system_prompt.trim() || null : null;
 
   // Rename all attachments for this lecture title if requested or if title changed

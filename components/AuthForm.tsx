@@ -9,6 +9,7 @@ import { useSettings } from '@/lib/useSettings';
 import { cardClass, inputClass, labelClass } from '@/lib/ui';
 import { firstPulseOpen } from '@/lib/firstPulse';
 import FirstPulseBadge from './brand/FirstPulseBadge';
+import { trackClient } from '@/lib/analytics/client';
 
 function safeRedirect(value: string | null) {
   return value && value.startsWith('/') && !value.startsWith('//') ? value : '/';
@@ -81,6 +82,7 @@ export default function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
         }
         setConfirmationPending(true); setCooldown(60);
         setInfo('Check your inbox for a confirmation link. You can resend it in 60 seconds.');
+        trackClient('signup', { method: 'password' });
       } else {
         const { error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (authError) {
@@ -91,6 +93,7 @@ export default function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
           if (message.includes('confirm') || message.includes('verified')) setCanResend(true);
           return;
         }
+        trackClient('login', { method: 'password' });
         router.replace(redirect);
       }
     } catch {

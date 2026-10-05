@@ -14,9 +14,41 @@ import {
 import { authenticatedHeaders } from '@/lib/authHeaders';
 import { cardClass } from '@/lib/ui';
 
+type ObservabilityPayload = {
+  window: { since: string; days: number };
+  users: { total: number; active7d: number };
+  ai: {
+    requests: number;
+    byFeature: Record<string, number>;
+    byStatus: Record<string, number>;
+    byProvider: Record<string, number>;
+    providerFailures: number;
+    totalTokens: number;
+    estimatedCostUsd: number | null;
+  };
+  credits: { consumed: number; purchased: number; granted: number };
+  revenue: { currency: string; paidOrders: number; amountCents: number; amountLabel: string };
+  conversion: { checkoutStarted: number; purchasesCompleted: number; rate: number | null };
+  recentPaymentEvents: Array<{
+    id: string;
+    provider: string;
+    event_type: string;
+    order_id: string | null;
+    created_at: string;
+  }>;
+  recentErrors: Array<{
+    id: string;
+    feature: string | null;
+    provider: string | null;
+    error_code: string | null;
+    status: string;
+    created_at: string;
+  }>;
+};
+
 type AnalyticsPayload = {
   generatedAt: string;
-  users: { total: number; students: number; editors: number; superAdmins: number; withUniversityId?: number };
+  users: { total: number; students: number; editors: number; superAdmins: number; withUniversityId?: number; active7d?: number };
   roster?: Array<{
     id: string;
     email: string;
@@ -50,6 +82,7 @@ type AnalyticsPayload = {
     monthly_remaining: number;
     created_at: string;
   }>;
+  observability?: ObservabilityPayload;
   links: { vercel: string; supabase: string };
   warnings?: string[];
 };
@@ -105,6 +138,9 @@ export default function AnalyticsDashboard() {
   }, [refresh]);
 
   const actionEntries = Object.entries(data?.credits.spendsByAction || {}).sort((a, b) => b[1] - a[1]);
+  const obs = data?.observability;
+  const featureEntries = Object.entries(obs?.ai.byFeature || {}).sort((a, b) => b[1] - a[1]);
+  const providerEntries = Object.entries(obs?.ai.byProvider || {}).sort((a, b) => b[1] - a[1]);
 
   return (
     <div className="space-y-4">
@@ -151,13 +187,34 @@ export default function AnalyticsDashboard() {
             <MetricCard
               label="Accounts"
               value={data.users.total}
-              hint={`${data.users.students} students · ${data.users.withUniversityId ?? 0} with Uni ID`}
+              hint={`${data.users.students} students · ${data.users.active7d ?? obs?.users.active7d ?? 0} AI-active 7d`}
             />
             <MetricCard label="Materials" value={data.content.materialsTotal} hint={`URS ${data.content.materialsByModule.URS} · CNS ${data.content.materialsByModule.CNS} · REP ${data.content.materialsByModule.REP}`} />
             <MetricCard label="Quizzes" value={data.content.quizzesTotal} hint={`${data.content.quizzesPublished} published`} />
             <MetricCard label="AI spends (7d)" value={data.credits.spendCredits7d} hint={`${data.credits.spendEvents7d} events`} />
             <MetricCard label="Daily credits empty" value={data.credits.lowDailyCount} hint={`${data.credits.rows} credit rows`} />
           </div>
+
+          {obs && (
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <MetricCard label="AI requests (7d)" value={obs.ai.requests} hint={`${obs.ai.providerFailures} provider failures`} />
+              <MetricCard
+                label="Est. AI cost (7d)"
+                value={obs.ai.estimatedCostUsd == null ? '—' : `$${obs.ai.estimatedCostUsd}`}
+                hint={`${obs.ai.totalTokens.toLocaleString()} tokens`}
+              />
+              <MetricCard
+                label="Credits purchased (7d)"
+                value={obs.credits.purchased}
+                hint={`Granted ${obs.credits.granted} · consumed ${obs.credits.consumed}`}
+              />
+              <MetricCard
+                label="Revenue (7d)"
+                value={obs.revenue.amountLabel}
+                hint={`${obs.revenue.paidOrders} paid · conv ${obs.conversion.rate == null ? '—' : `${Math.round(obs.conversion.rate * 100)}%`}`}
+              />
+            </div>
+          )}
 
           <div className="grid gap-4 lg:grid-cols-3">
             <section className={`${cardClass} p-5`}>
@@ -238,6 +295,84 @@ export default function AnalyticsDashboard() {
               </div>
             )}
           </section>
+
+          {obs && (
+            <div className="grid gap-4 lg:grid-cols-3">
+              <section className={`${cardClass} p-5`}>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">AI by feature (7d)</h3>
+                {featureEntries.length === 0 ? (
+                  <p className="mt-3 text-sm text-slate-500">No AI usage rows yet (or ai_usage SQL not applied).</p>
+                ) : (
+                  <ul className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+                    {featureEntries.map(([feature, count]) => (
+                      <li key={feature} className="flex justify-between">
+                        <span className="font-mono text-xs">{feature}</span>
+                        <span className="font-mono font-semibold">{count}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+              <section className={`${cardClass} p-5`}>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Provider usage (7d)</h3>
+                {providerEntries.length === 0 ? (
+                  <p className="mt-3 text-sm text-slate-500">No provider attribution yet.</p>
+                ) : (
+                  <ul className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+                    {providerEntries.map(([provider, count]) => (
+                      <li key={provider} className="flex justify-between">
+                        <span className="font-mono text-xs">{provider}</span>
+                        <span className="font-mono font-semibold">{count}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+              <section className={`${cardClass} p-5`}>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Checkout funnel (7d)</h3>
+                <ul className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+                  <li className="flex justify-between"><span>Orders created</span><span className="font-mono font-semibold">{obs.conversion.checkoutStarted}</span></li>
+                  <li className="flex justify-between"><span>Paid / fulfilled</span><span className="font-mono font-semibold">{obs.conversion.purchasesCompleted}</span></li>
+                  <li className="flex justify-between"><span>Conversion</span><span className="font-mono font-semibold">{obs.conversion.rate == null ? '—' : `${Math.round(obs.conversion.rate * 100)}%`}</span></li>
+                </ul>
+              </section>
+            </div>
+          )}
+
+          {obs && (obs.recentErrors.length > 0 || obs.recentPaymentEvents.length > 0) && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <section className={`${cardClass} p-5`}>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Recent AI errors</h3>
+                {!obs.recentErrors.length ? (
+                  <p className="mt-3 text-sm text-slate-500">No recent errors.</p>
+                ) : (
+                  <ul className="mt-3 space-y-2 text-xs text-slate-600 dark:text-slate-300">
+                    {obs.recentErrors.map((row) => (
+                      <li key={row.id} className="flex flex-wrap justify-between gap-2 border-b border-slate-100 pb-2 dark:border-white/5">
+                        <span className="font-mono">{row.feature || '—'} · {row.error_code || row.status}</span>
+                        <span className="text-slate-400">{new Date(row.created_at).toLocaleString()}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+              <section className={`${cardClass} p-5`}>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Recent payment events</h3>
+                {!obs.recentPaymentEvents.length ? (
+                  <p className="mt-3 text-sm text-slate-500">No payment webhook events yet.</p>
+                ) : (
+                  <ul className="mt-3 space-y-2 text-xs text-slate-600 dark:text-slate-300">
+                    {obs.recentPaymentEvents.map((row) => (
+                      <li key={row.id} className="flex flex-wrap justify-between gap-2 border-b border-slate-100 pb-2 dark:border-white/5">
+                        <span className="font-mono">{row.provider} · {row.event_type}</span>
+                        <span className="text-slate-400">{new Date(row.created_at).toLocaleString()}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </div>
+          )}
 
           <section className={`${cardClass} p-5`}>
             <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">

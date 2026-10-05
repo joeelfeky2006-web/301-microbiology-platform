@@ -1,0 +1,383 @@
+-- ==============================================================================
+-- MedAtlas — Phase 4: usage logging, safety switches, packs, summary cache
+-- REVIEW BEFORE APPLYING — do not auto-run against production from an agent.
+-- Single transaction; idempotent / re-runnable.
+-- Prerequisites: credit-refund-abuse-fix.sql (+ credit-fix-2.sql if needed).
+-- Do not recreate anything from supabase/_archive/.
+-- ==============================================================================
+
+begin;
+
+-- ------------------------------------------------------------------------------
+-- ITEM 1 — ai_usage (metadata only; never prompts/outputs/PII)
+-- ------------------------------------------------------------------------------
+create table if not exists public.ai_usage (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete set null,
+  request_id uuid,
+  feature text,
+  material_id uuid,
+  provider text,
+  model text,
+  input_tokens integer,
+  output_tokens integer,
+  total_tokens integer,
+  credits_charged integer,
+  latency_ms integer,
+  status text not null check (status in ('success', 'error', 'refunded', 'blocked')),
+  error_code text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists ai_usage_created_at_idx on public.ai_usage (created_at);
+create index if not exists ai_usage_user_created_idx on public.ai_usage (user_id, created_at);
+create index if not exists ai_usage_feature_created_idx on public.ai_usage (feature, created_at);
+
+alter table public.ai_usage enable row level security;
+
+revoke all on public.ai_usage from public, anon, authenticated;
+grant select, insert, update, delete on public.ai_usage to service_role;
+
+-- ------------------------------------------------------------------------------
+-- ITEM 2 — AI kill switch on platform_settings
+-- ------------------------------------------------------------------------------
+alter table public.platform_settings
+  add column if not exists ai_enabled boolean not null default true;
+
+-- ------------------------------------------------------------------------------
+-- ITEM 3 — bonus_balance + free-first deduct / bucket-aware refund / admin grant
+-- ------------------------------------------------------------------------------
+alter table public.user_credits
+  add column if not exists bonus_balance integer not null default 0;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'user_credits_bonus_balance_check'
+      and conrelid = 'public.user_credits'::regclass
+  ) then
+    alter table public.user_credits
+      add constraint user_credits_bonus_balance_check check (bonus_balance >= 0);
+  end if;
+end $$;
+
+-- Return type changes (adds bonus_remaining) → drop then recreate.
+drop function if exists public.deduct_user_credit(uuid, integer, text, uuid);
+
+create function public.deduct_user_credit(
+  p_user_id uuid,
+  p_cost integer,
+  p_action text,
+  p_request_id uuid
+) returns table(
+  success boolean,
+  reason text,
+  daily_remaining integer,
+  monthly_remaining integer,
+  bonus_remaining integer
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_rec public.user_credits%rowtype;
+  v_today date := current_date;
+  v_month text := to_char(current_date, 'YYYY-MM');
+  v_action text := coalesce(nullif(trim(p_action), ''), 'unknown');
+  v_daily integer;
+  v_monthly integer;
+  v_bonus integer;
+  v_source text;
+  v_meta jsonb;
+begin
+  if auth.uid() is null or auth.uid() <> p_user_id then
+    raise exception 'Cannot spend credits for another user' using errcode = '42501';
+  end if;
+  if p_request_id is null then
+    raise exception 'request_id is required' using errcode = '22023';
+  end if;
+  if p_cost is null or p_cost < 1 or p_cost > 3 then
+    raise exception 'Invalid credit cost' using errcode = '22023';
+  end if;
+  if v_action not in (
+    'quiz-eval', 'case-study', 'summarize', 'chat', 'unknown',
+    'admin_grant', 'purchase', 'pack', 'expiry', 'adjustment'
+  ) then
+    raise exception 'Invalid credit action' using errcode = '22023';
+  end if;
+
+  if exists (
+    select 1 from public.user_credit_history
+    where request_id = p_request_id and event_type = 'spend' and user_id = p_user_id
+  ) then
+    select * into v_rec from public.user_credits where user_id = p_user_id;
+    if not found then
+      return query select false, 'missing_balance', 0, 0, 0;
+      return;
+    end if;
+    return query select true, 'duplicate_request', v_rec.daily_remaining, v_rec.monthly_remaining, coalesce(v_rec.bonus_balance, 0);
+    return;
+  end if;
+
+  select * into v_rec from public.user_credits where user_id = p_user_id for update;
+  if not found then
+    insert into public.user_credits (user_id, daily_remaining, daily_limit, monthly_remaining, monthly_limit, bonus_balance)
+    values (p_user_id, 8, 8, 80, 80, 0)
+    returning * into v_rec;
+  end if;
+
+  if v_rec.last_daily_reset < v_today then
+    v_rec.daily_remaining := v_rec.daily_limit;
+    v_rec.last_daily_reset := v_today;
+  end if;
+  if v_rec.last_monthly_reset <> v_month then
+    v_rec.monthly_remaining := v_rec.monthly_limit;
+    v_rec.last_monthly_reset := v_month;
+  end if;
+
+  v_bonus := coalesce(v_rec.bonus_balance, 0);
+
+  -- Free allowance first for the FULL cost; otherwise bonus for the FULL cost (never mix).
+  if v_rec.daily_remaining >= p_cost and v_rec.monthly_remaining >= p_cost then
+    v_source := 'free';
+    v_daily := v_rec.daily_remaining - p_cost;
+    v_monthly := v_rec.monthly_remaining - p_cost;
+  elsif v_bonus >= p_cost then
+    v_source := 'bonus';
+    v_daily := v_rec.daily_remaining;
+    v_monthly := v_rec.monthly_remaining;
+    v_bonus := v_bonus - p_cost;
+  else
+    if v_rec.daily_remaining < p_cost then
+      return query select false, 'daily_cap_reached', v_rec.daily_remaining, v_rec.monthly_remaining, v_bonus;
+      return;
+    end if;
+    if v_rec.monthly_remaining < p_cost then
+      return query select false, 'monthly_cap_reached', v_rec.daily_remaining, v_rec.monthly_remaining, v_bonus;
+      return;
+    end if;
+    return query select false, 'insufficient_bonus', v_rec.daily_remaining, v_rec.monthly_remaining, v_bonus;
+    return;
+  end if;
+
+  update public.user_credits
+  set daily_remaining = v_daily,
+      monthly_remaining = v_monthly,
+      bonus_balance = v_bonus,
+      last_daily_reset = v_rec.last_daily_reset,
+      last_monthly_reset = v_rec.last_monthly_reset,
+      updated_at = now()
+  where user_id = p_user_id;
+
+  v_meta := jsonb_build_object('source', v_source);
+
+  insert into public.user_credit_history (
+    user_id, event_type, action, amount,
+    daily_remaining, monthly_remaining,
+    request_id, refunded, reference_id, feature, metadata
+  ) values (
+    p_user_id, 'spend', v_action, p_cost,
+    v_daily, v_monthly,
+    p_request_id, false, p_request_id::text, v_action, v_meta
+  );
+
+  return query select true, 'approved', v_daily, v_monthly, v_bonus;
+end;
+$$;
+
+revoke all on function public.deduct_user_credit(uuid, integer, text, uuid) from public, anon;
+grant execute on function public.deduct_user_credit(uuid, integer, text, uuid) to authenticated;
+
+create or replace function public.refund_spend(p_user_id uuid, p_request_id uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_spend public.user_credit_history%rowtype;
+  v_rec public.user_credits%rowtype;
+  v_today date := current_date;
+  v_month text := to_char(current_date, 'YYYY-MM');
+  v_daily integer;
+  v_monthly integer;
+  v_bonus integer;
+  v_cost integer;
+  v_source text;
+begin
+  if p_user_id is null or p_request_id is null then
+    return false;
+  end if;
+
+  select * into v_spend
+  from public.user_credit_history
+  where user_id = p_user_id
+    and request_id = p_request_id
+    and event_type = 'spend'
+    and refunded = false
+  for update;
+
+  if not found then
+    return false;
+  end if;
+
+  v_cost := abs(v_spend.amount);
+  if v_cost < 1 then
+    return false;
+  end if;
+
+  v_source := coalesce(nullif(trim(v_spend.metadata->>'source'), ''), 'free');
+
+  select * into v_rec from public.user_credits where user_id = p_user_id for update;
+  if not found then
+    return false;
+  end if;
+
+  if v_rec.last_daily_reset < v_today then
+    v_rec.daily_remaining := v_rec.daily_limit;
+    v_rec.last_daily_reset := v_today;
+  end if;
+  if v_rec.last_monthly_reset <> v_month then
+    v_rec.monthly_remaining := v_rec.monthly_limit;
+    v_rec.last_monthly_reset := v_month;
+  end if;
+
+  v_bonus := coalesce(v_rec.bonus_balance, 0);
+
+  if v_source = 'bonus' then
+    v_daily := v_rec.daily_remaining;
+    v_monthly := v_rec.monthly_remaining;
+    v_bonus := v_bonus + v_cost;
+  else
+    v_daily := least(v_rec.daily_limit, v_rec.daily_remaining + v_cost);
+    v_monthly := least(v_rec.monthly_limit, v_rec.monthly_remaining + v_cost);
+  end if;
+
+  update public.user_credits
+  set daily_remaining = v_daily,
+      monthly_remaining = v_monthly,
+      bonus_balance = v_bonus,
+      last_daily_reset = v_rec.last_daily_reset,
+      last_monthly_reset = v_rec.last_monthly_reset,
+      updated_at = now()
+  where user_id = p_user_id;
+
+  update public.user_credit_history
+  set refunded = true
+  where id = v_spend.id;
+
+  insert into public.user_credit_history (
+    user_id, event_type, action, amount,
+    daily_remaining, monthly_remaining,
+    request_id, refunded, reference_id, feature, metadata
+  ) values (
+    p_user_id, 'refund', v_spend.action, v_cost,
+    v_daily, v_monthly,
+    p_request_id, false, coalesce(v_spend.reference_id, p_request_id::text),
+    coalesce(v_spend.feature, v_spend.action),
+    jsonb_build_object('refund_of', v_spend.id, 'source', v_source)
+  );
+
+  return true;
+end;
+$$;
+
+revoke all on function public.refund_spend(uuid, uuid) from public, anon, authenticated;
+grant execute on function public.refund_spend(uuid, uuid) to service_role;
+
+drop function if exists public.grant_user_credits(text, integer, text);
+
+create function public.grant_user_credits(
+  p_target_email text,
+  p_amount integer,
+  p_reason text
+) returns integer
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  v_admin uuid := auth.uid();
+  v_email text := lower(trim(coalesce(p_target_email, '')));
+  v_reason text := left(trim(coalesce(p_reason, '')), 500);
+  v_target uuid;
+  v_bonus integer;
+  v_daily integer;
+  v_monthly integer;
+  v_request uuid := gen_random_uuid();
+begin
+  if v_admin is null then
+    raise exception 'Authentication required' using errcode = '42501';
+  end if;
+  if public.get_current_user_role() <> 'super_admin' then
+    raise exception 'Not authorized' using errcode = '42501';
+  end if;
+  if v_email = '' or position('@' in v_email) = 0 then
+    raise exception 'Valid student email is required' using errcode = '22023';
+  end if;
+  if p_amount is null or p_amount < 1 or p_amount > 5000 then
+    raise exception 'Amount must be between 1 and 5000' using errcode = '22023';
+  end if;
+  if length(v_reason) < 2 then
+    raise exception 'Reason is required' using errcode = '22023';
+  end if;
+
+  select id into v_target from auth.users where lower(trim(email)) = v_email limit 1;
+  if v_target is null then
+    raise exception 'User not found' using errcode = 'P0002';
+  end if;
+
+  insert into public.user_credits (user_id, daily_remaining, daily_limit, monthly_remaining, monthly_limit, bonus_balance)
+  values (v_target, 8, 8, 80, 80, p_amount)
+  on conflict (user_id) do update
+    set bonus_balance = public.user_credits.bonus_balance + excluded.bonus_balance,
+        updated_at = now();
+
+  select daily_remaining, monthly_remaining, bonus_balance
+    into v_daily, v_monthly, v_bonus
+  from public.user_credits
+  where user_id = v_target
+  for update;
+
+  insert into public.user_credit_history (
+    user_id, event_type, action, amount,
+    daily_remaining, monthly_remaining,
+    request_id, refunded, reference_id, feature, metadata
+  ) values (
+    v_target, 'grant', 'admin_grant', p_amount,
+    v_daily, v_monthly,
+    v_request, false, v_request::text, 'admin_grant',
+    jsonb_build_object(
+      'reason', v_reason,
+      'granted_by', v_admin,
+      'target_email', v_email
+    )
+  );
+
+  return v_bonus;
+end;
+$$;
+
+revoke all on function public.grant_user_credits(text, integer, text) from public, anon;
+grant execute on function public.grant_user_credits(text, integer, text) to authenticated;
+
+-- ------------------------------------------------------------------------------
+-- ITEM 4 — summary cache (lecture content only; never student prompts)
+-- ------------------------------------------------------------------------------
+create table if not exists public.ai_summary_cache (
+  material_id uuid not null,
+  content_hash text not null,
+  prompt_version text not null,
+  model text,
+  summary jsonb not null,
+  created_at timestamptz not null default now(),
+  primary key (material_id, content_hash, prompt_version)
+);
+
+alter table public.ai_summary_cache enable row level security;
+revoke all on public.ai_summary_cache from public, anon, authenticated;
+grant select, insert, update, delete on public.ai_summary_cache to service_role;
+
+commit;

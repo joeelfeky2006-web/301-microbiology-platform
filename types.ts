@@ -78,6 +78,8 @@ export interface Material {
   /** Nullable lecture-level Gemini source material and quiz bank. */
   ai_context?: string | null;
   raw_quiz_text?: string | null;
+  /** Admin-authored flashcard bank (Q:/A:/HINT:/TAG:). */
+  raw_flashcard_text?: string | null;
   custom_system_prompt?: string | null;
 }
 
@@ -103,6 +105,7 @@ export interface PlatformSettings {
   announcement_text: string;
   announcement_active: boolean;
   maintenance_mode: boolean;
+  ai_enabled: boolean;
   whatsapp_number: string;
   registration_open: boolean;
   support_content: SupportContent;

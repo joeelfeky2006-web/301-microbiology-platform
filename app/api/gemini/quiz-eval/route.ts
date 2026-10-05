@@ -1,8 +1,9 @@
 import 'server-only';
 import { NextRequest } from 'next/server';
-import { authenticate, authorizeAndSpend, refundCredit } from '@/lib/apiAuth';
+import { authenticate, refundCredit } from '@/lib/apiAuth';
 import { parseBank } from '@/lib/ai/quizBank';
-import { loadMaterial, generateJson, noStoreJson } from '@/lib/ai/pipeline';
+import { errorCodeFromUnknown, featureCost, generateJson, loadMaterial, noStoreJson, recordAiUsage } from '@/lib/ai/pipeline';
+import { prepareAiCall, readIdempotencyKey } from '@/lib/ai/router';
 import { AI_MESSAGES, aiError } from '@/lib/ai/messages';
 import { MODULE_RULES, SAFETY_RULES, dataBlock } from '@/lib/ai/modulePrompts';
 import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
@@ -90,19 +91,50 @@ export async function POST(request: NextRequest) {
   };
 
   if (!wantCritique) {
-    console.info(JSON.stringify({ action: 'quiz-eval', material_id: loaded.material.id, kind: 'ok', latency_ms: Date.now() - started, charged: false, mode: 'score' }));
+    const latency = Date.now() - started;
+    console.info(JSON.stringify({ action: 'quiz-eval', material_id: loaded.material.id, kind: 'ok', latency_ms: latency, charged: false, mode: 'score' }));
+    recordAiUsage({
+      userId: auth.userId,
+      feature: 'quiz-eval',
+      materialId: loaded.material.id,
+      provider: 'local',
+      model: 'score',
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      creditsCharged: 0,
+      latencyMs: latency,
+      status: 'success',
+    });
     return noStoreJson({ report: baseReport });
   }
 
   if (!wrong.length) {
-    console.info(JSON.stringify({ action: 'quiz-eval', material_id: loaded.material.id, kind: 'ok', latency_ms: Date.now() - started, charged: false, mode: 'critique' }));
+    const latency = Date.now() - started;
+    console.info(JSON.stringify({ action: 'quiz-eval', material_id: loaded.material.id, kind: 'ok', latency_ms: latency, charged: false, mode: 'critique' }));
+    recordAiUsage({
+      userId: auth.userId,
+      feature: 'quiz-eval',
+      materialId: loaded.material.id,
+      provider: 'local',
+      model: 'score',
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      creditsCharged: 0,
+      latencyMs: latency,
+      status: 'success',
+    });
     return noStoreJson({ report: { ...baseReport, feedback: 'Perfect score — no critique needed.' } });
   }
 
-  const access = await authorizeAndSpend(request, 'quiz-eval');
+  const access = await prepareAiCall(request, 'quiz-eval', {
+    materialId: loaded.material.id,
+    idempotencyKey: readIdempotencyKey(body),
+  });
   if ('response' in access) return access.response;
   try {
-    const critique = await generateJson(`You are Dr. Atlas. ${SAFETY_RULES}\n${MODULE_RULES[loaded.material.module] || ''}\nCreate a short supportive critique, weak topics, and revision advice based ONLY on these wrong questions and stored explanations. ${dataBlock('SOURCE MATERIAL', JSON.stringify(wrong.map(({ question, explanation }) => ({ question, explanation }))))}\n${dataBlock('STUDENT INPUT', JSON.stringify(wrong.map(({ question, student_answer }) => ({ question, student_answer }))))}`, {
+    const generated = await generateJson(`You are Dr. Atlas. ${SAFETY_RULES}\n${MODULE_RULES[loaded.material.module] || ''}\nCreate a short supportive critique, weak topics, and revision advice based ONLY on these wrong questions and stored explanations. ${dataBlock('SOURCE MATERIAL', JSON.stringify(wrong.map(({ question, explanation }) => ({ question, explanation }))))}\n${dataBlock('STUDENT INPUT', JSON.stringify(wrong.map(({ question, student_answer }) => ({ question, student_answer }))))}`, {
       type: 'OBJECT',
       properties: {
         feedback: { type: 'STRING' },
@@ -111,8 +143,24 @@ export async function POST(request: NextRequest) {
       },
       required: ['feedback', 'weaknesses', 'studyRecommendations'],
     });
+    const critique = generated.data;
     if (typeof critique.feedback !== 'string' || !Array.isArray(critique.weaknesses) || !Array.isArray(critique.studyRecommendations)) throw new Error('shape');
-    console.info(JSON.stringify({ action: 'quiz-eval', material_id: loaded.material.id, kind: 'ok', latency_ms: Date.now() - started, charged: true, mode: 'critique' }));
+    const latency = Date.now() - started;
+    console.info(JSON.stringify({ action: 'quiz-eval', material_id: loaded.material.id, kind: 'ok', latency_ms: latency, charged: true, mode: 'critique' }));
+    recordAiUsage({
+      userId: access.userId,
+      requestId: access.requestId,
+      feature: 'quiz-eval',
+      materialId: loaded.material.id,
+      provider: generated.provider,
+      model: generated.model,
+      inputTokens: generated.usage.input,
+      outputTokens: generated.usage.output,
+      totalTokens: generated.usage.total,
+      creditsCharged: featureCost('quiz-eval'),
+      latencyMs: latency,
+      status: 'success',
+    });
     return noStoreJson({
       report: {
         ...baseReport,
@@ -120,11 +168,23 @@ export async function POST(request: NextRequest) {
         weaknesses: critique.weaknesses.slice(0, 8).map((x: unknown) => String(x).slice(0, 300)),
         studyRecommendations: critique.studyRecommendations.slice(0, 8).map((x: unknown) => String(x).slice(0, 300)),
       },
+      credits: access.credits,
     });
   } catch (error: any) {
-    await refundCredit(request, 'quiz-eval');
+    const refunded = await refundCredit(access.userId, access.requestId);
     const busy = /429|RESOURCE_EXHAUSTED|rate.?limit/i.test(String(error?.message || error));
-    console.info(JSON.stringify({ action: 'quiz-eval', material_id: loaded.material.id, kind: busy ? 'busy' : 'glitch', latency_ms: Date.now() - started }));
+    const latency = Date.now() - started;
+    console.info(JSON.stringify({ action: 'quiz-eval', material_id: loaded.material.id, kind: busy ? 'busy' : 'glitch', latency_ms: latency }));
+    recordAiUsage({
+      userId: access.userId,
+      requestId: access.requestId,
+      feature: 'quiz-eval',
+      materialId: loaded.material.id,
+      creditsCharged: 0,
+      latencyMs: latency,
+      status: 'refunded',
+      errorCode: errorCodeFromUnknown(error),
+    });
     return noStoreJson({
       report: {
         ...baseReport,
@@ -132,6 +192,7 @@ export async function POST(request: NextRequest) {
       },
       kind: busy ? 'busy' : 'glitch',
       message: busy ? AI_MESSAGES.busy : AI_MESSAGES.glitch,
+      credits: refunded || access.credits,
     }, 503);
   }
 }

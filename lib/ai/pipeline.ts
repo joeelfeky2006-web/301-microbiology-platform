@@ -1,14 +1,22 @@
 import 'server-only';
 import type { NextRequest } from 'next/server';
 import type { AIAction } from './actions';
+import { ACTION_COSTS } from './actions';
 import { authenticate, authorizeAndSpend, refundCredit } from '@/lib/apiAuth';
 import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { aiError } from './messages';
 import { loadLectureSource } from './loadSource';
-import { generateStructuredJson } from './provider';
+import { generateStructuredJson, type GenerateResult } from './provider';
+import { AI_MAINTENANCE_MESSAGE, AI_RATE_PER_HOUR, AI_RATE_PER_MINUTE } from './limits';
+import { AI_MESSAGES } from './messages';
+import { errorCodeFromUnknown, logUsage, type AiUsageEntry, type AiUsageStatus } from './usage';
+import { trackServer } from '@/lib/analytics/server';
 
 export type AIBody = Record<string, unknown>;
 export type LoadedMaterial = { id: string; module: string; title?: string | null; ai_context?: string | null; raw_quiz_text?: string | null; custom_system_prompt?: string | null };
+
+export { logUsage, errorCodeFromUnknown };
+export type { AiUsageEntry, AiUsageStatus, GenerateResult };
 
 export async function parseObject(request: NextRequest, limits: { message?: boolean; answers?: boolean } = {}) {
   let body: AIBody;
@@ -28,20 +36,139 @@ export async function loadMaterial(id: unknown) {
   return { material: await loadLectureSource(admin, data as unknown as import('./loadSource').SourceRow) };
 }
 
-export async function beginAction(request: NextRequest, action: AIAction) {
+export async function beginAction(request: NextRequest, action: AIAction, idempotencyKey?: string | null) {
   const identity = await authenticate(request);
   if ('response' in identity) return identity;
-  return authorizeAndSpend(request, action);
+  return authorizeAndSpend(request, action, idempotencyKey);
 }
 
-export async function refund(request: NextRequest, action: AIAction) {
-  await refundCredit(request, action);
+export async function refund(userId: string, requestId: string | undefined) {
+  return refundCredit(userId, requestId);
 }
 
 export function noStoreJson(data: unknown, status = 200) {
   return Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 }
 
-export async function generateJson(prompt: string, schema: Record<string, unknown>, timeoutMs = 25_000) {
+export async function generateJson(prompt: string, schema: Record<string, unknown>, timeoutMs = 25_000): Promise<GenerateResult> {
   return generateStructuredJson(prompt, schema, timeoutMs);
+}
+
+export function featureCost(action: AIAction): number {
+  return ACTION_COSTS[action];
+}
+
+/** Convenience logger used by AI routes — never awaits. */
+export function recordAiUsage(entry: AiUsageEntry): void {
+  logUsage(entry);
+  // Product analytics (hashed user id; no prompts / lecture text).
+  if (entry.status === 'success') {
+    trackServer('ai_request_success', {
+      feature: entry.feature,
+      provider: entry.provider || undefined,
+      credits: entry.creditsCharged ?? 0,
+      latency_ms: entry.latencyMs ?? undefined,
+    }, { userId: entry.userId });
+    if ((entry.creditsCharged || 0) > 0) {
+      trackServer('credits_used', { feature: entry.feature, credits: entry.creditsCharged }, { userId: entry.userId });
+    }
+    if (entry.feature === 'summarize') trackServer('summary_generated', { cached: entry.provider === 'cache' }, { userId: entry.userId });
+    if (entry.feature === 'chat') trackServer('chat_started', {}, { userId: entry.userId });
+    if (entry.feature === 'case-study') trackServer('mcq_generated', { feature: 'case-study' }, { userId: entry.userId });
+  } else if (entry.status === 'error' || entry.status === 'refunded') {
+    trackServer('ai_request_error', {
+      feature: entry.feature,
+      error_code: entry.errorCode || 'unknown',
+      status: entry.status,
+    }, { userId: entry.userId });
+  } else if (entry.status === 'blocked') {
+    trackServer('ai_request', { feature: entry.feature, blocked: true, error_code: entry.errorCode || undefined }, { userId: entry.userId });
+  }
+}
+
+type GuardOk = { ok: true };
+type GuardBlocked = { response: Response };
+
+/**
+ * Kill switch + DB-backed rate limit. Call BEFORE authorizeAndSpend.
+ * Fail CLOSED if platform_settings cannot be read.
+ */
+export async function guardAiAccess(
+  userId: string,
+  feature: string,
+  materialId?: string | null,
+): Promise<GuardOk | GuardBlocked> {
+  const admin = createSupabaseAdmin();
+  if (!admin) {
+    recordAiUsage({
+      userId, feature, materialId, status: 'blocked', errorCode: 'settings_unavailable', creditsCharged: 0,
+    });
+    return {
+      response: Response.json(
+        { ok: false, kind: 'maintenance', message: AI_MAINTENANCE_MESSAGE },
+        { status: 503, headers: { 'Cache-Control': 'no-store' } },
+      ),
+    };
+  }
+
+  const { data: settings, error: settingsError } = await admin
+    .from('platform_settings')
+    .select('ai_enabled')
+    .eq('id', 1)
+    .maybeSingle();
+
+  if (settingsError || !settings) {
+    recordAiUsage({
+      userId, feature, materialId, status: 'blocked', errorCode: 'settings_unavailable', creditsCharged: 0,
+    });
+    return {
+      response: Response.json(
+        { ok: false, kind: 'maintenance', message: AI_MAINTENANCE_MESSAGE },
+        { status: 503, headers: { 'Cache-Control': 'no-store' } },
+      ),
+    };
+  }
+
+  if (settings.ai_enabled === false) {
+    recordAiUsage({
+      userId, feature, materialId, status: 'blocked', errorCode: 'ai_disabled', creditsCharged: 0,
+    });
+    return {
+      response: Response.json(
+        { ok: false, kind: 'maintenance', message: AI_MESSAGES.maintenance },
+        { status: 503, headers: { 'Cache-Control': 'no-store' } },
+      ),
+    };
+  }
+
+  const now = Date.now();
+  const sinceMinute = new Date(now - 60_000).toISOString();
+  const sinceHour = new Date(now - 3_600_000).toISOString();
+
+  // Count only real AI attempts — never 'blocked', or retries would self-amplify the limit.
+  const counted = ['success', 'error', 'refunded'] as const;
+  const [{ count: minuteCount, error: minuteError }, { count: hourCount, error: hourError }] = await Promise.all([
+    admin.from('ai_usage').select('id', { count: 'exact', head: true }).eq('user_id', userId).in('status', [...counted]).gte('created_at', sinceMinute),
+    admin.from('ai_usage').select('id', { count: 'exact', head: true }).eq('user_id', userId).in('status', [...counted]).gte('created_at', sinceHour),
+  ]);
+
+  if (minuteError || hourError) {
+    // Fail OPEN if ai_usage is missing/unreadable so a pending migration does not brick AI.
+    console.error(JSON.stringify({ kind: 'rate_check_failed', feature, code: minuteError?.code || hourError?.code || 'db' }));
+    return { ok: true };
+  }
+
+  if ((minuteCount ?? 0) >= AI_RATE_PER_MINUTE || (hourCount ?? 0) >= AI_RATE_PER_HOUR) {
+    recordAiUsage({
+      userId, feature, materialId, status: 'blocked', errorCode: 'user_rate_limit', creditsCharged: 0,
+    });
+    return {
+      response: Response.json(
+        { ok: false, kind: 'busy', message: AI_MESSAGES.busy, retry_after_seconds: 60 },
+        { status: 429, headers: { 'Cache-Control': 'no-store' } },
+      ),
+    };
+  }
+
+  return { ok: true };
 }

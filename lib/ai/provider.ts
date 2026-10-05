@@ -3,6 +3,18 @@ import { GoogleGenAI } from '@google/genai';
 
 type JsonObject = Record<string, unknown>;
 
+export type TokenUsage = { input: number; output: number; total: number };
+export type GenerateResult = {
+  data: JsonObject;
+  provider: string;
+  model: string;
+  usage: TokenUsage;
+};
+
+function emptyUsage(): TokenUsage {
+  return { input: 0, output: 0, total: 0 };
+}
+
 function normalizeSchema(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(normalizeSchema);
   if (!value || typeof value !== 'object') return value;
@@ -24,47 +36,91 @@ async function withTimeout<T>(timeoutMs: number, action: (signal: AbortSignal) =
   try { return await action(controller.signal); } finally { clearTimeout(timer); }
 }
 
-async function generateGemini(prompt: string, schema: JsonObject, timeoutMs: number): Promise<JsonObject> {
+function geminiUsage(meta: any): TokenUsage {
+  const input = Number(meta?.promptTokenCount ?? meta?.prompt_token_count ?? 0) || 0;
+  const output = Number(meta?.candidatesTokenCount ?? meta?.candidates_token_count ?? 0) || 0;
+  const total = Number(meta?.totalTokenCount ?? meta?.total_token_count ?? input + output) || 0;
+  return { input, output, total };
+}
+
+async function generateGemini(prompt: string, schema: JsonObject, timeoutMs: number): Promise<GenerateResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   const primary = process.env.GEMINI_MODEL;
   if (!apiKey || !primary) throw new Error('Gemini provider is not configured');
   const ai = new GoogleGenAI({ apiKey, httpOptions: { timeout: timeoutMs } });
-  const run = async (model: string) => {
+  const run = async (model: string): Promise<GenerateResult> => {
     let lastError: unknown;
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const response = await ai.models.generateContent({ model, contents: prompt, config: { responseMimeType: 'application/json', responseSchema: schema as any } });
-        return validateResult(JSON.parse(response.text || ''), schema);
+        return {
+          data: validateResult(JSON.parse(response.text || ''), schema),
+          provider: 'gemini',
+          model,
+          usage: geminiUsage((response as any).usageMetadata),
+        };
       } catch (error) { lastError = error; }
     }
     throw lastError;
   };
   try { return await run(primary); }
   catch (error: any) {
-    if (process.env.GEMINI_FALLBACK_MODEL && /not.?found|unsupported|404/i.test(String(error?.message || error))) return run(process.env.GEMINI_FALLBACK_MODEL);
+    if (process.env.GEMINI_FALLBACK_MODEL && /not.?found|unsupported|404/i.test(String(error?.message || error))) {
+      return run(process.env.GEMINI_FALLBACK_MODEL);
+    }
     throw error;
   }
 }
 
-async function generateOpenAI(prompt: string, schema: JsonObject, timeoutMs: number): Promise<JsonObject> {
+async function generateOpenAI(prompt: string, schema: JsonObject, timeoutMs: number): Promise<GenerateResult> {
   const apiKey = process.env.OPENAI_API_KEY;
-  const model = process.env.OPENAI_MODEL;
-  if (!apiKey || !model) throw new Error('OpenAI provider is not configured');
-  return withTimeout(timeoutMs, async (signal) => {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST', signal,
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages: [{ role: 'user', content: `${prompt}\n\nReturn a JSON object matching this schema: ${JSON.stringify(normalizeSchema(schema))}` }], response_format: { type: 'json_object' } }),
+  const primary = process.env.OPENAI_MODEL;
+  const fallback = process.env.OPENAI_FALLBACK_MODEL?.trim();
+  if (!apiKey || !primary) throw new Error('OpenAI provider is not configured');
+
+  const run = async (model: string): Promise<GenerateResult> =>
+    withTimeout(timeoutMs, async (signal) => {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST', signal,
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: `${prompt}\n\nReturn a JSON object matching this schema: ${JSON.stringify(normalizeSchema(schema))}` }],
+          response_format: { type: 'json_object' },
+        }),
+      });
+      if (!response.ok) throw new Error(`OpenAI request failed (${response.status})`);
+      const payload = await response.json();
+      const content = payload?.choices?.[0]?.message?.content;
+      if (typeof content !== 'string') throw new Error('OpenAI returned no JSON content');
+      const usage = payload?.usage;
+      return {
+        data: validateResult(JSON.parse(content), schema),
+        provider: 'openai',
+        model,
+        usage: {
+          input: Number(usage?.prompt_tokens || 0) || 0,
+          output: Number(usage?.completion_tokens || 0) || 0,
+          total: Number(usage?.total_tokens || 0) || 0,
+        },
+      };
     });
-    if (!response.ok) throw new Error(`OpenAI request failed (${response.status})`);
-    const payload = await response.json();
-    const content = payload?.choices?.[0]?.message?.content;
-    if (typeof content !== 'string') throw new Error('OpenAI returned no JSON content');
-    return validateResult(JSON.parse(content), schema);
-  });
+
+  try {
+    return await run(primary);
+  } catch (error: any) {
+    const message = String(error?.message || error);
+    const canFallback = Boolean(fallback) && fallback !== primary
+      && /not.?found|unsupported|404|429|rate.?limit|capacity|overloaded/i.test(message);
+    if (canFallback) {
+      console.warn(`[ai-provider] openai ${primary} failed; trying OPENAI_FALLBACK_MODEL=${fallback}. ${message}`);
+      return run(fallback!);
+    }
+    throw error;
+  }
 }
 
-async function generateAnthropic(prompt: string, schema: JsonObject, timeoutMs: number): Promise<JsonObject> {
+async function generateAnthropic(prompt: string, schema: JsonObject, timeoutMs: number): Promise<GenerateResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   const model = process.env.ANTHROPIC_MODEL;
   if (!apiKey || !model) throw new Error('Anthropic provider is not configured');
@@ -77,21 +133,80 @@ async function generateAnthropic(prompt: string, schema: JsonObject, timeoutMs: 
     if (!response.ok) throw new Error(`Anthropic request failed (${response.status})`);
     const payload = await response.json();
     const result = payload?.content?.find((item: { type?: string }) => item.type === 'tool_use')?.input;
-    return validateResult(result, schema);
+    const input = Number(payload?.usage?.input_tokens || 0) || 0;
+    const output = Number(payload?.usage?.output_tokens || 0) || 0;
+    return {
+      data: validateResult(result, schema),
+      provider: 'anthropic',
+      model,
+      usage: { input, output, total: input + output },
+    };
   });
+}
+
+/** Groq OpenAI-compatible chat completions (configured fallback after Gemini). */
+async function generateGroq(prompt: string, schema: JsonObject, timeoutMs: number): Promise<GenerateResult> {
+  const apiKey = process.env.GROQ_API_KEY;
+  const primary = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
+  const fallback = process.env.GROQ_FALLBACK_MODEL?.trim();
+  if (!apiKey) throw new Error('Groq provider is not configured');
+
+  const run = async (model: string): Promise<GenerateResult> =>
+    withTimeout(timeoutMs, async (signal) => {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST', signal,
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: `${prompt}\n\nReturn a JSON object matching this schema: ${JSON.stringify(normalizeSchema(schema))}` }],
+          response_format: { type: 'json_object' },
+          temperature: 0.2,
+        }),
+      });
+      if (!response.ok) throw new Error(`Groq request failed (${response.status})`);
+      const payload = await response.json();
+      const content = payload?.choices?.[0]?.message?.content;
+      if (typeof content !== 'string') throw new Error('Groq returned no JSON content');
+      const usage = payload?.usage;
+      return {
+        data: validateResult(JSON.parse(content), schema),
+        provider: 'groq',
+        model,
+        usage: {
+          input: Number(usage?.prompt_tokens || 0) || 0,
+          output: Number(usage?.completion_tokens || 0) || 0,
+          total: Number(usage?.total_tokens || 0) || 0,
+        },
+      };
+    });
+
+  try {
+    return await run(primary);
+  } catch (error: any) {
+    const message = String(error?.message || error);
+    const canFallback = Boolean(fallback) && fallback !== primary
+      && /not.?found|unsupported|404|429|rate.?limit|capacity|overloaded/i.test(message);
+    if (canFallback) {
+      console.warn(`[ai-provider] groq ${primary} failed; trying GROQ_FALLBACK_MODEL=${fallback}. ${message}`);
+      return run(fallback!);
+    }
+    throw error;
+  }
 }
 
 function isConfigured(provider: string) {
   if (provider === 'gemini') return Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_MODEL);
+  if (provider === 'groq') return Boolean(process.env.GROQ_API_KEY);
   if (provider === 'openai') return Boolean(process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL);
   if (provider === 'anthropic') return Boolean(process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_MODEL);
   return false;
 }
 
 /** Provider-neutral structured JSON generation with ordered failover across configured providers. */
-export async function generateStructuredJson(prompt: string, schema: JsonObject, timeoutMs = 25_000): Promise<JsonObject> {
+export async function generateStructuredJson(prompt: string, schema: JsonObject, timeoutMs = 25_000): Promise<GenerateResult> {
   const primary = (process.env.AI_PROVIDER || 'gemini').trim().toLowerCase();
-  const priority = (process.env.AI_PROVIDER_PRIORITY || `${primary},gemini,openai,anthropic`)
+  // Preferred: Gemini primary, Groq fallback. Optional OpenAI/Anthropic remain env-gated.
+  const priority = (process.env.AI_PROVIDER_PRIORITY || `${primary},groq,openai,anthropic`)
     .split(',').map((item) => item.trim().toLowerCase()).filter((item, index, all) => item && all.indexOf(item) === index);
   const providers = priority.filter(isConfigured);
   if (!providers.length) throw new Error('No AI providers in AI_PROVIDER_PRIORITY are fully configured');
@@ -100,6 +215,7 @@ export async function generateStructuredJson(prompt: string, schema: JsonObject,
   for (const provider of providers) {
     try {
       if (provider === 'gemini') return await generateGemini(prompt, schema, timeoutMs);
+      if (provider === 'groq') return await generateGroq(prompt, schema, timeoutMs);
       if (provider === 'openai') return await generateOpenAI(prompt, schema, timeoutMs);
       if (provider === 'anthropic') return await generateAnthropic(prompt, schema, timeoutMs);
     } catch (error) {
@@ -110,3 +226,5 @@ export async function generateStructuredJson(prompt: string, schema: JsonObject,
   }
   throw new Error(`All configured AI providers failed. ${errors.join(' | ')}`);
 }
+
+export { emptyUsage };

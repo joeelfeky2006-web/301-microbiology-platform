@@ -24,6 +24,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   announcement_text: '',
   announcement_active: false,
   maintenance_mode: false,
+  ai_enabled: true,
   whatsapp_number: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '201000000000',
   registration_open: true,
   support_content: DEFAULT_SUPPORT_CONTENT,
@@ -46,6 +47,7 @@ async function loadSettings(force = false): Promise<PlatformSettings> {
         ...DEFAULT_PLATFORM_SETTINGS,
         ...row,
         id: 1,
+        ai_enabled: row.ai_enabled !== false,
         support_content: row.support_content && typeof row.support_content === 'object'
           ? { ...DEFAULT_SUPPORT_CONTENT, ...row.support_content, methods: Array.isArray(row.support_content.methods) ? row.support_content.methods : DEFAULT_SUPPORT_CONTENT.methods }
           : DEFAULT_SUPPORT_CONTENT,

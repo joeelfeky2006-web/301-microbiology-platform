@@ -112,10 +112,11 @@ export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolea
 
       const data = await res.json();
       if (res.status === 401) { await redirectAfterSessionExpiry(); return; }
-      window.dispatchEvent(new Event('credits_updated'));
+      const { notifyCreditsUpdated } = await import('@/lib/creditsClient');
+      notifyCreditsUpdated(data.credits);
       if (!res.ok) {
         if (data.kind === 'busy') setRetrySeconds(60);
-        setMessages((prev) => [...prev, { id: 'msg-err-' + Date.now(), role: 'model', text: typeof data.message === 'string' ? data.message : "Dr. Atlas is catching his breath. Let's give it another try in a moment!", timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+        setMessages((prev) => [...prev, { id: 'msg-err-' + Date.now(), role: 'model', text: typeof data.message === 'string' ? data.message : 'Dr. Atlas hit a temporary error. Try again in a moment.', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
         return;
       }
       if (data.kind === 'fallback' && typeof data.message === 'string') {

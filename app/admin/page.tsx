@@ -33,6 +33,7 @@ import { DEFAULT_PLATFORM_SETTINGS, invalidateSettingsCache, useSettings } from 
 import { PRIMARY_ADMIN_EMAIL } from '@/lib/admin';
 import PublishMaterial from '@/components/admin/PublishMaterial';
 import QuizManager from '@/components/admin/QuizManager';
+import FlashcardManager from '@/components/admin/FlashcardManager';
 import SiteContentEditor from '@/components/admin/SiteContentEditor';
 import AnalyticsDashboard from '@/components/admin/AnalyticsDashboard';
 import { cardClass, inputClass, labelClass } from '@/lib/ui';
@@ -79,7 +80,7 @@ export default function AdminDashboardPage() {
   const router = useRouter();
 
   // Active navigation tab
-  const [activeTab, setActiveTab] = useState<'materials' | 'publish' | 'quizzes' | 'analytics' | 'roles' | 'settings'>('materials');
+  const [activeTab, setActiveTab] = useState<'materials' | 'publish' | 'quizzes' | 'flashcards' | 'analytics' | 'roles' | 'settings'>('materials');
 
   // Materials state
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -96,6 +97,7 @@ export default function AdminDashboardPage() {
   const [externalUrl, setExternalUrl] = useState('');
   const [aiContext, setAiContext] = useState('');
   const [rawQuizText, setRawQuizText] = useState('');
+  const [rawFlashcardText, setRawFlashcardText] = useState('');
   const [customSystemPrompt, setCustomSystemPrompt] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
@@ -110,6 +112,16 @@ export default function AdminDashboardPage() {
   const [adminUsers, setAdminUsers] = useState<Array<{ email: string; role: UserRole; name?: string; university_id?: string }>>([]);
   const [newRoleEmail, setNewRoleEmail] = useState('');
   const [newRoleChoice, setNewRoleChoice] = useState<UserRole>('editor');
+  const [grantEmail, setGrantEmail] = useState('');
+  const [grantAmount, setGrantAmount] = useState('50');
+  const [grantReason, setGrantReason] = useState('');
+  const [grantBusy, setGrantBusy] = useState(false);
+  const [grantMessage, setGrantMessage] = useState('');
+  const [memberEmail, setMemberEmail] = useState('');
+  const [memberPlan, setMemberPlan] = useState('pro_monthly');
+  const [memberReason, setMemberReason] = useState('');
+  const [memberBusy, setMemberBusy] = useState(false);
+  const [memberMessage, setMemberMessage] = useState('');
 
   const applyAdminUsers = (data: unknown) => {
     const users = Array.isArray(data) ? data : [];
@@ -241,6 +253,7 @@ export default function AdminDashboardPage() {
         file_url: finalFileUrl,
         ai_context: aiContext.trim() || null,
         raw_quiz_text: rawQuizText.trim() || null,
+        raw_flashcard_text: rawFlashcardText.trim() || null,
         custom_system_prompt: customSystemPrompt.trim() || null,
       };
 
@@ -256,6 +269,7 @@ export default function AdminDashboardPage() {
       setExternalUrl('');
       setAiContext('');
       setRawQuizText('');
+      setRawFlashcardText('');
       setCustomSystemPrompt('');
       setFile(null);
       setFileInputKey((k) => k + 1);
@@ -287,6 +301,7 @@ export default function AdminDashboardPage() {
         subtitle: editingMaterial.subtitle?.trim() || null,
         ai_context: editingMaterial.ai_context?.trim() || null,
         raw_quiz_text: editingMaterial.raw_quiz_text?.trim() || null,
+        raw_flashcard_text: editingMaterial.raw_flashcard_text?.trim() || null,
         custom_system_prompt: editingMaterial.custom_system_prompt?.trim() || null,
         rename_all_matching: true,
       };
@@ -326,6 +341,7 @@ export default function AdminDashboardPage() {
           subtitle: changes.subtitle,
           ai_context: changes.ai_context,
           raw_quiz_text: changes.raw_quiz_text,
+          raw_flashcard_text: changes.raw_flashcard_text,
           custom_system_prompt: changes.custom_system_prompt,
         }).eq('id', editingMaterial.id);
 
@@ -400,6 +416,64 @@ export default function AdminDashboardPage() {
     setNewRoleEmail('');
   };
 
+  const handleGrantCredits = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = grantEmail.trim().toLowerCase();
+    const amount = Number(grantAmount);
+    const reason = grantReason.trim();
+    if (!email || !reason || !Number.isFinite(amount) || amount < 1 || amount > 5000) {
+      setGrantMessage('Enter a student email, amount (1–5000), and reason.');
+      return;
+    }
+    if (!window.confirm(`Grant ${amount} pack credits to ${email}?`)) return;
+    setGrantBusy(true);
+    setGrantMessage('');
+    const { data, error } = await supabase.rpc('grant_user_credits', {
+      p_target_email: email,
+      p_amount: Math.floor(amount),
+      p_reason: reason,
+    });
+    setGrantBusy(false);
+    if (error) {
+      const msg = (error.message || '').toLowerCase();
+      if (msg.includes('not found')) setGrantMessage('No student account matches that email.');
+      else if (msg.includes('not authorized') || msg.includes('authentication')) setGrantMessage('Only super admins can grant credits.');
+      else setGrantMessage('Could not grant credits. Check the details and try again.');
+      return;
+    }
+    setGrantMessage(`Granted. New pack balance for that student: ${data}`);
+    setGrantReason('');
+  };
+
+  const handleAssignMembership = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = memberEmail.trim().toLowerCase();
+    const reason = memberReason.trim();
+    if (!email || !reason || !memberPlan) {
+      setMemberMessage('Enter student email, plan, and reason.');
+      return;
+    }
+    if (!window.confirm(`Assign “${memberPlan}” membership to ${email}? Recurring billing is OFF — this is a manual period.`)) return;
+    setMemberBusy(true);
+    setMemberMessage('');
+    try {
+      const response = await fetch('/api/admin/memberships', {
+        method: 'POST',
+        headers: { ...(await authenticatedHeaders()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, plan: memberPlan, reason, grant_credits: true }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Could not assign membership.');
+      const exp = result.membership?.expires_at ? new Date(result.membership.expires_at).toLocaleDateString() : 'period end';
+      setMemberMessage(`Membership assigned. Expires ${exp}. Period credits granted if allocation > 0.`);
+      setMemberReason('');
+    } catch (cause) {
+      setMemberMessage(cause instanceof Error ? cause.message : 'Could not assign membership.');
+    } finally {
+      setMemberBusy(false);
+    }
+  };
+
   // Handle Save Settings
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -417,6 +491,7 @@ export default function AdminDashboardPage() {
       announcement_text: settings.announcement_text,
       announcement_active: settings.announcement_active,
       maintenance_mode: settings.maintenance_mode,
+      ai_enabled: settings.ai_enabled !== false,
       whatsapp_number: settings.whatsapp_number,
       registration_open: settings.registration_open,
       support_content: settings.support_content,
@@ -609,6 +684,19 @@ export default function AdminDashboardPage() {
             Multi-Quiz Manager
           </button>
 
+          <button
+            type="button"
+            onClick={() => setActiveTab('flashcards')}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${
+              activeTab === 'flashcards'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-900 dark:text-slate-300'
+            }`}
+          >
+            <Layers className="h-4 w-4" />
+            Flashcard Decks
+          </button>
+
           {userIsSuperAdmin && (
             <>
               <button
@@ -621,7 +709,7 @@ export default function AdminDashboardPage() {
                 }`}
               >
                 <BarChart3 className="h-4 w-4" />
-                Analytics
+                Platform Analytics
               </button>
 
               <button
@@ -732,9 +820,9 @@ export default function AdminDashboardPage() {
                                 {mat.subtitle}
                               </p>
                             )}
-                            {(mat.ai_context || mat.raw_quiz_text || mat.custom_system_prompt) && (
+                            {(mat.ai_context || mat.raw_quiz_text || mat.raw_flashcard_text || mat.custom_system_prompt) && (
                               <span className="inline-flex items-center gap-1 mt-0.5 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">
-                                <Sparkles className="h-3 w-3" /> AI Knowledge Attached
+                                <Sparkles className="h-3 w-3" /> AI / banks attached
                               </span>
                             )}
                             <span className="font-mono text-[10px] text-slate-400 truncate max-w-xs block">
@@ -826,6 +914,7 @@ export default function AdminDashboardPage() {
         {/* TAB 2: Publish & Upload Center */}
         {activeTab === 'publish' && <PublishMaterial materials={materials} onPublished={loadMaterials} />}
         {activeTab === 'quizzes' && <QuizManager />}
+        {activeTab === 'flashcards' && <FlashcardManager />}
         {activeTab === 'analytics' && userIsSuperAdmin && <AnalyticsDashboard />}
 
         {/* TAB 3: RBAC Roles & Permissions (Super Admin only) */}
@@ -885,13 +974,73 @@ export default function AdminDashboardPage() {
                       Save Role Assignment
                     </button>
                   </form>
+
+                  <div className="mt-8 border-t border-slate-200 pt-6 dark:border-white/10">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Grant pack credits</h3>
+                    <p className="mt-1 text-xs text-slate-500">Manual pre-payment path. Adds bonus pack credits (not free daily/monthly).</p>
+                    <form onSubmit={handleGrantCredits} className="mt-4 space-y-3">
+                      <div>
+                        <label className={labelClass}>Student email</label>
+                        <input type="email" required value={grantEmail} onChange={(e) => setGrantEmail(e.target.value)} placeholder="student@example.com" className={inputClass} />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Amount (1–5000)</label>
+                        <input type="number" min={1} max={5000} required value={grantAmount} onChange={(e) => setGrantAmount(e.target.value)} className={inputClass} />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Reason</label>
+                        <input type="text" required maxLength={500} value={grantReason} onChange={(e) => setGrantReason(e.target.value)} placeholder="Midterm pack / support bonus" className={inputClass} />
+                      </div>
+                      <button type="submit" disabled={grantBusy} className="w-full rounded-xl bg-emerald-600 py-2.5 text-xs font-bold text-white shadow hover:bg-emerald-700 disabled:opacity-60">
+                        {grantBusy ? 'Granting…' : 'Grant credits'}
+                      </button>
+                      {grantMessage && <p role="status" className="text-xs font-semibold text-slate-600 dark:text-slate-300">{grantMessage}</p>}
+                    </form>
+                  </div>
+
+                  <div className="mt-8 border-t border-slate-200 pt-6 dark:border-white/10">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Assign membership</h3>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Phase 8 model — plan, dates, monthly allocation. Recurring billing is not enabled; this creates a timed active period and can grant the period’s credits once.
+                    </p>
+                    <form onSubmit={handleAssignMembership} className="mt-4 space-y-3">
+                      <div>
+                        <label className={labelClass}>Student email</label>
+                        <input type="email" required value={memberEmail} onChange={(e) => setMemberEmail(e.target.value)} placeholder="student@example.com" className={inputClass} />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Plan</label>
+                        <select value={memberPlan} onChange={(e) => setMemberPlan(e.target.value)} className={inputClass}>
+                          <option value="pro_monthly">Pro Monthly (800 credits / 30 days)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelClass}>Reason</label>
+                        <input type="text" required maxLength={500} value={memberReason} onChange={(e) => setMemberReason(e.target.value)} placeholder="Beta Pro access / scholarship" className={inputClass} />
+                      </div>
+                      <button type="submit" disabled={memberBusy} className="w-full rounded-xl bg-violet-600 py-2.5 text-xs font-bold text-white shadow hover:bg-violet-700 disabled:opacity-60">
+                        {memberBusy ? 'Assigning…' : 'Assign membership'}
+                      </button>
+                      {memberMessage && <p role="status" className="text-xs font-semibold text-slate-600 dark:text-slate-300">{memberMessage}</p>}
+                    </form>
+                  </div>
                 </div>
 
                 {/* Right: Active Roles & Matrix */}
                 <div className={`${cardClass} p-6 md:col-span-2 space-y-5`}>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Current Configured Roles
-                  </h3>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                      Current Configured Roles
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('analytics')}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-800"
+                    >
+                      <BarChart3 className="h-3.5 w-3.5" />
+                      Open Platform Analytics
+                    </button>
+                  </div>
 
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
@@ -1113,6 +1262,19 @@ export default function AdminDashboardPage() {
                     <label htmlFor="maintenanceMode" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Enable maintenance mode for students</label>
                   </div>
 
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="aiEnabled"
+                      checked={settings.ai_enabled !== false}
+                      onChange={(e) => setSettings({ ...settings, ai_enabled: e.target.checked })}
+                      className="h-4 w-4 rounded text-blue-600"
+                    />
+                    <label htmlFor="aiEnabled" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      AI features enabled
+                    </label>
+                  </div>
+
                   <div className="border-t border-slate-200 pt-4 dark:border-white/10">
                     <button
                       type="submit"
@@ -1256,6 +1418,11 @@ export default function AdminDashboardPage() {
                   <label className={labelClass} title="Paste raw text questions, choice options, and explanation keys here.">Raw Quiz Bank &amp; Explanations</label>
                   <textarea rows={5} value={editingMaterial.raw_quiz_text ?? ''} onChange={(e) => setEditingMaterial({ ...editingMaterial, raw_quiz_text: e.target.value })} className={inputClass} />
                   <p className="mt-1 text-[11px] text-slate-500">Paste raw text questions, choice options, and explanation keys here.</p>
+                </div>
+                <div>
+                  <label className={labelClass} title="Paste flashcards as Q: front / A: back blocks.">Raw Flashcard Bank</label>
+                  <textarea rows={5} value={editingMaterial.raw_flashcard_text ?? ''} onChange={(e) => setEditingMaterial({ ...editingMaterial, raw_flashcard_text: e.target.value })} className={inputClass} placeholder={"Q: Front?\nA: Back\nHINT: optional\nTAG: culture"} />
+                  <p className="mt-1 text-[11px] text-slate-500">Format: Q: front, A: back. Optional HINT: and TAG: lines. Students study free with spaced repetition.</p>
                 </div>
                 <div>
                   <label className={labelClass}>Custom AI System Prompt (Optional)</label>

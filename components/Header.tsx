@@ -56,12 +56,13 @@ export default function Header() {
   useOnClickOutside(accountMenu, closeAccountOutside);
 
   useEffect(() => {
-    if (session?.user?.user_metadata?.group_section) {
-      setUserGroup(session.user.user_metadata.group_section as GroupSection);
-    } else if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('student_group_preference');
-      if (stored === 'G1' || stored === 'G2') setUserGroup(stored);
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('student_group_preference') : null;
+    if (stored === 'G1' || stored === 'G2') {
+      setUserGroup(stored);
+      return;
     }
+    const fromAuth = session?.user?.user_metadata?.group_section;
+    if (fromAuth === 'G1' || fromAuth === 'G2') setUserGroup(fromAuth as GroupSection);
   }, [session]);
 
   useEffect(() => {

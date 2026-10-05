@@ -1,3 +1,4 @@
+-- OBSOLETE: do not run. Superseded by credit-refund-abuse-fix.sql.
 -- Run after credits-and-analytics.sql and ai-credit-refund.sql.
 -- Stores a bounded, per-user activity ledger without exposing user_credits broadly.
 begin;
@@ -23,7 +24,10 @@ create policy user_credit_history_read_self on public.user_credit_history
 revoke all on public.user_credit_history from public, anon;
 grant select on public.user_credit_history to authenticated;
 
+-- Defaults do not change identity: (uuid, int, text default ...) is still (uuid, integer, text).
+-- Drop both overloads so re-runs do not hit 42723 "already exists with same argument types".
 drop function if exists public.deduct_user_credit(uuid, integer);
+drop function if exists public.deduct_user_credit(uuid, integer, text);
 create function public.deduct_user_credit(
   p_user_id uuid,
   p_cost integer default 1,
@@ -86,6 +90,7 @@ revoke all on function public.deduct_user_credit(uuid, integer, text) from publi
 grant execute on function public.deduct_user_credit(uuid, integer, text) to authenticated;
 
 drop function if exists public.refund_user_credit(integer);
+drop function if exists public.refund_user_credit(integer, text);
 create function public.refund_user_credit(p_cost integer, p_action text default 'unknown')
 returns boolean language plpgsql security definer set search_path = public
 as $$

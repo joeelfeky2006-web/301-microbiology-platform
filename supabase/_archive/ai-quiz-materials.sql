@@ -1,3 +1,4 @@
+-- OBSOLETE: do not run. Superseded by credit-refund-abuse-fix.sql.
 -- MedAtlas AI knowledge and quiz authoring migration.
 -- Safe to run repeatedly.
 alter table public.materials

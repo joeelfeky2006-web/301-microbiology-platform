@@ -94,7 +94,8 @@ export default function AILearningStudio({
       });
       const data = await res.json();
       if (res.status === 401) { await redirectAfterSessionExpiry(); return; }
-      window.dispatchEvent(new Event('credits_updated'));
+      const { notifyCreditsUpdated } = await import('@/lib/creditsClient');
+      notifyCreditsUpdated(data.credits);
       if (data.kind === 'busy') setRetrySeconds(60);
       if (data.caseStudy && typeof data.sealed === 'string') {
         setCaseStudy(data.caseStudy);
@@ -105,7 +106,7 @@ export default function AILearningStudio({
         setCreditNotice(data.message);
       }
     } catch {
-      setCreditNotice("Dr. Atlas is catching his breath. Let's give it another try in a moment!");
+      setCreditNotice('Dr. Atlas hit a temporary error. Try again in a moment.');
     } finally {
       setCaseLoading(false);
     }
@@ -163,7 +164,8 @@ export default function AILearningStudio({
       });
       const data = await res.json();
       if (res.status === 401) { await redirectAfterSessionExpiry(); return; }
-      window.dispatchEvent(new Event('credits_updated'));
+      const { notifyCreditsUpdated } = await import('@/lib/creditsClient');
+      notifyCreditsUpdated(data.credits);
       if (data.kind === 'busy') setRetrySeconds(60);
       if (data.summary) {
         setSummary(data.summary);
