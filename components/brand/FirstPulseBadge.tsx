@@ -6,7 +6,7 @@ export default function FirstPulseBadge({ size = 'md', className = '' }: { size?
   return (
     <span
       title="First Pulse: joined MedAtlas Egypt during the beta"
-      className={`inline-flex w-fit items-center gap-1.5 rounded-full bg-gradient-to-r from-brand-nile to-brand-indigo font-bold text-white shadow-sm shadow-brand-nile/25 ${small ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1.5 text-xs'} ${className}`}
+      className={`inline-flex w-fit shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-r from-brand-nile to-brand-indigo font-bold text-white shadow-sm shadow-brand-nile/25 ${small ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1.5 text-xs'} ${className}`}
     >
       <svg viewBox="0 0 30 20" className={small ? 'h-2.5 w-4' : 'h-3.5 w-5'} aria-hidden>
         <path d={PULSE} fill="none" stroke="#21E3C0" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
