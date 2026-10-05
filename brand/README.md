@@ -5,6 +5,7 @@ Nothing in this folder is wired into the website yet. Once the identity is appro
 | Folder | What's inside |
 | --- | --- |
 | `logo/svg`, `logo/png` | Horizontal, stacked, wordmark and symbol versions, each in **color** (light backgrounds), **reversed** (dark), **mono-black** and **mono-white**. Also app-icon tiles and the `micro301-beta` product badge. Text is outlined, so the SVGs need no fonts. PNGs are transparent. |
+| `logo/final` | **Final logo (ECG + Giza line with the AI spark)**, for review: horizontal, stacked and mark-only versions in color, reversed, mono-black and mono-white (`svg/`, transparent `png/`), app icon, maskable icon and favicons (`icons/`), and an overview `sheet.html`. Wordmark is Space Grotesk Bold, the website font. Supersedes `logo/svg` and `icons` once approved. |
 | `icons` | `icon-512/192.png`, `apple-icon-180.png`, `icon-maskable-512.png`, `favicon.ico` (16/32/48), `favicon-16/32/48.png`, plus SVG sources (`favicon-small.svg` is the heavier cut for 16–32 px). |
 | `tokens.css` | Colour, font and texture tokens (Agar grid, lens ring, chips). |
 | `fonts` | Sora, Inter, IBM Plex Sans Arabic, IBM Plex Mono (Google Fonts, OFL). |
@@ -19,6 +20,7 @@ Requirements: Chrome, ffmpeg, Node with `puppeteer-core`, Python with `fonttools
 ```bash
 FONT_DIR=brand/fonts python3 brand/_source/build_logos.py   # logo + icon SVGs
 NODE_PATH=<puppeteer dir> node brand/_source/export_assets.js  # PNGs, icons, social exports
+NODE_PATH=<puppeteer dir> python3 brand/_source/build_final_logo.py  # final ECG + Giza logo set
 brand/video/_source/build_audio.sh /tmp/medatlas-audio         # voiceover + music (VOICE=ar-EG-SalmaNeural for a female voice)
 NODE_PATH=<puppeteer dir> node brand/video/_source/render_video.js /tmp/medatlas-audio
 ```
