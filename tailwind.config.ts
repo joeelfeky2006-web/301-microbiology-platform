@@ -16,6 +16,12 @@ const config: Config = {
         mono: ["var(--font-ibm-plex-mono)", "monospace"],
       },
       colors: {
+        brand: {
+          nile: "#2350FF",
+          indigo: "#5B3DF5",
+          teal: "#21E3C0",
+          ink: "#0B1230",
+        },
         lab: {
           950: "#070b14",
           900: "#0b1120",

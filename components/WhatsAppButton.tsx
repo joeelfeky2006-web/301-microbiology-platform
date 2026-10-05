@@ -5,7 +5,7 @@ import { useSettings } from '@/lib/useSettings';
 export default function WhatsAppButton() {
   const { settings } = useSettings();
   const number = (settings.whatsapp_number || '').replace(/\D/g, '');
-  const href = `https://wa.me/${number}?text=${encodeURIComponent('Hello, I need some info about the 301 Microbiology portal.')}`;
+  const href = `https://wa.me/${number}?text=${encodeURIComponent('Hello, I need some info about MedAtlas Egypt.')}`;
 
   return (
     <a

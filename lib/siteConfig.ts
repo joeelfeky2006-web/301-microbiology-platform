@@ -3,6 +3,16 @@ import type { SiteContent } from '@/types';
 /** Beta: hide Support / payment UI until real channels are configured. */
 export const SHOW_SUPPORT = true;
 
+/** Official channels. They are always listed, even when saved site content predates them. */
+export const OFFICIAL_SOCIAL = [
+  { label: 'Instagram', url: 'https://www.instagram.com/medatlas_eg' },
+  { label: 'WhatsApp Channel', url: 'https://whatsapp.com/channel/0029Vb8pcwu7oQhgGeoAhp2M' },
+];
+
+const sameLink = (a: string, b: string) => {
+  try { const x = new URL(a); const y = new URL(b); return x.hostname.replace(/^www\./, '') === y.hostname.replace(/^www\./, '') && x.pathname.replace(/\/$/, '') === y.pathname.replace(/\/$/, ''); } catch { return false; }
+};
+
 /** Public, editable copy defaults. Keep credentials and security policy out of this object. */
 export const DEFAULT_SITE_CONTENT: SiteContent = {
   brand: {
@@ -10,7 +20,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     description: 'MedAtlas Egypt: Next-Gen AI Training for Medical Students. Micro 301 — Culturing Curiosity, with interactive case studies, practical records, and exam-focused learning.', logo: '/logo.svg',
     affiliation: 'Independent student-built study resource. Not an official university publication.',
     contactEmail: 'mucizedoctorseg@gmail.com', teamName: 'MedAtlas Egypt Team', foundedYear: '2026',
-    social: [{ label: 'Instagram', url: 'https://www.instagram.com/medatlas_eg' }],
+    social: OFFICIAL_SOCIAL,
   },
   navigation: { home: 'Home', modules: 'Modules', cns: 'CNS', urs: 'Urinary System', rep: 'Reproductive System', about: 'About', contact: 'Contact', privacy: 'Privacy', terms: 'Terms', copyright: 'Copyright & Content' },
   navigationOrder: ['home', 'modules', 'about', 'contact'],
@@ -70,9 +80,13 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
 export function mergeSiteContent(value: unknown): SiteContent {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return DEFAULT_SITE_CONTENT;
   const input = value as Partial<SiteContent>;
+  const savedSocial = Array.isArray(input.brand?.social) ? input.brand.social.filter((item) => item && typeof item.label === 'string' && typeof item.url === 'string' && (() => { try { return new URL(item.url).protocol === 'https:'; } catch { return false; } })()) : [];
   return {
     ...DEFAULT_SITE_CONTENT, ...input,
-    brand: { ...DEFAULT_SITE_CONTENT.brand, ...input.brand, social: Array.isArray(input.brand?.social) ? input.brand.social.filter((item) => item && typeof item.label === 'string' && typeof item.url === 'string' && (() => { try { return new URL(item.url).protocol === 'https:'; } catch { return false; } })()) : [] },
+    brand: { ...DEFAULT_SITE_CONTENT.brand, ...input.brand, social: [
+      ...OFFICIAL_SOCIAL.map((official) => savedSocial.find((item) => sameLink(item.url, official.url)) ?? official),
+      ...savedSocial.filter((item) => !OFFICIAL_SOCIAL.some((official) => sameLink(item.url, official.url))),
+    ] },
     navigation: { ...DEFAULT_SITE_CONTENT.navigation, ...input.navigation },
     navigationOrder: Array.isArray(input.navigationOrder) ? Array.from(new Set(input.navigationOrder.filter((route): route is SiteContent['navigationOrder'][number] => ['home', 'modules', 'about', 'contact'].includes(route)))) : DEFAULT_SITE_CONTENT.navigationOrder,
     footer: { ...DEFAULT_SITE_CONTENT.footer, ...input.footer },
