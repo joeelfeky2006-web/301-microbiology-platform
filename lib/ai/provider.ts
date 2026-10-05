@@ -74,30 +74,50 @@ async function generateGemini(prompt: string, schema: JsonObject, timeoutMs: num
 
 async function generateOpenAI(prompt: string, schema: JsonObject, timeoutMs: number): Promise<GenerateResult> {
   const apiKey = process.env.OPENAI_API_KEY;
-  const model = process.env.OPENAI_MODEL;
-  if (!apiKey || !model) throw new Error('OpenAI provider is not configured');
-  return withTimeout(timeoutMs, async (signal) => {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST', signal,
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages: [{ role: 'user', content: `${prompt}\n\nReturn a JSON object matching this schema: ${JSON.stringify(normalizeSchema(schema))}` }], response_format: { type: 'json_object' } }),
+  const primary = process.env.OPENAI_MODEL;
+  const fallback = process.env.OPENAI_FALLBACK_MODEL?.trim();
+  if (!apiKey || !primary) throw new Error('OpenAI provider is not configured');
+
+  const run = async (model: string): Promise<GenerateResult> =>
+    withTimeout(timeoutMs, async (signal) => {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST', signal,
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: `${prompt}\n\nReturn a JSON object matching this schema: ${JSON.stringify(normalizeSchema(schema))}` }],
+          response_format: { type: 'json_object' },
+        }),
+      });
+      if (!response.ok) throw new Error(`OpenAI request failed (${response.status})`);
+      const payload = await response.json();
+      const content = payload?.choices?.[0]?.message?.content;
+      if (typeof content !== 'string') throw new Error('OpenAI returned no JSON content');
+      const usage = payload?.usage;
+      return {
+        data: validateResult(JSON.parse(content), schema),
+        provider: 'openai',
+        model,
+        usage: {
+          input: Number(usage?.prompt_tokens || 0) || 0,
+          output: Number(usage?.completion_tokens || 0) || 0,
+          total: Number(usage?.total_tokens || 0) || 0,
+        },
+      };
     });
-    if (!response.ok) throw new Error(`OpenAI request failed (${response.status})`);
-    const payload = await response.json();
-    const content = payload?.choices?.[0]?.message?.content;
-    if (typeof content !== 'string') throw new Error('OpenAI returned no JSON content');
-    const usage = payload?.usage;
-    return {
-      data: validateResult(JSON.parse(content), schema),
-      provider: 'openai',
-      model,
-      usage: {
-        input: Number(usage?.prompt_tokens || 0) || 0,
-        output: Number(usage?.completion_tokens || 0) || 0,
-        total: Number(usage?.total_tokens || 0) || 0,
-      },
-    };
-  });
+
+  try {
+    return await run(primary);
+  } catch (error: any) {
+    const message = String(error?.message || error);
+    const canFallback = Boolean(fallback) && fallback !== primary
+      && /not.?found|unsupported|404|429|rate.?limit|capacity|overloaded/i.test(message);
+    if (canFallback) {
+      console.warn(`[ai-provider] openai ${primary} failed; trying OPENAI_FALLBACK_MODEL=${fallback}. ${message}`);
+      return run(fallback!);
+    }
+    throw error;
+  }
 }
 
 async function generateAnthropic(prompt: string, schema: JsonObject, timeoutMs: number): Promise<GenerateResult> {
@@ -127,35 +147,51 @@ async function generateAnthropic(prompt: string, schema: JsonObject, timeoutMs: 
 /** Groq OpenAI-compatible chat completions (configured fallback after Gemini). */
 async function generateGroq(prompt: string, schema: JsonObject, timeoutMs: number): Promise<GenerateResult> {
   const apiKey = process.env.GROQ_API_KEY;
-  const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+  const primary = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
+  const fallback = process.env.GROQ_FALLBACK_MODEL?.trim();
   if (!apiKey) throw new Error('Groq provider is not configured');
-  return withTimeout(timeoutMs, async (signal) => {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST', signal,
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+
+  const run = async (model: string): Promise<GenerateResult> =>
+    withTimeout(timeoutMs, async (signal) => {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST', signal,
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: `${prompt}\n\nReturn a JSON object matching this schema: ${JSON.stringify(normalizeSchema(schema))}` }],
+          response_format: { type: 'json_object' },
+          temperature: 0.2,
+        }),
+      });
+      if (!response.ok) throw new Error(`Groq request failed (${response.status})`);
+      const payload = await response.json();
+      const content = payload?.choices?.[0]?.message?.content;
+      if (typeof content !== 'string') throw new Error('Groq returned no JSON content');
+      const usage = payload?.usage;
+      return {
+        data: validateResult(JSON.parse(content), schema),
+        provider: 'groq',
         model,
-        messages: [{ role: 'user', content: `${prompt}\n\nReturn a JSON object matching this schema: ${JSON.stringify(normalizeSchema(schema))}` }],
-        response_format: { type: 'json_object' },
-        temperature: 0.2,
-      }),
+        usage: {
+          input: Number(usage?.prompt_tokens || 0) || 0,
+          output: Number(usage?.completion_tokens || 0) || 0,
+          total: Number(usage?.total_tokens || 0) || 0,
+        },
+      };
     });
-    if (!response.ok) throw new Error(`Groq request failed (${response.status})`);
-    const payload = await response.json();
-    const content = payload?.choices?.[0]?.message?.content;
-    if (typeof content !== 'string') throw new Error('Groq returned no JSON content');
-    const usage = payload?.usage;
-    return {
-      data: validateResult(JSON.parse(content), schema),
-      provider: 'groq',
-      model,
-      usage: {
-        input: Number(usage?.prompt_tokens || 0) || 0,
-        output: Number(usage?.completion_tokens || 0) || 0,
-        total: Number(usage?.total_tokens || 0) || 0,
-      },
-    };
-  });
+
+  try {
+    return await run(primary);
+  } catch (error: any) {
+    const message = String(error?.message || error);
+    const canFallback = Boolean(fallback) && fallback !== primary
+      && /not.?found|unsupported|404|429|rate.?limit|capacity|overloaded/i.test(message);
+    if (canFallback) {
+      console.warn(`[ai-provider] groq ${primary} failed; trying GROQ_FALLBACK_MODEL=${fallback}. ${message}`);
+      return run(fallback!);
+    }
+    throw error;
+  }
 }
 
 function isConfigured(provider: string) {
