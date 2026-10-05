@@ -15,11 +15,12 @@ export async function generateMetadata(): Promise<Metadata> {
   const site = await getPublicSiteContent();
   const title = `${site.brand.name} — ${site.brand.tagline}`;
   return {
-    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
+    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL
+      || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : 'http://localhost:3000')),
     title: { default: title, template: `%s | ${site.brand.shortName}` },
     description: site.brand.description,
-    openGraph: { title: site.brand.name, description: site.brand.description, type: 'website' },
-    twitter: { card: 'summary', title: site.brand.name, description: site.brand.description },
+    openGraph: { title: site.brand.name, description: site.brand.description, type: 'website', siteName: site.brand.name },
+    twitter: { card: 'summary_large_image', title: site.brand.name, description: site.brand.description },
   };
 }
 
