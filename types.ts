@@ -80,6 +80,10 @@ export interface Material {
   raw_quiz_text?: string | null;
   /** Admin-authored flashcard bank (Q:/A:/HINT:/TAG:). */
   raw_flashcard_text?: string | null;
+  /** Student list flags from /api/materials (bank text is never sent to the browser). */
+  has_ai_context?: boolean;
+  has_raw_quiz?: boolean;
+  has_raw_flashcard?: boolean;
   custom_system_prompt?: string | null;
 }
 

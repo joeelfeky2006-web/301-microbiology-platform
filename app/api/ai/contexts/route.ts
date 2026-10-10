@@ -14,14 +14,27 @@ export async function GET(request: NextRequest) {
   const admin = createSupabaseAdmin();
   if (!admin) return Response.json({ error: 'AI context service is unavailable.' }, { status: 503 });
 
+  // Include lectures that have AI context and/or quiz bank text (siblings are merged server-side later).
   const { data, error } = await admin.from('materials')
-    .select('id,module,type,title,file_url,ai_context')
+    .select('id,module,type,title,file_url,ai_context,raw_quiz_text')
     .eq('module', moduleCode)
-    .not('ai_context', 'is', null)
     .order('title', { ascending: true });
   if (error) return Response.json({ error: 'Could not load lecture contexts.' }, { status: 503 });
 
-  const files = (data || []).filter((row) => typeof row.ai_context === 'string' && row.ai_context.trim().length > 0)
+  const seenTitles = new Set<string>();
+  const files = (data || [])
+    .filter((row) => {
+      const hasAi = typeof row.ai_context === 'string' && row.ai_context.trim().length > 0;
+      const hasQuiz = typeof row.raw_quiz_text === 'string' && row.raw_quiz_text.trim().length > 0;
+      return hasAi || hasQuiz;
+    })
+    .filter((row) => {
+      // One picker entry per lecture title (loadMaterial merges sibling banks).
+      const key = `${row.module}::${row.title}`;
+      if (seenTitles.has(key)) return false;
+      seenTitles.add(key);
+      return true;
+    })
     .map(({ id, module: rowModule, type, title, file_url }) => {
       let fileLabel = 'Resource';
       try {

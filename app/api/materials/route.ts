@@ -36,13 +36,16 @@ export async function GET(request: NextRequest) {
   const pageSize = 500;
   const materials: Record<string, unknown>[] = [];
 
-  // Exclude 'created_at' as that column does not exist on the database table
-  const columns = 'id,module,type,title,subtitle,file_url,format,source_type';
-  const baselineColumns = 'id,module,type,title,file_url,format,source_type';
+  // Public list columns. With service role we can also read bank columns to derive
+  // has_* flags for quiz/flashcard UI without exposing the bank text to the client.
+  const publicColumns = 'id,module,type,title,subtitle,file_url,format,source_type';
+  const adminColumns = `${publicColumns},ai_context,raw_quiz_text,raw_flashcard_text`;
+  const baselineColumns = 'id,module,type,title,subtitle,file_url,format,source_type';
+  const columns = admin ? adminColumns : publicColumns;
 
   let success = false;
 
-  // Attempt 1: Query with subtitle
+  // Attempt 1: Query with subtitle (+ bank columns when service role is available)
   try {
     for (let from = 0; ; from += pageSize) {
       let q = clientToQuery
@@ -64,7 +67,7 @@ export async function GET(request: NextRequest) {
     }
     success = true;
   } catch (err: any) {
-    // Attempt 2: Query without subtitle if subtitle column is missing or restricted
+    // Attempt 2: Public columns only
     materials.length = 0;
     try {
       for (let from = 0; ; from += pageSize) {
@@ -110,17 +113,31 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Normalize module names to uppercase in output
-  const normalized = materials.map((m: any) => ({
-    ...m,
-    module: typeof m.module === 'string' ? m.module.trim().toUpperCase() : m.module,
-  }));
+  // Normalize module names; expose bank presence flags only (never raw bank text).
+  const normalized = materials.map((m: any) => {
+    const hasAi = typeof m.ai_context === 'string' && m.ai_context.trim().length > 0;
+    const hasQuiz = typeof m.raw_quiz_text === 'string' && m.raw_quiz_text.trim().length > 0;
+    const hasFlash = typeof m.raw_flashcard_text === 'string' && m.raw_flashcard_text.trim().length > 0;
+    return {
+      id: m.id,
+      module: typeof m.module === 'string' ? m.module.trim().toUpperCase() : m.module,
+      type: m.type,
+      title: m.title,
+      subtitle: m.subtitle ?? null,
+      file_url: m.file_url,
+      format: m.format,
+      source_type: m.source_type ?? null,
+      has_ai_context: hasAi,
+      has_raw_quiz: hasQuiz,
+      has_raw_flashcard: hasFlash,
+    };
+  });
 
   return NextResponse.json(
     { materials: normalized, count: normalized.length },
     {
       headers: {
-        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
+        'Cache-Control': 'private, no-store',
       },
     }
   );

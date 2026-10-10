@@ -204,8 +204,18 @@ function Section({
                   );
                 })}
               </div>
-              <MaterialQuiz material={materials.find((m) => Boolean(m.raw_quiz_text?.trim() || m.ai_context?.trim())) ?? materials[0]} />
-              <MaterialFlashcards material={materials.find((m) => Boolean(m.raw_flashcard_text?.trim())) ?? materials[0]} />
+              <MaterialQuiz
+                material={
+                  materials.find((m) => m.has_raw_quiz || m.has_ai_context || Boolean(m.raw_quiz_text?.trim() || m.ai_context?.trim()))
+                  ?? materials[0]
+                }
+              />
+              <MaterialFlashcards
+                material={
+                  materials.find((m) => m.has_raw_flashcard || Boolean(m.raw_flashcard_text?.trim()))
+                  ?? materials[0]
+                }
+              />
             </div>
           ))}
         </div>

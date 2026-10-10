@@ -76,7 +76,7 @@ export default function MaterialFlashcards({ material }: { material: Pick<Materi
       });
     } catch {
       setAvailable(false);
-      setError('Could not check flashcards for this lecture.');
+      setError('Could not check flashcards for this lecture. Sign in and try again.');
     }
   }, [material.id]);
 
@@ -162,7 +162,14 @@ export default function MaterialFlashcards({ material }: { material: Pick<Materi
     );
   }
 
-  if (!available) return null;
+  if (!available) {
+    if (!error) return null;
+    return (
+      <div className="mt-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-3 text-xs text-slate-500 dark:border-white/10 dark:bg-slate-900/40">
+        {error}
+      </div>
+    );
+  }
 
   const card = cards[index];
 
@@ -171,9 +178,9 @@ export default function MaterialFlashcards({ material }: { material: Pick<Materi
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="flex items-center gap-2 text-sm font-bold text-teal-900 dark:text-teal-200">
-            <Layers className="h-4 w-4" /> Flashcards
+            <Layers className="h-4 w-4" /> Flashcards / Decks
           </h3>
-          <p className="mt-0.5 text-xs text-slate-500">Spaced repetition · free study</p>
+          <p className="mt-0.5 text-xs text-slate-500">Spaced repetition · free study · pick a deck below</p>
         </div>
         {phase !== 'lobby' && (
           <button

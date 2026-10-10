@@ -76,10 +76,26 @@ export async function GET(request: NextRequest) {
   const materials: Record<string, unknown>[] = [];
   const pageSize = 500;
 
-  // Attempt 1: Fetch comprehensive columns
+  // Optional: load one material with bank fields for the edit modal (?id=uuid)
+  const singleId = request.nextUrl.searchParams.get('id')?.trim() || '';
+  if (singleId) {
+    const { data, error } = await (clientToQuery.from('materials') as any)
+      .select(admin
+        ? '*'
+        : 'id,module,type,title,subtitle,file_url,format,source_type,ai_context,raw_quiz_text,raw_flashcard_text,custom_system_prompt')
+      .eq('id', singleId)
+      .maybeSingle();
+    if (error || !data) {
+      return NextResponse.json({ error: error?.message || 'Material not found.' }, { status: error ? 500 : 404 });
+    }
+    return NextResponse.json({ material: data }, { headers: { 'Cache-Control': 'no-store' } });
+  }
+
+  // List view: with service role use *; otherwise only columns students/staff can SELECT
+  // (AI bank columns are not granted to authenticated — including them breaks the whole list).
   const preferredColumns = admin
     ? '*'
-    : 'id,module,type,title,subtitle,file_url,format,source_type,ai_context,raw_quiz_text,raw_flashcard_text,custom_system_prompt';
+    : 'id,module,type,title,subtitle,file_url,format,source_type';
 
   let fetchError: any = null;
   for (let from = 0; ; from += pageSize) {
@@ -102,7 +118,7 @@ export async function GET(request: NextRequest) {
   if (fetchError) {
     console.warn('Preferred columns query failed, retrying with baseline columns:', fetchError.message);
     materials.length = 0;
-    const baselineColumns = 'id,module,type,title,file_url,format,source_type';
+    const baselineColumns = 'id,module,type,title,subtitle,file_url,format,source_type';
     for (let from = 0; ; from += pageSize) {
       const { data, error } = await (clientToQuery.from('materials') as any)
         .select(baselineColumns)

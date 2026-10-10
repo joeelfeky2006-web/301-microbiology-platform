@@ -91,6 +91,7 @@ export default function AdminDashboardPage() {
 
   // Upload Form state
   const [title, setTitle] = useState('');
+  const [subtitle, setSubtitle] = useState('');
   const [moduleName, setModuleName] = useState<ModuleName>('URS');
   const [type, setType] = useState<MaterialCategory>('lec_pdf');
   const [format, setFormat] = useState<MaterialFormat>('external_link');
@@ -246,6 +247,7 @@ export default function AdminDashboardPage() {
 
       const newRecord = {
         title: title.trim(),
+        subtitle: subtitle.trim() || null,
         module: moduleName,
         type,
         format,
@@ -266,6 +268,7 @@ export default function AdminDashboardPage() {
         type: 'success',
       });
       setTitle('');
+      setSubtitle('');
       setExternalUrl('');
       setAiContext('');
       setRawQuizText('');
@@ -290,7 +293,9 @@ export default function AdminDashboardPage() {
     setEditStatus({ loading: true, message: 'Saving changes...', type: 'info' });
     try {
       const source = detectSource(editingMaterial.file_url) || editingMaterial.source_type;
-      const changes = {
+      // Only send bank fields when they were loaded into the edit form.
+      // Sending null for missing keys was wiping raw_quiz / flash / AI context on save.
+      const changes: Record<string, unknown> = {
         id: editingMaterial.id,
         title: editingMaterial.title.trim(),
         module: editingMaterial.module,
@@ -299,12 +304,12 @@ export default function AdminDashboardPage() {
         source_type: source,
         file_url: editingMaterial.file_url.trim(),
         subtitle: editingMaterial.subtitle?.trim() || null,
-        ai_context: editingMaterial.ai_context?.trim() || null,
-        raw_quiz_text: editingMaterial.raw_quiz_text?.trim() || null,
-        raw_flashcard_text: editingMaterial.raw_flashcard_text?.trim() || null,
-        custom_system_prompt: editingMaterial.custom_system_prompt?.trim() || null,
         rename_all_matching: true,
       };
+      if ('ai_context' in editingMaterial) changes.ai_context = editingMaterial.ai_context?.trim() || null;
+      if ('raw_quiz_text' in editingMaterial) changes.raw_quiz_text = editingMaterial.raw_quiz_text?.trim() || null;
+      if ('raw_flashcard_text' in editingMaterial) changes.raw_flashcard_text = editingMaterial.raw_flashcard_text?.trim() || null;
+      if ('custom_system_prompt' in editingMaterial) changes.custom_system_prompt = editingMaterial.custom_system_prompt?.trim() || null;
 
       let apiSuccess = false;
       try {
@@ -331,7 +336,7 @@ export default function AdminDashboardPage() {
             .eq('module', original?.module ?? editingMaterial.module).eq('title', original?.title ?? editingMaterial.title);
           if (renameError) throw renameError;
         }
-        const { error } = await supabase.from('materials').update({
+        const clientUpdate: Record<string, unknown> = {
           title: changes.title,
           module: changes.module,
           type: changes.type,
@@ -339,11 +344,12 @@ export default function AdminDashboardPage() {
           source_type: changes.source_type,
           file_url: changes.file_url,
           subtitle: changes.subtitle,
-          ai_context: changes.ai_context,
-          raw_quiz_text: changes.raw_quiz_text,
-          raw_flashcard_text: changes.raw_flashcard_text,
-          custom_system_prompt: changes.custom_system_prompt,
-        }).eq('id', editingMaterial.id);
+        };
+        if ('ai_context' in changes) clientUpdate.ai_context = changes.ai_context;
+        if ('raw_quiz_text' in changes) clientUpdate.raw_quiz_text = changes.raw_quiz_text;
+        if ('raw_flashcard_text' in changes) clientUpdate.raw_flashcard_text = changes.raw_flashcard_text;
+        if ('custom_system_prompt' in changes) clientUpdate.custom_system_prompt = changes.custom_system_prompt;
+        const { error } = await supabase.from('materials').update(clientUpdate).eq('id', editingMaterial.id);
 
         if (error) throw error;
       }
@@ -879,7 +885,23 @@ export default function AdminDashboardPage() {
                               {/* Edit Button (Available to Super Admin and Editor) */}
                               <button
                                 type="button"
-                                onClick={() => setEditingMaterial(mat)}
+                                onClick={() => {
+                                  void (async () => {
+                                    setEditingMaterial(mat);
+                                    try {
+                                      const res = await fetch(`/api/admin/materials?id=${encodeURIComponent(mat.id)}`, {
+                                        headers: await authenticatedHeaders(),
+                                        cache: 'no-store',
+                                      });
+                                      const payload = await res.json();
+                                      if (res.ok && payload.material) {
+                                        setEditingMaterial(payload.material as Material);
+                                      }
+                                    } catch {
+                                      /* keep list row; bank fields may be empty until reload */
+                                    }
+                                  })();
+                                }}
                                 title="Edit material details"
                                 className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                               >
