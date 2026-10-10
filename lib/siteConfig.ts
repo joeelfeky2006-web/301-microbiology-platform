@@ -75,6 +75,11 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
   },
   auth: { signInTitle: 'Welcome back', signInHelp: 'Sign in to continue your MedAtlas Egypt studies.', signUpTitle: 'Create your student account', signUpHelp: 'Use your email to access MedAtlas Egypt learning resources.' },
   campaigns: { title: 'Student support', description: 'Partner offers help support learning resources.', cta: 'Learn more', url: '', discountCode: '', disclosure: 'Sponsored content', active: false },
+  ads: {
+    enabled: true,
+    showBuiltinFallbacks: true,
+    placements: { banner: true, sidebar: true, inline: true, compact: true },
+  },
 };
 
 export function mergeSiteContent(value: unknown): SiteContent {
@@ -97,5 +102,13 @@ export function mergeSiteContent(value: unknown): SiteContent {
     })) as SiteContent['pages'],
     modules: { ...DEFAULT_SITE_CONTENT.modules, ...input.modules }, auth: { ...DEFAULT_SITE_CONTENT.auth, ...input.auth },
     campaigns: { ...DEFAULT_SITE_CONTENT.campaigns, ...input.campaigns },
+    ads: {
+      ...DEFAULT_SITE_CONTENT.ads,
+      ...input.ads,
+      placements: {
+        ...DEFAULT_SITE_CONTENT.ads.placements,
+        ...(input.ads?.placements && typeof input.ads.placements === 'object' ? input.ads.placements : {}),
+      },
+    },
   };
 }

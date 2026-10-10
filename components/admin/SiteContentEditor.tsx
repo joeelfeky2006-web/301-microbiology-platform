@@ -10,11 +10,18 @@ const box = 'space-y-4 rounded-xl border border-slate-200 p-4 dark:border-white/
 const text = 'block w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white';
 const allowedNavRoutes: SiteContent['navigationOrder'] = ['home', 'modules', 'about', 'contact'];
 
+const defaultAds: SiteContent['ads'] = {
+  enabled: true,
+  showBuiltinFallbacks: true,
+  placements: { banner: true, sidebar: true, inline: true, compact: true },
+};
+
 export default function SiteContentEditor({ value, onChange, onValidityChange }: Props) {
   const [uploading, setUploading] = useState(false);
   const [jsonError, setJsonError] = useState('');
   const [sectionDraft, setSectionDraft] = useState<Record<string, string>>({});
   const [socialDraft, setSocialDraft] = useState(JSON.stringify(value.brand.social, null, 2));
+  const ads = value.ads ?? defaultAds;
   useEffect(() => {
     setSectionDraft(Object.fromEntries(Object.entries(value.pages).map(([key, page]) => [key, JSON.stringify(page.sections, null, 2)])));
     setSocialDraft(JSON.stringify(value.brand.social, null, 2));
@@ -22,6 +29,7 @@ export default function SiteContentEditor({ value, onChange, onValidityChange }:
   useEffect(() => { onValidityChange?.(!jsonError); }, [jsonError, onValidityChange]);
   const setBrand = (key: keyof SiteContent['brand'], next: string) => onChange({ ...value, brand: { ...value.brand, [key]: next } });
   const setHome = (key: keyof SiteContent['home'], next: string | string[]) => onChange({ ...value, home: { ...value.home, [key]: next } });
+  const setAds = (next: SiteContent['ads']) => onChange({ ...value, ads: next });
 
   async function uploadLogo(file?: File) {
     if (!file) return;
@@ -68,7 +76,46 @@ export default function SiteContentEditor({ value, onChange, onValidityChange }:
 
     <section className={box}><h3 className="font-bold">Auth-facing copy</h3><div className="grid gap-3 sm:grid-cols-2">{field('Sign-in heading', value.auth.signInTitle, v => onChange({ ...value, auth: { ...value.auth, signInTitle: v } }))}{field('Sign-in helper', value.auth.signInHelp, v => onChange({ ...value, auth: { ...value.auth, signInHelp: v } }))}{field('Sign-up heading', value.auth.signUpTitle, v => onChange({ ...value, auth: { ...value.auth, signUpTitle: v } }))}{field('Sign-up helper', value.auth.signUpHelp, v => onChange({ ...value, auth: { ...value.auth, signUpHelp: v } }))}</div></section>
 
-    <section className={box}><h3 className="font-bold">Campaign copy</h3><div className="grid gap-3 sm:grid-cols-2">{field('Campaign title', value.campaigns.title, v => onChange({ ...value, campaigns: { ...value.campaigns, title: v } }))}{field('Campaign description', value.campaigns.description, v => onChange({ ...value, campaigns: { ...value.campaigns, description: v } }), true)}{field('Button label', value.campaigns.cta, v => onChange({ ...value, campaigns: { ...value.campaigns, cta: v } }))}{field('Destination (HTTPS only)', value.campaigns.url, v => onChange({ ...value, campaigns: { ...value.campaigns, url: v } }))}{field('Discount code', value.campaigns.discountCode, v => onChange({ ...value, campaigns: { ...value.campaigns, discountCode: v } }))}{field('Disclosure', value.campaigns.disclosure, v => onChange({ ...value, campaigns: { ...value.campaigns, disclosure: v } }))}<label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={value.campaigns.active} onChange={e => onChange({ ...value, campaigns: { ...value.campaigns, active: e.target.checked } })} />Active</label></div></section>
+    <section className={box}>
+      <h3 className="font-bold">Ads &amp; campaigns</h3>
+      <p className="text-xs text-slate-500">Turn ads off entirely, hide individual placements, or run your own campaign copy instead of the built-in Revive/Medova cards.</p>
+      <div className="mt-3 flex flex-wrap gap-4 text-sm">
+        <label className="inline-flex items-center gap-2"><input type="checkbox" checked={ads.enabled} onChange={(e) => setAds({ ...ads, enabled: e.target.checked })} />Ads enabled</label>
+        <label className="inline-flex items-center gap-2"><input type="checkbox" checked={ads.showBuiltinFallbacks} onChange={(e) => setAds({ ...ads, showBuiltinFallbacks: e.target.checked })} />Show built-in fallback ads</label>
+        <label className="inline-flex items-center gap-2"><input type="checkbox" checked={value.campaigns.active} onChange={(e) => onChange({ ...value, campaigns: { ...value.campaigns, active: e.target.checked } })} />Use custom campaign (overrides fallbacks)</label>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-4 text-sm">
+        {(['banner', 'sidebar', 'inline', 'compact'] as const).map((slot) => (
+          <label key={slot} className="inline-flex items-center gap-2 capitalize">
+            <input
+              type="checkbox"
+              checked={ads.placements[slot]}
+              onChange={(e) => setAds({ ...ads, placements: { ...ads.placements, [slot]: e.target.checked } })}
+            />
+            {slot}
+          </label>
+        ))}
+      </div>
+      <button
+        type="button"
+        className="mt-3 rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300"
+        onClick={() => onChange({
+          ...value,
+          ads: { enabled: false, showBuiltinFallbacks: false, placements: { banner: false, sidebar: false, inline: false, compact: false } },
+          campaigns: { ...value.campaigns, active: false },
+        })}
+      >
+        Remove all ads
+      </button>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        {field('Campaign title', value.campaigns.title, (v) => onChange({ ...value, campaigns: { ...value.campaigns, title: v } }))}
+        {field('Campaign description', value.campaigns.description, (v) => onChange({ ...value, campaigns: { ...value.campaigns, description: v } }), true)}
+        {field('Button label', value.campaigns.cta, (v) => onChange({ ...value, campaigns: { ...value.campaigns, cta: v } }))}
+        {field('Destination (HTTPS only)', value.campaigns.url, (v) => onChange({ ...value, campaigns: { ...value.campaigns, url: v } }))}
+        {field('Discount code', value.campaigns.discountCode, (v) => onChange({ ...value, campaigns: { ...value.campaigns, discountCode: v } }))}
+        {field('Disclosure', value.campaigns.disclosure, (v) => onChange({ ...value, campaigns: { ...value.campaigns, disclosure: v } }))}
+      </div>
+    </section>
     {jsonError && <p role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">{jsonError}</p>}
   </div>;
 }

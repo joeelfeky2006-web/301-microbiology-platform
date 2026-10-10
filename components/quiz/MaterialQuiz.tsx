@@ -11,7 +11,11 @@ type Question = {
   id: string;
   question: string;
   options: { id: 'A' | 'B' | 'C' | 'D'; text: string }[];
+  correctAnswer?: 'A' | 'B' | 'C' | 'D' | '';
+  explanation?: string;
 };
+
+type QuizMode = 'exam' | 'practice';
 
 type PerQuestion = {
   question_id: string;
@@ -114,11 +118,13 @@ export default function MaterialQuiz({ material }: { material: Pick<Material, 'i
   const [quizChoices, setQuizChoices] = useState<QuizChoice[]>([]);
   const [available, setAvailable] = useState<boolean | null>(null);
   const [selectedQuizId, setSelectedQuizId] = useState('');
+  const [quizMode, setQuizMode] = useState<QuizMode>('practice');
   const [timedMode, setTimedMode] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [quizTitle, setQuizTitle] = useState('');
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, Question['options'][number]['id'] | ''>>({});
+  const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(false);
@@ -130,15 +136,24 @@ export default function MaterialQuiz({ material }: { material: Pick<Material, 'i
   const answersRef = useRef(answers);
   const questionsRef = useRef(questions);
   const quizIdRef = useRef(selectedQuizId);
+  const quizModeRef = useRef(quizMode);
 
   useEffect(() => { answersRef.current = answers; }, [answers]);
   useEffect(() => { questionsRef.current = questions; }, [questions]);
   useEffect(() => { quizIdRef.current = selectedQuizId; }, [selectedQuizId]);
+  useEffect(() => { quizModeRef.current = quizMode; }, [quizMode]);
 
   const selectedMeta = quizChoices.find((quiz) => quiz.id === selectedQuizId) || null;
   const question = questions[index];
   const answeredCount = useMemo(
     () => questions.filter((item) => answers[item.id]).length,
+    [answers, questions],
+  );
+  const practiceCorrectCount = useMemo(
+    () => questions.filter((item) => {
+      const choice = answers[item.id];
+      return choice && item.correctAnswer && choice === item.correctAnswer;
+    }).length,
     [answers, questions],
   );
 
@@ -183,7 +198,43 @@ export default function MaterialQuiz({ material }: { material: Pick<Material, 'i
     return () => { document.body.style.overflow = previous; };
   }, [phase]);
 
+  const finishPracticeLocally = () => {
+    const activeQuestions = questionsRef.current;
+    const currentAnswers = answersRef.current;
+    const perQuestion: PerQuestion[] = activeQuestions.map((item) => {
+      const student = currentAnswers[item.id] || '';
+      const correct = item.correctAnswer || '';
+      return {
+        question_id: item.id,
+        question: item.question,
+        is_correct: Boolean(student && correct && student === correct),
+        student_answer: student || '—',
+        correct_answer: correct || '—',
+        explanation: item.explanation || undefined,
+      };
+    });
+    const correctCount = perQuestion.filter((row) => row.is_correct).length;
+    const score = activeQuestions.length ? Math.round((correctCount / activeQuestions.length) * 100) : 0;
+    setReport({
+      module: material.module,
+      score,
+      isCorrect: score >= 70,
+      feedback: `Practice complete — ${correctCount}/${activeQuestions.length} correct. Answers were revealed as you went; nothing was submitted for grading.`,
+      diagnosticFocus: 'Self-paced practice',
+      strengths: [],
+      weaknesses: [],
+      studyRecommendations: [],
+      perQuestion,
+    });
+    setPhase('report');
+    setSecondsLeft(null);
+  };
+
   const finishQuiz = async (timedOut = false) => {
+    if (quizModeRef.current === 'practice') {
+      finishPracticeLocally();
+      return;
+    }
     const activeQuestions = questionsRef.current;
     const activeQuizId = quizIdRef.current;
     if (submittingRef.current || !activeQuizId || !activeQuestions.length) return;
@@ -236,26 +287,43 @@ export default function MaterialQuiz({ material }: { material: Pick<Material, 'i
     setLoading(true); setError('');
     try {
       const headers = await authenticatedHeaders();
-      const response = await fetch(`/api/quizzes/${encodeURIComponent(selectedQuizId)}`, { headers, cache: 'no-store' });
+      const practiceQs = quizMode === 'practice' ? '?mode=practice' : '';
+      const response = await fetch(`/api/quizzes/${encodeURIComponent(selectedQuizId)}${practiceQs}`, { headers, cache: 'no-store' });
       const data = await response.json();
       if (response.status === 401) { await redirectAfterSessionExpiry(); return; }
       if (!response.ok) { console.error('Quiz load failed:', data); setError('Could not load this quiz. Please try again.'); return; }
-      const nextQuestions: Question[] = Array.isArray(data.questions) ? data.questions : [];
+      const nextQuestions: Question[] = (Array.isArray(data.questions) ? data.questions : []).map((item: Question) => {
+        const correct = String(item.correctAnswer || '').trim().toUpperCase();
+        return {
+          id: item.id,
+          question: item.question,
+          options: item.options,
+          correctAnswer: (['A', 'B', 'C', 'D'].includes(correct) ? correct : '') as Question['correctAnswer'],
+          explanation: typeof item.explanation === 'string' ? item.explanation : '',
+        };
+      });
       if (!nextQuestions.length) { setError('This quiz has no questions yet.'); return; }
       const limit = typeof data.quiz?.time_limit_minutes === 'number' ? data.quiz.time_limit_minutes : null;
       submittingRef.current = false;
       setQuestions(nextQuestions);
       setQuizTitle(data.quiz?.title || selectedMeta?.title || 'Practice Quiz');
       setAnswers(Object.fromEntries(nextQuestions.map((item) => [item.id, ''])));
+      setRevealed({});
       setIndex(0);
       setReport(null);
-      setSecondsLeft(timedMode && limit ? limit * 60 : null);
+      setSecondsLeft(quizMode === 'exam' && timedMode && limit ? limit * 60 : null);
       setPhase('active');
     } catch {
       setError('Could not start this quiz. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const pickPracticeAnswer = (questionId: string, choice: Question['options'][number]['id']) => {
+    if (revealed[questionId]) return;
+    setAnswers((current) => ({ ...current, [questionId]: choice }));
+    setRevealed((current) => ({ ...current, [questionId]: true }));
   };
 
   const requestCritique = async () => {
@@ -291,6 +359,7 @@ export default function MaterialQuiz({ material }: { material: Pick<Material, 'i
     setPhase('lobby');
     setQuestions([]);
     setReport(null);
+    setRevealed({});
     setSecondsLeft(null);
     setError('');
   };
@@ -301,8 +370,8 @@ export default function MaterialQuiz({ material }: { material: Pick<Material, 'i
     <div className="mt-4 rounded-2xl border border-indigo-200 bg-white p-5 dark:border-indigo-900/50 dark:bg-slate-900">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h4 className="font-bold text-slate-900 dark:text-white">Lecture Practice Quiz</h4>
-          <p className="mt-1 text-xs text-slate-500">Structured quizzes only. One question at a time, full report at the end.</p>
+          <h4 className="font-bold text-slate-900 dark:text-white">Lecture quizzes</h4>
+          <p className="mt-1 text-xs text-slate-500">Practice with instant feedback, or take an exam-style run scored at the end.</p>
         </div>
       </div>
       {available === null && <p className="mt-3 text-xs text-slate-500">Checking available quizzes…</p>}
@@ -327,7 +396,20 @@ export default function MaterialQuiz({ material }: { material: Pick<Material, 'i
               ))}
             </select>
           </label>
-          {selectedMeta?.time_limit_minutes ? (
+          <fieldset className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+            <legend className="px-1 text-xs font-semibold">Mode</legend>
+            <div className="mt-1 flex flex-wrap gap-3 text-xs">
+              <label className="inline-flex items-center gap-2">
+                <input type="radio" name="quiz-mode" checked={quizMode === 'practice'} onChange={() => { setQuizMode('practice'); setTimedMode(false); }} />
+                Practice — see answers as you go
+              </label>
+              <label className="inline-flex items-center gap-2">
+                <input type="radio" name="quiz-mode" checked={quizMode === 'exam'} onChange={() => setQuizMode('exam')} />
+                Exam — score at the end
+              </label>
+            </div>
+          </fieldset>
+          {quizMode === 'exam' && selectedMeta?.time_limit_minutes ? (
             <fieldset className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
               <legend className="px-1 text-xs font-semibold">Timer</legend>
               <div className="mt-1 flex flex-wrap gap-3 text-xs">
@@ -341,6 +423,8 @@ export default function MaterialQuiz({ material }: { material: Pick<Material, 'i
                 </label>
               </div>
             </fieldset>
+          ) : quizMode === 'practice' ? (
+            <p className="text-xs text-slate-500">Practice is untimed. Correct answers and explanations appear after each choice.</p>
           ) : (
             <p className="text-xs text-slate-500">This quiz is untimed.</p>
           )}
@@ -351,7 +435,7 @@ export default function MaterialQuiz({ material }: { material: Pick<Material, 'i
             className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            Enter quiz mode
+            {quizMode === 'practice' ? 'Start practice' : 'Enter exam mode'}
           </button>
         </div>
       )}
@@ -359,13 +443,26 @@ export default function MaterialQuiz({ material }: { material: Pick<Material, 'i
     </div>
   );
 
+  const isPractice = quizMode === 'practice';
+  const questionRevealed = Boolean(question && revealed[question.id]);
+  const practiceCorrect = Boolean(
+    question?.correctAnswer && answers[question.id] && answers[question.id] === question.correctAnswer,
+  );
+
   const activePanel = phase === 'active' && mounted && question ? createPortal(
     <div className="fixed inset-0 z-[80] flex flex-col bg-slate-50 text-slate-900 dark:bg-lab-950 dark:text-slate-100">
       <header className={`flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 sm:px-6 ${secondsLeft != null && secondsLeft <= 60 ? 'border-amber-400 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/40' : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950'}`}>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Quiz mode · {material.module}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {isPractice ? 'Practice' : 'Exam'} · {material.module}
+          </p>
           <h2 className="text-lg font-black">{quizTitle}</h2>
-          <p className="text-xs text-slate-500">Question {index + 1} of {questions.length} · Answered {answeredCount}/{questions.length}</p>
+          <p className="text-xs text-slate-500">
+            Question {index + 1} of {questions.length}
+            {isPractice
+              ? ` · Correct ${practiceCorrectCount}/${answeredCount || 0}`
+              : ` · Answered ${answeredCount}/${questions.length}`}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           {secondsLeft != null && (
@@ -386,19 +483,45 @@ export default function MaterialQuiz({ material }: { material: Pick<Material, 'i
         <div className="space-y-2">
           {question.options.map((option) => {
             const checked = answers[question.id] === option.id;
+            const showKey = isPractice && questionRevealed;
+            const isCorrectOpt = showKey && question.correctAnswer === option.id;
+            const isWrongPick = showKey && checked && !isCorrectOpt;
+            const optionClass = isCorrectOpt
+              ? 'border-emerald-500 bg-emerald-50 dark:border-emerald-400 dark:bg-emerald-950/30'
+              : isWrongPick
+                ? 'border-rose-500 bg-rose-50 dark:border-rose-400 dark:bg-rose-950/30'
+                : checked
+                  ? 'border-indigo-500 bg-indigo-50 dark:border-cyan-400 dark:bg-cyan-950/30'
+                  : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900';
             return (
-              <label key={option.id} className={`flex cursor-pointer gap-3 rounded-xl border p-3.5 text-sm transition ${checked ? 'border-indigo-500 bg-indigo-50 dark:border-cyan-400 dark:bg-cyan-950/30' : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900'}`}>
+              <label
+                key={option.id}
+                className={`flex gap-3 rounded-xl border p-3.5 text-sm transition ${optionClass} ${showKey ? 'cursor-default' : 'cursor-pointer'}`}
+              >
                 <input
                   type="radio"
                   name={question.id}
                   checked={checked}
-                  onChange={() => setAnswers((current) => ({ ...current, [question.id]: option.id }))}
+                  disabled={isPractice && questionRevealed}
+                  onChange={() => {
+                    if (isPractice) pickPracticeAnswer(question.id, option.id);
+                    else setAnswers((current) => ({ ...current, [question.id]: option.id }));
+                  }}
                 />
                 <span><strong>{option.id}.</strong> {option.text}</span>
               </label>
             );
           })}
         </div>
+        {isPractice && questionRevealed && (
+          <div
+            className={`rounded-xl border p-3 text-sm ${practiceCorrect ? 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100' : 'border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-100'}`}
+            role="status"
+          >
+            <p className="font-bold">{practiceCorrect ? 'Correct' : `Incorrect — answer is ${question.correctAnswer || '—'}`}</p>
+            {question.explanation ? <p className="mt-1 text-xs opacity-90">{question.explanation}</p> : null}
+          </div>
+        )}
         {error && <p role="alert" className="text-sm text-rose-600">{error}</p>}
       </main>
 
@@ -408,13 +531,18 @@ export default function MaterialQuiz({ material }: { material: Pick<Material, 'i
             <ArrowLeft className="h-4 w-4" /> Previous
           </button>
           {index + 1 < questions.length ? (
-            <button type="button" disabled={loading} onClick={() => setIndex((value) => Math.min(questions.length - 1, value + 1))} className="inline-flex items-center gap-1 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white">
+            <button
+              type="button"
+              disabled={loading || (isPractice && !questionRevealed)}
+              onClick={() => setIndex((value) => Math.min(questions.length - 1, value + 1))}
+              className="inline-flex items-center gap-1 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-40"
+            >
               Next <ArrowRight className="h-4 w-4" />
             </button>
           ) : (
-            <button type="button" disabled={loading} onClick={() => { void finishQuiz(false); }} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-60">
+            <button type="button" disabled={loading || (isPractice && !questionRevealed)} onClick={() => { void finishQuiz(false); }} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-60">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Submit quiz
+              {isPractice ? 'Finish practice' : 'Submit quiz'}
             </button>
           )}
         </div>
@@ -428,7 +556,9 @@ export default function MaterialQuiz({ material }: { material: Pick<Material, 'i
       <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">End-of-quiz report</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              {quizMode === 'practice' ? 'Practice summary' : 'End-of-quiz report'}
+            </p>
             <h2 className="text-2xl font-black text-slate-900 dark:text-white">{quizTitle}</h2>
           </div>
           <button type="button" onClick={exitToLobby} className="rounded-lg border px-3 py-2 text-xs font-semibold">Back to lecture</button>
@@ -442,7 +572,7 @@ export default function MaterialQuiz({ material }: { material: Pick<Material, 'i
             <button type="button" onClick={() => printFullReport(report, quizTitle)} className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold">
               <Printer className="h-4 w-4" /> Print / Save PDF
             </button>
-            {!report.isCorrect && (
+            {quizMode === 'exam' && !report.isCorrect && (
               <button
                 type="button"
                 disabled={critiqueLoading || retrySeconds > 0}

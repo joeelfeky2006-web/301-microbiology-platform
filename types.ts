@@ -129,6 +129,12 @@ export interface SiteContent {
   modules: Record<ModuleName, { label: string; summary: string }>;
   auth: { signInTitle: string; signInHelp: string; signUpTitle: string; signUpHelp: string };
   campaigns: { title: string; description: string; cta: string; url: string; discountCode: string; disclosure: string; active: boolean };
+  /** Sponsored ad placements. When enabled=false, no AdSlot renders. */
+  ads: {
+    enabled: boolean;
+    showBuiltinFallbacks: boolean;
+    placements: { banner: boolean; sidebar: boolean; inline: boolean; compact: boolean };
+  };
 }
 
 export interface SupportPaymentMethod {
