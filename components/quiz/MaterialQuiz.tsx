@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, Clock, Loader2, Printer, Sparkles, X } from 'lucide-react';
 import type { Material, ModuleName } from '@/types';
 import QuizComfortCard from './ComfortCard';
+import CollapsiblePanel from '@/components/ui/CollapsiblePanel';
 import { authenticatedHeaders, redirectAfterSessionExpiry } from '@/lib/authHeaders';
 
 type Question = {
@@ -367,16 +368,24 @@ export default function MaterialQuiz({ material }: { material: Pick<Material, 'i
   if (available === false && !quizChoices.length) return <QuizComfortCard />;
 
   const lobby = (
-    <div className="mt-4 rounded-2xl border border-indigo-200 bg-white p-5 dark:border-indigo-900/50 dark:bg-slate-900">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h4 className="font-bold text-slate-900 dark:text-white">Lecture quizzes</h4>
-          <p className="mt-1 text-xs text-slate-500">Practice with instant feedback, or take an exam-style run scored at the end.</p>
-        </div>
-      </div>
-      {available === null && <p className="mt-3 text-xs text-slate-500">Checking available quizzes…</p>}
+    <CollapsiblePanel
+      accent="indigo"
+      title="Lecture quizzes"
+      subtitle="Practice or exam · tap to open"
+      meta={
+        quizChoices.length > 0 ? (
+          <span className="rounded-md bg-indigo-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200">
+            {quizChoices.length} available
+          </span>
+        ) : available === null ? (
+          <span className="text-[10px] font-semibold uppercase text-slate-400">Checking…</span>
+        ) : null
+      }
+    >
+      <p className="mb-3 text-xs text-slate-500">Practice with instant feedback, or take an exam-style run scored at the end.</p>
+      {available === null && <p className="text-xs text-slate-500">Checking available quizzes…</p>}
       {available && quizChoices.length > 0 && (
-        <div className="mt-4 space-y-3">
+        <div className="space-y-3">
           <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200">
             Choose quiz
             <select
@@ -440,7 +449,7 @@ export default function MaterialQuiz({ material }: { material: Pick<Material, 'i
         </div>
       )}
       {error && <p role="alert" className="mt-3 text-sm text-rose-600">{error}</p>}
-    </div>
+    </CollapsiblePanel>
   );
 
   const isPractice = quizMode === 'practice';

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Loader2, RotateCcw, Layers } from 'lucide-react';
 import type { Material } from '@/types';
+import CollapsiblePanel from '@/components/ui/CollapsiblePanel';
 import { authenticatedHeaders, redirectAfterSessionExpiry } from '@/lib/authHeaders';
 import type { SrsRating } from '@/lib/flashcards/srs';
 
@@ -226,16 +227,31 @@ export default function MaterialFlashcards({ material }: { material: Pick<Materi
   );
 
   return (
-    <div className="mt-4 rounded-xl border border-teal-200 bg-gradient-to-br from-teal-50/80 to-white p-4 dark:border-teal-900/40 dark:from-teal-950/30 dark:to-slate-900">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="flex items-center gap-2 text-sm font-bold text-teal-900 dark:text-teal-200">
-            <Layers className="h-4 w-4" /> Flashcards / Decks
-          </h3>
-          <p className="mt-0.5 text-xs text-slate-500">
-            Spaced repetition · cards return when due · Again / Hard / Good / Easy
-          </p>
-        </div>
+    <CollapsiblePanel
+      accent="teal"
+      title={
+        <span className="inline-flex items-center gap-2">
+          <Layers className="h-4 w-4" /> Flashcards / Decks
+        </span>
+      }
+      subtitle="Spaced repetition · tap to open"
+      meta={
+        lobbyStats ? (
+          <span className="rounded-md bg-teal-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-teal-800 dark:bg-teal-950 dark:text-teal-200">
+            {lobbyStats.due + lobbyStats.new} due
+          </span>
+        ) : rawCardCount > 0 || decks.length > 0 ? (
+          <span className="rounded-md bg-teal-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-teal-800 dark:bg-teal-950 dark:text-teal-200">
+            {rawCardCount || decks.length} cards
+          </span>
+        ) : null
+      }
+      forceOpen={phase !== 'lobby'}
+    >
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <p className="text-xs text-slate-500">
+          Spaced repetition · cards return when due · Again / Hard / Good / Easy
+        </p>
         {phase !== 'lobby' && (
           <button
             type="button"
@@ -244,7 +260,7 @@ export default function MaterialFlashcards({ material }: { material: Pick<Materi
               setCards([]);
               void refreshLobby();
             }}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700"
+            className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-teal-700"
           >
             <RotateCcw className="h-3.5 w-3.5" /> Lobby
           </button>
@@ -252,13 +268,13 @@ export default function MaterialFlashcards({ material }: { material: Pick<Materi
       </div>
 
       {error && (
-        <p role="alert" className="mt-3 text-sm text-rose-600">
+        <p role="alert" className="mb-3 text-sm text-rose-600">
           {error}
         </p>
       )}
 
       {phase === 'lobby' && (
-        <div className="mt-3 space-y-3">
+        <div className="space-y-3">
           <label className="block text-xs font-semibold text-slate-600">
             Deck
             <select
@@ -304,7 +320,7 @@ export default function MaterialFlashcards({ material }: { material: Pick<Materi
       )}
 
       {phase === 'study' && card && (
-        <div className="mt-3 space-y-3">
+        <div className="space-y-3">
           <div className="flex items-center justify-between text-xs text-slate-500">
             <span>{sessionTitle}</span>
             <span>
@@ -350,7 +366,7 @@ export default function MaterialFlashcards({ material }: { material: Pick<Materi
       )}
 
       {phase === 'done' && (
-        <div className="mt-3 space-y-3 text-center">
+        <div className="space-y-3 text-center">
           <p className="text-sm font-semibold text-teal-900 dark:text-teal-200">
             {reviewed > 0
               ? `Session complete — ${reviewed} card${reviewed === 1 ? '' : 's'} reviewed.`
@@ -373,6 +389,6 @@ export default function MaterialFlashcards({ material }: { material: Pick<Materi
           </button>
         </div>
       )}
-    </div>
+    </CollapsiblePanel>
   );
 }
