@@ -48,4 +48,4 @@ Save it and practise all 5 in the URS question bank. Educational use only.
 ## Stories
 - Teasers before launch: `story-t1-teaser`, `story-t2-teaser` (add a countdown sticker).
 - Launch day: `s1-reveal` → `s2-live` (link sticker over the arrow) → `s3-poll` (poll sticker: CNS / URS / REP) → `s4-quiz` (quiz sticker: E. coli · Proteus · Klebsiella) → `s4b-answer` → `s5-first-pulse` (link sticker) → `s6-channel` (link sticker to the WhatsApp Channel).
-- Highlights: `hl-start`, `hl-dr-atlas`, `hl-exam-packs`, `hl-first-pulse`, `hl-wins`, `hl-faq`. Profile picture: `pfp-01`.
+- Highlights: `hl-start`, `hl-dr-atlas`, `hl-exam-packs`, `hl-first-pulse`, `hl-wins`, `hl-faq`. Profile picture: `pfp-01` (logo + MedAtlas EGYPT in Space Grotesk, blue); alternative `pfp-02-dark`.
