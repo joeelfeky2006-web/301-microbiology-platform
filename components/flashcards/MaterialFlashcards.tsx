@@ -17,7 +17,7 @@ type StudyCard = {
   isNew?: boolean;
 };
 
-type Stats = { due: number; new: number; learned: number; total: number };
+type Stats = { due: number; new: number; learned: number; total: number; next_due_at?: string | null };
 
 type Phase = 'lobby' | 'study' | 'done';
 
@@ -28,11 +28,26 @@ const RATINGS: { id: SrsRating; label: string; className: string }[] = [
   { id: 'easy', label: 'Easy', className: 'bg-blue-600 hover:bg-blue-700' },
 ];
 
+function formatNextDue(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const ms = Date.parse(iso);
+  if (!Number.isFinite(ms)) return null;
+  const diff = ms - Date.now();
+  if (diff <= 0) return 'now';
+  const mins = Math.round(diff / 60_000);
+  if (mins < 60) return `in ~${Math.max(1, mins)} min`;
+  const hours = Math.round(mins / 60);
+  if (hours < 36) return `in ~${hours} hour${hours === 1 ? '' : 's'}`;
+  const days = Math.round(hours / 24);
+  return `in ~${days} day${days === 1 ? '' : 's'}`;
+}
+
 export default function MaterialFlashcards({ material }: { material: Pick<Material, 'id' | 'module' | 'title'> }) {
   const [phase, setPhase] = useState<Phase>('lobby');
   const [decks, setDecks] = useState<DeckChoice[]>([]);
   const [hasRawBank, setHasRawBank] = useState(false);
   const [rawCardCount, setRawCardCount] = useState(0);
+  const [lobbyStats, setLobbyStats] = useState<Stats | null>(null);
   const [available, setAvailable] = useState<boolean | null>(null);
   const [selected, setSelected] = useState<'raw' | string>('');
   const [cards, setCards] = useState<StudyCard[]>([]);
@@ -46,6 +61,7 @@ export default function MaterialFlashcards({ material }: { material: Pick<Materi
   const [ratingBusy, setRatingBusy] = useState(false);
   const [error, setError] = useState('');
   const [reviewed, setReviewed] = useState(0);
+  const [sessionNextDue, setSessionNextDue] = useState<string | null>(null);
 
   const refreshLobby = useCallback(async () => {
     setError('');
@@ -66,6 +82,7 @@ export default function MaterialFlashcards({ material }: { material: Pick<Materi
       setDecks(nextDecks);
       setHasRawBank(raw);
       setRawCardCount(Number(data.raw_card_count) || 0);
+      setLobbyStats(data.raw_stats && typeof data.raw_stats === 'object' ? data.raw_stats as Stats : null);
       if (typeof data.material_id === 'string') setBankMaterialId(data.material_id);
       setAvailable(raw || nextDecks.length > 0);
       setSelected((current) => {
@@ -102,8 +119,10 @@ export default function MaterialFlashcards({ material }: { material: Pick<Materi
       }
       if (!response.ok) throw new Error(data.error || 'Could not load cards.');
       const queue = Array.isArray(data.cards) ? data.cards : [];
+      const nextStats = (data.stats || null) as Stats | null;
       setCards(queue);
-      setStats(data.stats || null);
+      setStats(nextStats);
+      setSessionNextDue(nextStats?.next_due_at || null);
       setSessionTitle(data.deck?.title || 'Flashcards');
       setDeckId(typeof data.deck?.id === 'string' ? data.deck.id : null);
       if (typeof data.deck?.material_id === 'string') setBankMaterialId(data.deck.material_id);
@@ -140,8 +159,36 @@ export default function MaterialFlashcards({ material }: { material: Pick<Materi
         return;
       }
       if (!response.ok) throw new Error(data.error || 'Could not save review.');
+
+      const dueAt = typeof data.progress?.due_at === 'string' ? data.progress.due_at : null;
+      if (dueAt) {
+        const dueMs = Date.parse(dueAt);
+        if (Number.isFinite(dueMs) && dueMs > Date.now()) {
+          setSessionNextDue((prev) => {
+            if (!prev) return dueAt;
+            const prevMs = Date.parse(prev);
+            return Number.isFinite(prevMs) && dueMs < prevMs ? dueAt : prev;
+          });
+        }
+      }
+
       setReviewed((n) => n + 1);
       setFlipped(false);
+
+      // "Again" → move card to end of this session queue (still due again in ~10 min later).
+      if (rating === 'again') {
+        const restLength = cards.length - 1;
+        setCards((prev) => {
+          const rest = prev.filter((_, i) => i !== index);
+          return [...rest, { ...card, isNew: false }];
+        });
+        if (index >= restLength) {
+          setPhase('done');
+        }
+        // else: same index now points at the next card that slid forward
+        return;
+      }
+
       if (index + 1 >= cards.length) {
         setPhase('done');
       } else {
@@ -172,6 +219,11 @@ export default function MaterialFlashcards({ material }: { material: Pick<Materi
   }
 
   const card = cards[index];
+  const displayStats = selected === 'raw' ? lobbyStats : stats;
+  const dueNow = (displayStats?.due || 0) + (displayStats?.new || 0);
+  const nextDueLabel = formatNextDue(
+    phase === 'done' ? sessionNextDue || displayStats?.next_due_at : displayStats?.next_due_at,
+  );
 
   return (
     <div className="mt-4 rounded-xl border border-teal-200 bg-gradient-to-br from-teal-50/80 to-white p-4 dark:border-teal-900/40 dark:from-teal-950/30 dark:to-slate-900">
@@ -180,7 +232,9 @@ export default function MaterialFlashcards({ material }: { material: Pick<Materi
           <h3 className="flex items-center gap-2 text-sm font-bold text-teal-900 dark:text-teal-200">
             <Layers className="h-4 w-4" /> Flashcards / Decks
           </h3>
-          <p className="mt-0.5 text-xs text-slate-500">Spaced repetition · free study · pick a deck below</p>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Spaced repetition · cards return when due · Again / Hard / Good / Easy
+          </p>
         </div>
         {phase !== 'lobby' && (
           <button
@@ -224,13 +278,27 @@ export default function MaterialFlashcards({ material }: { material: Pick<Materi
               ))}
             </select>
           </label>
+          {selected === 'raw' && lobbyStats && (
+            <p className="text-xs text-slate-600 dark:text-slate-300">
+              <span className="font-semibold text-teal-800 dark:text-teal-200">{lobbyStats.due + lobbyStats.new}</span> ready now
+              {' · '}
+              <span className="font-semibold">{lobbyStats.learned}</span> waiting (scheduled)
+              {lobbyStats.next_due_at && lobbyStats.due + lobbyStats.new === 0 && (
+                <> · next review {formatNextDue(lobbyStats.next_due_at)}</>
+              )}
+            </p>
+          )}
           <button
             type="button"
             disabled={loading || !selected}
             onClick={() => void startSession()}
             className="w-full rounded-lg bg-teal-600 py-2.5 text-sm font-bold text-white disabled:opacity-50"
           >
-            {loading ? 'Loading…' : 'Study due cards'}
+            {loading
+              ? 'Loading…'
+              : selected === 'raw' && lobbyStats && dueNow === 0
+                ? 'Check schedule'
+                : `Study due cards${selected === 'raw' && lobbyStats ? ` (${dueNow})` : ''}`}
           </button>
         </div>
       )}
@@ -284,7 +352,14 @@ export default function MaterialFlashcards({ material }: { material: Pick<Materi
       {phase === 'done' && (
         <div className="mt-3 space-y-3 text-center">
           <p className="text-sm font-semibold text-teal-900 dark:text-teal-200">
-            {reviewed > 0 ? `Session complete — ${reviewed} card${reviewed === 1 ? '' : 's'} reviewed.` : 'Nothing due right now. Come back later.'}
+            {reviewed > 0
+              ? `Session complete — ${reviewed} card${reviewed === 1 ? '' : 's'} reviewed.`
+              : 'Nothing due right now.'}
+          </p>
+          <p className="text-xs text-slate-500">
+            {nextDueLabel
+              ? `Spaced repetition is working — next cards come back ${nextDueLabel}.`
+              : 'Rate cards Good/Easy to schedule them for later. Come back when they are due.'}
           </p>
           <button
             type="button"

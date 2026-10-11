@@ -48,7 +48,8 @@ export default function PublishMaterial({ materials, onPublished }: { materials:
   const parsedQuizCount = useMemo(() => (quizText.trim() ? parseBank(quizText).length : 0), [quizText]);
   const parsedFlashcardCount = useMemo(() => (flashcardText.trim() ? parseFlashcardBank(flashcardText).length : 0), [flashcardText]);
 
-  const resetResource = () => { setSubtitle(''); setFile(null); setUrl(''); setFileInputKey((k) => k + 1); setSaved(true); };
+  /** Keep subtitle when adding another file to the same lecture — only clear file/URL. */
+  const resetResource = () => { setFile(null); setUrl(''); setFileInputKey((k) => k + 1); setSaved(true); };
   const submit = async (event: React.FormEvent) => {
     event.preventDefault(); setNotice(''); setIsError(false);
     const cleanTitle = (attach ? title : title.trim().replace(/\s+/g, ' '));

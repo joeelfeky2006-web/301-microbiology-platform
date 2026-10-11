@@ -220,6 +220,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Only columns that exist on public.materials (no author_email — that column is not in DB).
   const recordToInsert: Record<string, unknown> = {
     title,
     module: moduleName,
@@ -228,7 +229,6 @@ export async function POST(request: NextRequest) {
     file_url: fileUrl,
     source_type: sourceType,
     subtitle: subtitle || null,
-    author_email: identity.email || null,
     ai_context: aiContext || null,
     raw_quiz_text: rawQuizText || null,
     raw_flashcard_text: rawFlashcardText || null,
@@ -242,19 +242,20 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   if (error) {
-    // If error is column missing (e.g. subtitle or ai_context), try fallback insert with minimal schema
-    console.warn('Full insert failed, trying minimal columns insert:', error.message);
-    const minimalRecord = {
+    // Retry without AI/bank columns if schema is older — always keep subtitle.
+    console.warn('Full insert failed, trying core columns insert:', error.message);
+    const coreRecord = {
       title,
       module: moduleName,
       type,
       format,
       file_url: fileUrl,
       source_type: sourceType,
+      subtitle: subtitle || null,
     };
     const { data: fallbackData, error: fallbackError } = await db
       .from('materials')
-      .insert([minimalRecord])
+      .insert([coreRecord])
       .select()
       .maybeSingle();
 
