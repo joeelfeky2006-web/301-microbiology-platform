@@ -1,0 +1,191 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: "Space Grotesk"; src: url("SpaceGrotesk-Variable.ttf"); font-weight: 300 700; }
+@font-face { font-family: "Inter"; src: url("Inter-Variable.ttf"); font-weight: 100 900; }
+@font-face { font-family: "Plex Arabic"; src: url("IBMPlexSansArabic-Regular.ttf"); font-weight: 400; }
+@font-face { font-family: "Plex Arabic"; src: url("IBMPlexSansArabic-SemiBold.ttf"); font-weight: 600; }
+@font-face { font-family: "Plex Arabic"; src: url("IBMPlexSansArabic-Bold.ttf"); font-weight: 700; }
+@font-face { font-family: "Plex Mono"; src: url("IBMPlexMono-Medium.ttf"); font-weight: 500; }
+@page { size: A4; margin: 14mm 15mm 14mm; @bottom-right { content: counter(page) ' / ' counter(pages); font: 500 7.8pt 'Plex Mono'; color: #8A97B3; } @bottom-left { content: 'MedAtlas Egypt · publishing schedule · all times Cairo (UTC+3)'; font: 500 7.8pt 'Plex Mono'; color: #8A97B3; } }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font: 400 10.6pt/1.45 "Inter", "Plex Arabic", "Noto Color Emoji", sans-serif; color: #0B1230; }
+.page { } .page.capstart { break-before: page; }
+tr, .box, .note, h2 { break-inside: avoid; } h2 { break-after: avoid; }
+.page:last-child { page-break-after: auto; }
+.head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 5mm; border-bottom: 1px solid #E3E8F3; margin-bottom: 6mm; }
+.head img { height: 8mm; }
+.tagline { font: 500 8pt "Plex Mono"; letter-spacing: .08em; color: #5B6B8C; text-transform: uppercase; }
+h1 { font: 700 25pt/1.1 "Space Grotesk"; letter-spacing: -.02em; }
+h2 { font: 700 14.5pt/1.2 "Space Grotesk"; margin: 6.5mm 0 3mm; display: flex; align-items: center; gap: 3mm; }
+.lead { color: #4A5878; margin-top: 2.5mm; }
+.day { display: inline-block; font: 600 8.5pt "Plex Mono"; letter-spacing: .06em; color: #fff; background: linear-gradient(135deg, #2350FF, #5B3DF5); padding: 1.2mm 3mm; border-radius: 99px; }
+.day.night { background: #0B1230; }
+.note { background: #0B1230; color: #fff; border-radius: 4mm; padding: 4mm 5mm; margin-top: 5mm; }
+.note b { color: #21E3C0; }
+table { width: 100%; border-collapse: collapse; }
+td, th { padding: 2.2mm 2.4mm; border-top: 1px solid #E3E8F3; vertical-align: top; text-align: left; }
+th { font: 500 7.8pt "Plex Mono"; letter-spacing: .08em; text-transform: uppercase; color: #5B6B8C; border-top: 0; padding-bottom: 1.5mm; }
+td.t { font: 700 10.5pt "Space Grotesk"; white-space: nowrap; width: 19mm; color: #2350FF; }
+td.f { font: 500 8.3pt "Plex Mono"; color: #4A5878; width: 44mm; word-break: break-word; }
+tr.key td { background: #F2F5FF; }
+.tag { display: inline-block; font: 600 7.4pt "Plex Mono"; letter-spacing: .05em; padding: .5mm 2mm; border-radius: 99px; margin-right: 1.5mm; vertical-align: 1px; }
+.post { background: #E6ECFF; color: #2350FF; } .story { background: #E9FBF7; color: #0B8F75; } .wa { background: #E7F9EE; color: #128C4A; } .task { background: #EEF0F5; color: #4A5878; }
+.ar { font-family: "Plex Arabic"; direction: rtl; unicode-bidi: isolate; }
+.cap { border: 1px solid #E3E8F3; border-radius: 3.5mm; padding: 3mm 4mm; margin-bottom: 2.6mm; break-inside: avoid; }
+.cap .ttl { font: 700 10.5pt "Space Grotesk"; display: flex; justify-content: space-between; }
+.cap .ttl span { font: 500 8pt "Plex Mono"; color: #5B6B8C; }
+.cap p { margin-top: 1.2mm; }
+.cap p.ar { text-align: right; }
+ul { padding-left: 5mm; } li { margin: 1mm 0; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+.box { border: 1px solid #E3E8F3; border-radius: 3.5mm; padding: 4mm; }
+.box h3 { font: 700 11pt "Space Grotesk"; margin-bottom: 1.5mm; }
+.check li { list-style: none; position: relative; padding-left: 1mm; }
+.check li::before { content: ""; position: absolute; left: -5mm; top: 1.3mm; width: 3mm; height: 3mm; border: 1.4px solid #2350FF; border-radius: .8mm; }
+.foot { position: absolute; left: 15mm; right: 15mm; bottom: 8mm; display: flex; justify-content: space-between; font: 500 7.8pt "Plex Mono"; color: #8A97B3; }
+</style></head><body>
+
+<!-- ================================================================ 1 -->
+<section class="page">
+  <div class="head"><img src="logo.svg"><span class="tagline">Instagram + WhatsApp · launch schedule</span></div>
+  <h1>Publishing schedule</h1>
+  <p class="lead">Every post, story and channel update with its date, Cairo time, file and sticker. Files are in the zip folders <b>1-profile-picture</b> to <b>4-stories</b>; full captions are at the end, ready to copy.</p>
+
+  <div class="note"><b>Why 8 PM?</b> Egyptian students are most active on Instagram between 8 and 11 PM, so every grid post goes out at 8:00 PM Cairo time. Stories fill the rest of the evening. Reply to every comment and DM in the first hour after each post; that is what pushes the post to more people.</div>
+
+  <h2><span class="day night">TONIGHT · SUN 11 → MON 12 OCT</span> Set up, then tease</h2>
+  <table>
+    <tr><th>Time</th><th>What</th><th>File</th></tr>
+    <tr><td class="t">Now</td><td><span class="tag task">PROFILE</span>Switch @medatlas_eg to a Professional account (Education). Upload the profile picture, paste the name, bio and links from “Copy for the profile and channel”.</td><td class="f">1-profile-picture/ pfp-01.png</td></tr>
+    <tr><td class="t">Now</td><td><span class="tag wa">CHANNEL</span>Set the WhatsApp Channel icon (same picture), name and description from the same section.</td><td class="f">pfp-01.png</td></tr>
+    <tr class="key"><td class="t">Before 2 AM</td><td><span class="tag story">STORY</span><b>Teaser 1:</b> "Something is pulsing…". Add a <b>countdown sticker</b>: "MedAtlas Egypt · Mon 12 Oct, 8:00 PM". Stories stay up 24 h, so it's seen in the morning.</td><td class="f">4-stories/ story-t1-teaser.png</td></tr>
+  </table>
+
+  <h2><span class="day">DAY 1 · MON 12 OCT</span> Launch day</h2>
+  <table>
+    <tr><th>Time</th><th>What</th><th>File</th></tr>
+    <tr><td class="t">3:00 PM</td><td><span class="tag story">STORY</span><b>Teaser 2:</b> "Three peaks. One idea." + question sticker "Guess what's coming? خمّن إيه اللي جاي؟"</td><td class="f">story-t2-teaser.png</td></tr>
+    <tr><td class="t">5:00 PM</td><td><span class="tag task">REPS</span>Send class reps the teaser + channel link; ask them to share in batch groups at 8:15 PM.</td><td class="f">—</td></tr>
+    <tr><td class="t">7:45 PM</td><td><span class="tag task">CHECK</span>Open the site on your phone: sign up works, links in bio open, WhatsApp Channel link opens.</td><td class="f">—</td></tr>
+    <tr class="key"><td class="t">8:00 PM</td><td><span class="tag post">POST 1</span><b>Launch.</b> Pin it.</td><td class="f">3-posts/post-01-launch</td></tr>
+    <tr><td class="t">8:05 PM</td><td><span class="tag story">STORY</span><b>S1</b> reveal, then <b>S2</b> "We're live" with a <b>link sticker</b> (site) over the arrow.</td><td class="f">story-s1-reveal · story-s2-live</td></tr>
+    <tr><td class="t">8:15 PM</td><td><span class="tag wa">CHANNEL</span>First update: "MedAtlas Egypt نزل رسمي 🚀" + site link + the launch image. Reps share now.</td><td class="f">post-01-launch.png</td></tr>
+    <tr class="key"><td class="t">8:30 PM</td><td><span class="tag post">POST 2</span><b>How it works</b> (7 slides). Pin it.</td><td class="f">3-posts/post-02-how</td></tr>
+    <tr class="key"><td class="t">9:00 PM</td><td><span class="tag post">POST 3</span><b>First Pulse.</b> Pin it. The first grid row is now full.</td><td class="f">3-posts/post-03-first-pulse</td></tr>
+    <tr><td class="t">9:05 PM</td><td><span class="tag story">STORY</span><b>S5</b> First Pulse + <b>link sticker</b> (sign-up page).</td><td class="f">story-s5-first-pulse</td></tr>
+    <tr><td class="t">9:30 PM</td><td><span class="tag story">STORY</span><b>S3</b> + <b>poll sticker</b>: CNS / URS / REP. The result decides the next exam-pack content.</td><td class="f">story-s3-poll</td></tr>
+    <tr><td class="t">10:00 PM</td><td><span class="tag story">STORY</span><b>S6</b> + <b>link sticker</b> to the WhatsApp Channel.</td><td class="f">story-s6-channel</td></tr>
+    <tr><td class="t">10:15 PM</td><td><span class="tag task">HIGHLIGHTS</span>Start Here ← S1, S2, S6 · First Pulse ← S5. Set the covers (see “Highlights”).</td><td class="f">2-highlight-covers/</td></tr>
+  </table>
+</section>
+
+<!-- ================================================================ 2 -->
+<section class="page">
+  
+
+  <h2><span class="day">DAYS 2–11</span> One post a day at 8 PM, with breaks</h2>
+  <table>
+    <tr><th>Day</th><th>Time</th><th>What</th><th>File</th></tr>
+    <tr class="key"><td class="t">Tue 13</td><td class="t">8:00 PM</td><td><span class="tag post">POST 4</span><b>Dr. Atlas</b> (4 slides). Share it to your story.</td><td class="f">post-04-dr-atlas</td></tr>
+    <tr><td class="t">Tue 13</td><td class="t">9:30 PM</td><td><span class="tag story">STORY</span>Question box: "Ask Dr. Atlas anything · اسأل Dr. Atlas". Add to Dr. Atlas highlight.</td><td class="f">—</td></tr>
+    <tr class="key"><td class="t">Wed 14</td><td class="t">8:00 PM</td><td><span class="tag post">POST 5</span><b>Exam packs</b> (5 slides). Story: share the poll result from day 1.</td><td class="f">post-05-exam-packs</td></tr>
+    <tr class="key"><td class="t">Thu 15</td><td class="t">8:00 PM</td><td><span class="tag post">POST 6</span><b>CSF table.</b> Ask people to save it. Also send it as the channel update.</td><td class="f">post-06-csf</td></tr>
+    <tr><td class="t">Fri 16</td><td class="t">—</td><td><span class="tag task">BREAK</span>No post. Reply to DMs, reshare students' stories.</td><td class="f">—</td></tr>
+    <tr class="key"><td class="t">Sat 17</td><td class="t">8:00 PM</td><td><span class="tag post">POST 7</span><b>Case of the week.</b> Answers go in the comments; reply to the first ones.</td><td class="f">post-07-case</td></tr>
+    <tr><td class="t">Sun 18</td><td class="t">8:00 PM</td><td><span class="tag story">STORY</span>Share post 7 to story: "Answer is on slide 2 · الإجابة في السلايد التانية".</td><td class="f">—</td></tr>
+    <tr class="key"><td class="t">Mon 19</td><td class="t">8:00 PM</td><td><span class="tag post">POST 8</span><b>Logo story</b> (5 slides).</td><td class="f">post-08-logo-story</td></tr>
+    <tr><td class="t">Tue 20</td><td class="t">—</td><td><span class="tag task">BREAK</span>Stories only.</td><td class="f">—</td></tr>
+    <tr class="key"><td class="t">Wed 21</td><td class="t">8:00 PM</td><td><span class="tag post">POST 9</span><b>UTI organisms</b> (7 slides). The 3×3 grid is complete.</td><td class="f">post-09-uti</td></tr>
+    <tr><td class="t">Wed 21</td><td class="t">8:15 PM</td><td><span class="tag story">STORY</span><b>S4</b> + <b>quiz sticker</b>: E. coli ✓ · Proteus · Klebsiella.</td><td class="f">story-s4-quiz</td></tr>
+    <tr><td class="t">Thu 22</td><td class="t">2:00 PM</td><td><span class="tag story">STORY</span><b>S4b</b> answer (points to post 9). Add S4 + S4b to the FAQ highlight.</td><td class="f">story-s4b-answer</td></tr>
+  </table>
+
+  <h2>Copy for the profile and channel</h2>
+  <div class="cols">
+    <div class="box"><h3>Instagram</h3>
+      <p><b>Name:</b> MedAtlas Egypt | AI Med Study</p>
+      <p style="margin-top:1.5mm"><b>Bio:</b><br>AI study lab for Egyptian med students<br>Micro 301 beta · cases, quizzes, Dr. Atlas<br><span class="ar">سجّل ببلاش دلوقتي وخد شارة First Pulse ↓</span></p>
+      <p style="margin-top:1.5mm"><b>Link 1:</b> site + <span style="font:500 8pt 'Plex Mono'">?utm_source=instagram&amp;utm_medium=bio</span><br><b>Link 2:</b> WhatsApp Channel</p>
+      <p style="margin-top:1.5mm"><b>Pin:</b> posts 1, 2, 3</p>
+    </div>
+    <div class="box"><h3>WhatsApp Channel</h3>
+      <p><b>Name:</b> MedAtlas Egypt</p>
+      <p style="margin-top:1.5mm"><b>Description:</b><br>High-yield Micro 301 notes, Dr. Atlas cases and exam reminders · <span class="ar">كل جديد MedAtlas هنا</span> + site link</p>
+      <p style="margin-top:1.5mm"><b>Rule:</b> one update a day at most, so followers don't mute it.</p>
+    </div>
+  </div>
+
+  <h2>Highlights (cover → stories)</h2>
+  <table>
+    <tr><td class="f">hl-start</td><td><b>Start Here</b>: S1, S2, S6</td><td class="f">hl-first-pulse</td><td><b>First Pulse</b>: S5, students' badge reshares</td></tr>
+    <tr><td class="f">hl-dr-atlas</td><td><b>Dr. Atlas</b>: question-box answers</td><td class="f">hl-exam-packs</td><td><b>Exam Packs</b>: post 5 share</td></tr>
+    <tr><td class="f">hl-faq</td><td><b>FAQ</b>: S4, S4b, common DM questions</td><td class="f">hl-wins</td><td><b>Wins</b>: students' messages and results (start once you have them)</td></tr>
+  </table>
+
+  <div class="note" style="margin-top:6mm"><b>Every day after launch:</b> one story minimum (quiz, question box or reshare), reply to DMs within the day, and at most one channel update. Reels come next, with music only and no voiceover.</div>
+</section>
+
+<!-- ================================================================ 3 -->
+<section class="page capstart">
+  
+  <h2 style="margin-top:0">Captions</h2>
+  <p class="lead" style="margin:-1mm 0 4mm">Add 5–8 hashtags at the end of each: #MedAtlasEgypt #Micro301 #MedicalStudents #طلاب_طب #Microbiology #MedStudentEgypt #HighYield #DrAtlas</p>
+
+  <div class="cap"><div class="ttl">1 · Launch <span>Mon 12 · 8:00 PM</span></div>
+    <p>MedAtlas Egypt is live. 🚀<br>Cases, quizzes and high-yield notes for Micro 301, with Dr. Atlas, your AI tutor.<br>Sign up is free now. Link in bio.</p>
+    <p class="ar">نزلنا رسمي! مكان واحد فيه كل اللي محتاجه في Micro 301: ملخصات مركّزة، حالات مرضية مع Dr. Atlas، وكويزات بتصحيح خطوة بخطوة. سجّل ببلاش دلوقتي، والرابط في الوصف.</p></div>
+
+  <div class="cap"><div class="ttl">2 · How it works <span>Mon 12 · 8:30 PM</span></div>
+    <p>5 steps and you're in. 👇<br>Sign up → pick a system → solve a case → test yourself → daily Atlas Credits.<br>Save it and share it with your batch.</p>
+    <p class="ar">٥ خطوات وتبدأ: سجّل، اختار الجهاز (CNS · URS · REP)، حلّ حالات مرضية مع Dr. Atlas، اختبر نفسك، وكل يوم عندك رصيد جديد. ابعته لدفعتك.</p></div>
+
+  <div class="cap"><div class="ttl">3 · First Pulse <span>Mon 12 · 9:00 PM</span></div>
+    <p>Your first pulse on MedAtlas. 💙<br>Sign up now and get the First Pulse badge on your profile, for beta students only. Link in bio.</p>
+    <p class="ar">أول نبضة في MedAtlas هي إنت. سجّل دلوقتي وخد شارة First Pulse على بروفايلك، لطلاب النسخة التجريبية بس.</p></div>
+
+  <div class="cap"><div class="ttl">4 · Dr. Atlas <span>Tue 13 · 8:00 PM</span></div>
+    <p>Meet Dr. Atlas ✦<br>Ask anything from your lectures and practise bedside cases step by step.<br>AI can make mistakes, so always check against your course material.</p>
+    <p class="ar">قابل Dr. Atlas: اسأله في أي حاجة من المحاضرات واتمرّن على حالات مرضية خطوة بخطوة. راجع دايماً على المحاضرات.</p></div>
+
+  <div class="cap"><div class="ttl">5 · Exam packs <span>Wed 14 · 8:00 PM</span></div>
+    <p>One pack per system: CNS, URS, REP. 📚<br>High-yield notes, recordings, mind maps, question bank and Dr. Atlas cases, all in one place.</p>
+    <p class="ar">مراجعة الامتحان لكل جهاز: ملخصات وتسجيلات وخرايط ذهنية وبنك أسئلة وحالات مع Dr. Atlas، كله في مكان واحد.</p></div>
+</section>
+
+<!-- ================================================================ 4 -->
+<section class="page">
+  
+
+  <div class="cap"><div class="ttl">6 · CSF table <span>Thu 15 · 8:00 PM</span></div>
+    <p>CSF in meningitis: bacterial vs viral vs TB. 🧠<br>Save it for revision night. Educational use only; check with your course notes.</p>
+    <p class="ar">احفظ الجدول ده قبل الامتحان، واعمله حفظ عشان ترجعله ليلة المراجعة.</p></div>
+
+  <div class="cap"><div class="ttl">7 · Case of the week <span>Sat 17 · 8:00 PM</span></div>
+    <p>Fever, headache, neck stiffness and a petechial rash. Gram-negative diplococci in the CSF.<br>What's the organism? 👇 Answer on slide 2.</p>
+    <p class="ar">إيه الميكروب؟ اكتب إجابتك في التعليقات قبل ما تشوف السلايد التانية.</p></div>
+
+  <div class="cap"><div class="ttl">8 · Logo story <span>Mon 19 · 8:00 PM</span></div>
+    <p>Why our logo looks like this. 🇪🇬<br>A pulse, three Giza pyramids and an AI spark. Built in Egypt, for Egyptian students.</p>
+    <p class="ar">حكاية الشعار: نبض، والأهرامات التلاتة، وشرارة الذكاء الاصطناعي. معمول في مصر، لطلاب مصر.</p></div>
+
+  <div class="cap"><div class="ttl">9 · UTI organisms <span>Wed 21 · 8:00 PM</span></div>
+    <p>5 UTI organisms you must know. 💧<br>Save it and practise all 5 in the URS question bank. Educational use only.</p>
+    <p class="ar">لازم تعرفهم قبل الامتحان. اعمله حفظ واتمرّن عليهم في بنك أسئلة URS.</p></div>
+
+  <h2>Before you press Share</h2>
+  <div class="cols">
+    <div class="box"><h3>Every post</h3><ul class="check">
+      <li>All slides of the carousel are in order (01, 02, 03…).</li>
+      <li>Caption + hashtags pasted; location "Egypt" optional.</li>
+      <li>Reply to comments for the first hour.</li>
+      <li>Share it to your story.</li></ul></div>
+    <div class="box"><h3>Words to use</h3><ul class="check">
+      <li>"Sign up is free now".</li>
+      <li>First Pulse is "for beta students only".</li>
+      <li>Reply in Egyptian Arabic, friendly and short.</li>
+      <li>Medical posts: "Educational use only".</li></ul></div>
+  </div>
+  <div class="note" style="margin-top:6mm"><b>Check before posting:</b> the medical facts in posts 6, 7 and 9 against your Micro 301 notes.</div>
+</section>
+</body></html>
