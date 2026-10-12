@@ -8,32 +8,15 @@ import {
   Check,
   X,
   ShieldCheck,
-  ShoppingBag,
   GraduationCap,
   BookOpen,
   Stethoscope,
   ArrowRight,
   Award,
-  Layers,
 } from 'lucide-react';
 import { cardClass } from '@/lib/ui';
 import type { AdCampaign } from '@/types';
 import { useSettings } from '@/lib/useSettings';
-
-export const REVIVE_CAMPAIGN: AdCampaign = {
-  id: 'revive-mw-micro301',
-  brand: 'Revive Medical Wear',
-  title: 'Upgrade Your Clinical Wardrobe with Revive',
-  badge: 'Official Sponsor',
-  tagline: 'Premium Medical Scrubs, Lab Coats & Hospital Apparel',
-  description:
-    'Upgrade your clinical wardrobe with Revive Medical Wear. Engineered for comfort during long hospital shifts and rotations. Use code revivemicro301 for 10% off.',
-  discountCode: 'revivemicro301',
-  ctaText: 'Shop Revive',
-  ctaUrl: 'https://www.revive-mw.net/',
-  active: true,
-  variant: 'revive',
-};
 
 export const ACADEMIC_PREP_CAMPAIGN: AdCampaign = {
   id: 'academic-clinical-prep-301',
@@ -87,7 +70,7 @@ export default function AdSlot({
   if (!ads?.enabled) return null;
   if (ads.placements && ads.placements[placement] === false) return null;
 
-  // Admin campaign wins; otherwise optional builtin fallback (Revive / Medova / Academic).
+  // Admin campaign wins; otherwise optional builtin fallback (Medova / Academic only — Revive removed).
   const activeCampaign: AdCampaign | null = settings.site_content.campaigns.active
     ? {
         id: 'admin-campaign',
@@ -100,7 +83,7 @@ export default function AdSlot({
         ctaText: settings.site_content.campaigns.cta,
         ctaUrl: settings.site_content.campaigns.url,
         active: true,
-        variant: 'revive',
+        variant: 'academic',
       }
     : campaign
       ?? (ads.showBuiltinFallbacks === false
@@ -109,7 +92,7 @@ export default function AdSlot({
           ? ACADEMIC_PREP_CAMPAIGN
           : variant === 'medova'
             ? MEDOVA_CAMPAIGN
-            : REVIVE_CAMPAIGN);
+            : null);
 
   if (dismissed || !activeCampaign?.active) return null;
 
@@ -245,96 +228,7 @@ export default function AdSlot({
     );
   }
 
-  // ==========================================
-  // INLINE VARIANT 1: Revive Medical Wear (Sponsor)
-  // Modern e-commerce aesthetic, clean light mode default
-  // ==========================================
-  if (activeCampaign.variant === 'revive') {
-    return (
-      <div
-        className={`${cardClass} group relative overflow-hidden border border-slate-200/90 bg-white p-6 shadow-sm transition-all duration-300 hover:border-slate-300 hover:shadow-md dark:border-white/10 dark:bg-slate-900/70 ${className}`}
-      >
-        {/* Subtle accent bar on top */}
-        <div className="absolute left-0 top-0 h-1 w-full bg-gradient-to-r from-slate-900 via-sky-600 to-indigo-600" />
-
-        <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="flex items-center gap-1 rounded-full bg-slate-900 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white dark:bg-slate-800 dark:text-cyan-300">
-                <ShoppingBag className="h-3 w-3" />
-                Featured Sponsor
-              </span>
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                Revive Medical Wear
-              </span>
-              <span className="text-[11px] text-slate-400">· Premium Hospital Scrubs</span>
-            </div>
-
-            <h3 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white md:text-xl">
-              Upgrade your clinical wardrobe with Revive Medical Wear.
-            </h3>
-            <p className="max-w-2xl text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              Breathable, wrinkle-resistant antimicrobial scrubs, tailor-fitted lab coats, and modern physician apparel crafted for Egyptian medical students and healthcare professionals. Use code{' '}
-              <strong className="font-mono text-blue-700 dark:text-cyan-300 font-bold bg-blue-50 dark:bg-slate-800 px-1.5 py-0.5 rounded">
-                revivemicro301
-              </strong>{' '}
-              for 10% off your entire order.
-            </p>
-          </div>
-
-          {/* Right Action & Code Box */}
-          <div className="flex flex-shrink-0 flex-col items-start gap-3 sm:flex-row sm:items-center md:flex-col md:items-end">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">10% Off:</span>
-              <button
-                type="button"
-                onClick={copyCode}
-                title="Click to copy promo code"
-                className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 font-mono text-xs font-bold text-slate-800 shadow-sm transition hover:bg-slate-100 active:scale-95 dark:border-slate-700 dark:bg-slate-800 dark:text-cyan-300 dark:hover:bg-slate-700"
-              >
-                {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Tag className="h-3.5 w-3.5 text-blue-600" />}
-                <span>revivemicro301</span>
-                <span className="text-[10px] font-normal text-slate-500">
-                  ({copied ? 'Copied!' : 'Copy'})
-                </span>
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <a
-                href="https://www.revive-mw.net/"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={handleLinkClick}
-                className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-slate-800 hover:shadow active:scale-95 dark:bg-cyan-500 dark:text-slate-950 dark:hover:bg-cyan-400"
-              >
-                <span>Shop Revive</span>
-                <ExternalLink className="h-3.5 w-3.5" />
-              </a>
-
-              <a
-                href="https://www.instagram.com/revive_mw/"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={handleLinkClick}
-                title="View Revive on Instagram"
-                className="rounded-xl border border-slate-300 bg-white p-2.5 text-slate-700 transition hover:bg-slate-50 dark:border-white/10 dark:bg-slate-800 dark:text-slate-200"
-              >
-                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.13-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
-                </svg>
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ==========================================
-  // INLINE VARIANT 2: Academic & Clinical Prep
-  // Academic focus with clinical icons and MUST-aligned references
-  // ==========================================
+  // Inline / default creative (academic or generic campaign)
   return (
     <div
       className={`${cardClass} group relative overflow-hidden border border-blue-200 bg-gradient-to-br from-blue-50/70 via-white to-indigo-50/40 p-6 shadow-sm transition-all duration-300 hover:border-blue-300 hover:shadow-md dark:border-blue-900/40 dark:from-slate-900/80 dark:via-slate-900 dark:to-indigo-950/30 ${className}`}

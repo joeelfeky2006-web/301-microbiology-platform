@@ -15,7 +15,6 @@ import {
   Award,
   Layers,
   TrendingUp,
-  ShoppingBag,
   HeartHandshake,
   Clock3,
 } from 'lucide-react';
@@ -23,7 +22,6 @@ import { MODULE_TITLES, type Material, type ModuleName } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/useSession';
 import { cardClass } from '@/lib/ui';
-import AdSlot from '@/components/marketing/AdSlot';
 import AILearningStudio from '@/components/ai/AILearningStudio';
 import DrAtlasChatbot from '@/components/ai/DrAtlasChatbot';
 import ModuleProgressTracker from '@/components/dashboard/ModuleProgressTracker';
@@ -190,9 +188,6 @@ export default function Home() {
 
   return (
     <>
-      {/* Top Partner Sponsor Banner */}
-      <AdSlot placement="banner" variant="revive" />
-
       <main className="p-4 sm:p-6 md:p-12 pb-28 sm:pb-32 overflow-hidden">
         <div className="mx-auto max-w-5xl space-y-10">
           {/* ======================================================== */}
@@ -462,11 +457,6 @@ export default function Home() {
                 </div>
               </section>
 
-              {/* Single Clean Partner Slot */}
-              <section>
-                <AdSlot variant="revive" placement="inline" />
-              </section>
-
               {/* Mobile & Desktop Student Support Callout Card */}
               {SHOW_SUPPORT && <section className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4.5 dark:border-emerald-900/60 dark:bg-emerald-950/30">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
@@ -500,7 +490,23 @@ export default function Home() {
           {/* ======================================================== */}
           {activeTab === 'progress' && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <ModuleProgressTracker materials={materials} />
+              {session ? (
+                <ModuleProgressTracker materials={materials} />
+              ) : (
+                <div className={`${cardClass} space-y-3 p-6 text-center`}>
+                  <TrendingUp className="mx-auto h-8 w-8 text-blue-600 dark:text-cyan-300" />
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">Sign in to track progress</h2>
+                  <p className="mx-auto max-w-md text-sm text-slate-600 dark:text-slate-300">
+                    The study checklist and material completion tracker are only available for signed-in students.
+                  </p>
+                  <Link
+                    href="/sign-in?redirect=/"
+                    className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
+                  >
+                    Sign in
+                  </Link>
+                </div>
+              )}
             </div>
           )}
 
