@@ -135,6 +135,8 @@ export interface SiteContent {
     showBuiltinFallbacks: boolean;
     placements: { banner: boolean; sidebar: boolean; inline: boolean; compact: boolean };
   };
+  /** Soft modal prompting Instagram + WhatsApp Channel follow. */
+  socialWelcome: { enabled: boolean };
 }
 
 export interface SupportPaymentMethod {

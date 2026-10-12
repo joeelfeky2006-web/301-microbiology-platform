@@ -46,7 +46,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
       { heading: 'Information in your account', body: 'Supabase Auth manages sign-in. The application uses account email and user metadata such as name and, when provided, University ID. The app does not read your password.', visible: true },
       { heading: 'Credits and activity', body: 'The platform stores AI credit balances and a bounded credit activity ledger for your account. Sponsored placements are shown without click or impression telemetry from this application.', visible: true },
       { heading: 'AI features', body: 'Relevant lecture source text and the text you submit to AI study tools may be sent to Google Gemini to generate a response. Do not submit personal, confidential, or patient-identifying information. Check AI output against course materials.', visible: true },
-      { heading: 'Browser storage and persistence', body: 'Browser storage keys used by the app include theme, student_group_preference, medatlas_profile_preferences, medatlas_student_progress, and announcement-dismissed:<content-hash>. Supabase Auth stores its session using the SDK-managed browser storage key. The local fallback uses micro_atlas_session, micro_atlas_mock_accounts, and micro_atlas_materials. In that development-only fallback, entered password values are stored in browser local storage and are not hashed: never use a real password in fallback mode. With Supabase configured, Supabase Auth handles passwords. Reviewed AI chat and quiz UI code keeps prompts and responses in page state and does not write chat transcripts, answers, or reports to Supabase.', visible: true },
+      { heading: 'Browser storage and persistence', body: 'Browser storage keys used by the app include theme, student_group_preference, medatlas_profile_preferences, medatlas_student_progress, medatlas_cookie_consent, medatlas_social_welcome_guest, medatlas_social_welcome_v1, and announcement-dismissed:<content-hash>. Supabase Auth stores its session using the SDK-managed browser storage key. The local fallback uses micro_atlas_session, micro_atlas_mock_accounts, and micro_atlas_materials. In that development-only fallback, entered password values are stored in browser local storage and are not hashed: never use a real password in fallback mode. With Supabase configured, Supabase Auth handles passwords. Reviewed AI chat and quiz UI code keeps prompts and responses in page state and does not write chat transcripts, answers, or reports to Supabase.', visible: true },
       { heading: 'Requests and retention', body: 'For access, correction, or deletion requests, email {email}. Account and operational records may remain while needed to provide the service or meet applicable obligations. Contact the team for current retention details.', visible: true },
       { heading: 'Third parties and security', body: 'Supabase provides authentication, database, and storage for the live service. Google Gemini (and any configured backup AI providers) process requests made to AI study features. Additional hosting or analytics providers may be used as part of the deployment.', visible: true },
       { heading: 'Access controls', body: 'The application uses authenticated sessions and database row-level policies for restricted data, alongside browser security response headers. No security control eliminates all risk; keep account credentials private and report suspected unauthorized access to {email}.', visible: true },
@@ -82,6 +82,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     showBuiltinFallbacks: true,
     placements: { banner: true, sidebar: true, inline: true, compact: true },
   },
+  socialWelcome: { enabled: true },
 };
 
 export function mergeSiteContent(value: unknown): SiteContent {
@@ -111,6 +112,10 @@ export function mergeSiteContent(value: unknown): SiteContent {
         ...DEFAULT_SITE_CONTENT.ads.placements,
         ...(input.ads?.placements && typeof input.ads.placements === 'object' ? input.ads.placements : {}),
       },
+    },
+    socialWelcome: {
+      ...DEFAULT_SITE_CONTENT.socialWelcome,
+      ...(input.socialWelcome && typeof input.socialWelcome === 'object' ? input.socialWelcome : {}),
     },
   };
 }

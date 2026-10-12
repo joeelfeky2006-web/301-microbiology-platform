@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Cookie, X } from 'lucide-react';
-
-const COOKIE_STORAGE_KEY = 'medatlas_cookie_consent';
+import { COOKIE_CONSENT_KEY } from '@/lib/socialWelcome';
 
 export default function CookieBanner() {
   const [mounted, setMounted] = useState(false);
@@ -13,7 +12,7 @@ export default function CookieBanner() {
   useEffect(() => {
     setMounted(true);
     try {
-      const consent = localStorage.getItem(COOKIE_STORAGE_KEY);
+      const consent = localStorage.getItem(COOKIE_CONSENT_KEY);
       if (!consent) {
         // Small delay so it animates in smoothly without layout jitter
         const timer = setTimeout(() => setVisible(true), 600);
@@ -26,7 +25,7 @@ export default function CookieBanner() {
 
   const handleConsent = (accepted: boolean) => {
     try {
-      localStorage.setItem(COOKIE_STORAGE_KEY, accepted ? 'accepted' : 'declined');
+      localStorage.setItem(COOKIE_CONSENT_KEY, accepted ? 'accepted' : 'declined');
     } catch {
       // ignore storage errors
     }

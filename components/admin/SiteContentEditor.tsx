@@ -77,6 +77,19 @@ export default function SiteContentEditor({ value, onChange, onValidityChange }:
     <section className={box}><h3 className="font-bold">Auth-facing copy</h3><div className="grid gap-3 sm:grid-cols-2">{field('Sign-in heading', value.auth.signInTitle, v => onChange({ ...value, auth: { ...value.auth, signInTitle: v } }))}{field('Sign-in helper', value.auth.signInHelp, v => onChange({ ...value, auth: { ...value.auth, signInHelp: v } }))}{field('Sign-up heading', value.auth.signUpTitle, v => onChange({ ...value, auth: { ...value.auth, signUpTitle: v } }))}{field('Sign-up helper', value.auth.signUpHelp, v => onChange({ ...value, auth: { ...value.auth, signUpHelp: v } }))}</div></section>
 
     <section className={box}>
+      <h3 className="font-bold">Social welcome</h3>
+      <p className="text-xs text-slate-500">Soft modal for Instagram + WhatsApp Channel. Guests see it once forever; signed-in students up to twice per Cairo day.</p>
+      <label className="mt-3 inline-flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={value.socialWelcome?.enabled !== false}
+          onChange={(e) => onChange({ ...value, socialWelcome: { enabled: e.target.checked } })}
+        />
+        Show social welcome modal
+      </label>
+    </section>
+
+    <section className={box}>
       <h3 className="font-bold">Ads &amp; campaigns</h3>
       <p className="text-xs text-slate-500">Turn ads off entirely, hide individual placements, or run your own campaign copy instead of the built-in Revive/Medova cards.</p>
       <div className="mt-3 flex flex-wrap gap-4 text-sm">
