@@ -15,8 +15,46 @@ function safeRedirect(value: string | null) {
   return value && value.startsWith('/') && !value.startsWith('//') ? value : '/';
 }
 
-function siteUrl() {
-  return (process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, '');
+/** Map Supabase Auth errors to user-safe copy (generic catch was hiding rate limits). */
+function authErrorMessage(err: unknown, mode: 'sign-in' | 'sign-up'): string {
+  const raw = err && typeof err === 'object' && 'message' in err ? String((err as { message: unknown }).message) : '';
+  const message = raw.toLowerCase();
+  const status = err && typeof err === 'object' && 'status' in err ? Number((err as { status: unknown }).status) : 0;
+  const code = err && typeof err === 'object' && 'code' in err ? String((err as { code: unknown }).code) : '';
+
+  if (
+    status === 429 ||
+    code === 'over_email_send_rate_limit' ||
+    message.includes('rate limit') ||
+    message.includes('email rate limit') ||
+    message.includes('over_email_send_rate_limit')
+  ) {
+    return mode === 'sign-up'
+      ? 'Too many confirmation emails were sent just now. Wait about 10 minutes, then try again — or sign in if you already created an account.'
+      : 'Too many emails were sent just now. Please wait a few minutes before requesting another.';
+  }
+  if (message.includes('user already registered') || message.includes('already been registered')) {
+    return 'An account with this email already exists. Please sign in or reset your password.';
+  }
+  if (message.includes('password') && (message.includes('weak') || message.includes('least') || message.includes('characters'))) {
+    return 'Choose a stronger password (at least 8 characters).';
+  }
+  if (message.includes('invalid login') || message.includes('invalid credentials')) {
+    return 'Email or password is incorrect.';
+  }
+  if (message.includes('confirm') || message.includes('verified') || message.includes('not confirmed')) {
+    return 'Please confirm your email before signing in.';
+  }
+  if (message.includes('redirect') && message.includes('url')) {
+    return 'Sign-up is misconfigured (redirect URL). Contact support.';
+  }
+  if (message.includes('database error')) {
+    return 'We could not finish creating your account. Please try again in a minute.';
+  }
+  if (raw && raw.length < 160 && !message.includes('fetch')) {
+    return raw;
+  }
+  return 'We could not complete that request. Please check your details and try again.';
 }
 
 export default function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
@@ -49,9 +87,11 @@ export default function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   const resend = async () => {
     if (cooldown || !email) return;
     setError('');
+    setInfo('');
     const { error: resendError } = await supabase.auth.resend({ type: 'signup', email: email.trim() });
     setCooldown(60);
-    setInfo(resendError ? 'We could not send the email right now. Please try again in a minute.' : 'Confirmation email sent. Check your inbox and spam folder.');
+    if (resendError) setError(authErrorMessage(resendError, 'sign-up'));
+    else setInfo('Confirmation email sent. Check your inbox and spam folder.');
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -64,40 +104,47 @@ export default function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
     setLoading(true);
     try {
       if (isSignUp) {
-        const { data, error: authError } = await supabase.auth.signUp({
-          email: email.trim(), password,
-          options: {
-            data: {
-              name: name.trim(),
-              university_id: universityId.trim(),
-              accepted_terms_at: new Date().toISOString(),
-              accepted_privacy_at: new Date().toISOString(),
-            },
-            emailRedirectTo: `${siteUrl()}/sign-in?confirmed=1`,
-          },
+        // Server path auto-confirms so signup does not hit Supabase's ~2 emails/hour built-in cap.
+        const response = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: email.trim(),
+            password,
+            name: name.trim(),
+            university_id: universityId.trim(),
+            accepted_legal: acceptedLegal,
+          }),
         });
-        if (authError) throw authError;
-        if (data.user && data.user.identities?.length === 0) {
-          setError('An account with this email already exists. Please sign in or reset your password.'); return;
+        const payload = (await response.json().catch(() => ({}))) as { error?: string; ok?: boolean };
+        if (!response.ok) {
+          throw Object.assign(new Error(payload.error || 'We could not create your account.'), { status: response.status });
         }
-        setConfirmationPending(true); setCooldown(60);
-        setInfo('Check your inbox for a confirmation link. You can resend it in 60 seconds.');
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+        if (signInError) throw signInError;
         trackClient('signup', { method: 'password' });
+        router.replace(redirect);
       } else {
         const { error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (authError) {
           const message = authError.message.toLowerCase();
-          if (message.includes('confirm') || message.includes('verified')) setError('Please confirm your email before signing in.');
-          else if (message.includes('invalid login') || message.includes('credentials')) setError('Email or password is incorrect.');
-          else setError('We could not sign you in. Please check your details and try again.');
-          if (message.includes('confirm') || message.includes('verified')) setCanResend(true);
+          setError(authErrorMessage(authError, 'sign-in'));
+          if (message.includes('confirm') || message.includes('verified') || message.includes('not confirmed')) setCanResend(true);
           return;
         }
         trackClient('login', { method: 'password' });
         router.replace(redirect);
       }
-    } catch {
-      setError('We could not complete that request. Please check your details and try again.');
+    } catch (err) {
+      setError(authErrorMessage(err, isSignUp ? 'sign-up' : 'sign-in'));
+      const message = err && typeof err === 'object' && 'message' in err ? String((err as { message: unknown }).message).toLowerCase() : '';
+      if (isSignUp && (message.includes('rate limit') || message.includes('over_email_send'))) {
+        setCanResend(true);
+        setInfo('If you already signed up a moment ago, wait a bit then use Resend — or try signing in.');
+      }
     } finally { setLoading(false); }
   };
 
@@ -146,7 +193,7 @@ export default function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
         {!isSignUp && <Link className="block text-sm text-blue-600 hover:underline dark:text-cyan-300" href="/forgot-password">Forgot password?</Link>}
         {error && <p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
         {info && <p role="status" className="rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-700">{info}</p>}
-        {canResend && !isSignUp && <button type="button" onClick={resend} disabled={cooldown > 0} className="w-full text-sm font-semibold text-blue-600 disabled:opacity-50">{cooldown ? `Resend confirmation in ${cooldown}s` : 'Resend confirmation email'}</button>}
+        {canResend && <button type="button" onClick={resend} disabled={cooldown > 0} className="w-full text-sm font-semibold text-blue-600 disabled:opacity-50">{cooldown ? `Resend confirmation in ${cooldown}s` : 'Resend confirmation email'}</button>}
         <button type="submit" disabled={loading || (isSignUp && (!settings.registration_open || !acceptedLegal))} className="w-full rounded-xl bg-blue-600 py-3 font-bold text-white disabled:bg-slate-400">{loading ? 'Please wait…' : isSignUp ? 'Create account' : 'Sign in'}</button>
       </form>}
       {error && confirmationPending && <p role="alert" className="mt-4 text-sm text-red-600">{error}</p>}
