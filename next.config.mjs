@@ -16,7 +16,7 @@ const nextConfig = {
       `img-src 'self' data: blob: ${supabaseOrigin}`,
       `connect-src 'self' ${supabaseOrigin}`,
       "font-src 'self' data:",
-      "frame-src 'self' https://drive.google.com https://forms.office.com https://forms.microsoft.com",
+      "frame-src 'self' https://drive.google.com https://forms.office.com https://forms.microsoft.com https://forms.cloud.microsoft",
     ].join('; ');
     return [
       { source: '/:path*', headers: [

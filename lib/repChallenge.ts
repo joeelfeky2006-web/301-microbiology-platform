@@ -25,7 +25,9 @@ export function challengePhase(now = Date.now()): ChallengePhase {
 export function embeddableFormUrl(url: string): string {
   try {
     const parsed = new URL(url);
-    if (/forms\.(office|microsoft)\.com$/i.test(parsed.hostname) && /responsepage\.aspx/i.test(parsed.pathname)) {
+    const isMsForms = /^forms\.((office|microsoft)\.com|cloud\.microsoft)$/i.test(parsed.hostname);
+    if (isMsForms && /responsepage\.aspx/i.test(parsed.pathname)) {
+      parsed.searchParams.delete('route');
       parsed.searchParams.set('embed', 'true');
     }
     return parsed.toString();
