@@ -9,7 +9,7 @@ page("story-comp-poll", 1080, 1920, f'''
   <div class="body" style="margin-top:18px;font-size:30px">9–10 PM · 30 MCQs · 40 min</div></div>
   <div class="slot"><span>↓ vote · <span class="ar">صوّت</span></span></div>
   <div style="flex:1"></div>
-  <div style="margin:0 auto">{prize(.78)}</div>''',
+  <div style="margin:0 auto">{prize(.95)}</div>''',
      ".frame{padding:150px 84px 210px}"
      ".slot{margin:56px auto 0;width:820px;height:420px;border-radius:40px;"
      "display:flex;align-items:flex-start;justify-content:center;padding-top:22px;font:500 26px 'IBM Plex Mono';letter-spacing:.06em;color:rgba(255,255,255,.55)}")

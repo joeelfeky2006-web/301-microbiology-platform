@@ -37,5 +37,8 @@ body::after { content: ""; position: absolute; inset: 0; background-size: 54px 5
 .rule .arx { font-family: "IBM Plex Sans Arabic"; font-weight: 500; direction: rtl; text-align: left; font-size: 30px; opacity: .75; margin-top: 4px; }
 .h1 .sub { display: flex; font: 500 26px "IBM Plex Mono"; letter-spacing: .14em; text-transform: uppercase; color: #21E3C0; margin-bottom: 14px; }
 .prize .runners { display: flex; gap: 34px; margin-top: 22px; padding-top: 20px; border-top: 1.5px solid rgba(255,255,255,.22); font-weight: 600; font-size: 28px; }
+.prize .win { display: flex; align-items: center; gap: 26px; margin-top: 18px; }
+.prize .win .v { margin-top: 0; }
+.prize .win .u { font-weight: 700; font-size: 40px; letter-spacing: -.02em; margin-top: 4px; }
 .prize .runners div { display: flex; align-items: center; gap: 10px; }
 .prize .runners .pl { font: 500 19px "IBM Plex Mono"; letter-spacing: .08em; text-transform: uppercase; opacity: .8; margin-right: 6px; }

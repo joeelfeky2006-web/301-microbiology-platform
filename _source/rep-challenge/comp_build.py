@@ -19,9 +19,8 @@ LOGO = '<img src="../../../logo/final/svg/medatlas-logo-horizontal-reversed.svg"
 
 def prize(zoom=1.0):
     return f'''<div class="prize" style="zoom:{zoom}">
-  <div class="k">1st place · المركز الأول</div><div class="v">200 EGP</div>
-  <div class="plus">+ {coin(58)} 50 Atlas Credits</div>
-  <div class="runners"><div><span class="pl">2nd · التاني</span>{coin(34)}<b>30</b> Atlas Credits</div><div><span class="pl">3rd · التالت</span>{coin(34)}<b>20</b> Atlas Credits</div></div>
+  <div class="k">The winner gets · الفايز ياخد</div>
+  <div class="win">{coin(96)}<div><div class="v">50</div><div class="u">Atlas Credits</div></div></div>
 </div>'''
 
 
@@ -36,12 +35,12 @@ AR_TITLE = 'تحدّي ميدترم ميكرو REP 301'
 
 page("post-comp-rep-challenge", 1080, 1350, f'''
   <div class="top">{LOGO}<span class="chip rep-c">Thu 15 Oct · 9 PM</span></div>
-  <div style="margin-top:34px"><span class="label">New competition · مسابقة جديدة</span></div>
-  <div class="h1" style="--h1:96px;margin-top:18px">{TITLE}</div>
-  <div class="ar-line" style="margin-top:10px;font-size:48px">{AR_TITLE}</div>
-  <div class="body" style="margin-top:8px;font-size:29px">30 MCQs (cases included) on the 2 REP lectures.</div>
-  <div style="margin-top:22px">{prize(.86)}</div>
-  <div class="facts" style="margin-top:18px">
+  <div style="margin-top:44px"><span class="label">New competition · مسابقة جديدة</span></div>
+  <div class="h1" style="--h1:112px;margin-top:22px">{TITLE}</div>
+  <div class="ar-line" style="margin-top:14px;font-size:52px">{AR_TITLE}</div>
+  <div class="body" style="margin-top:10px;font-size:31px">30 MCQs (cases included) on the 2 REP lectures.</div>
+  <div style="margin-top:36px">{prize(1)}</div>
+  <div class="facts" style="margin-top:22px">
     <div class="fact"><b>Thu 15 Oct · 9 PM</b><span class="ar">الخميس 15 أكتوبر، 9 مساءً</span></div>
     <div class="fact"><b>30 MCQs · 40 min</b><span class="ar">30 سؤال في 40 دقيقة</span></div>
   </div>
