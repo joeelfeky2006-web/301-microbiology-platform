@@ -59,42 +59,44 @@ async function generateGemini(prompt: string, schema: JsonObject, timeoutMs: num
   const primary = process.env.GEMINI_MODEL;
   const fallback = process.env.GEMINI_FALLBACK_MODEL?.trim();
   if (!apiKey || !primary) throw new Error('Gemini provider is not configured');
+  // Keep HTTP timeout inside the provider slice so a hung Gemini call cannot
+  // consume the whole Vercel 30s budget before Groq failover.
   const ai = new GoogleGenAI({ apiKey, httpOptions: { timeout: timeoutMs } });
+
+  const once = async (model: string, withThinking: boolean): Promise<GenerateResult> =>
+    withTimeout(timeoutMs, async (signal) => {
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: schema as any,
+          abortSignal: signal,
+          ...(withThinking ? { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } } : {}),
+        },
+      });
+      return {
+        data: validateResult(JSON.parse(geminiResponseText(response)), schema),
+        provider: 'gemini',
+        model,
+        usage: geminiUsage((response as any).usageMetadata),
+      };
+    });
+
   const run = async (model: string): Promise<GenerateResult> => {
-    let lastError: unknown;
-    // Prefer minimal thinking (Gemini 3.x defaults to medium and often times out
-    // under the 30s serverless cap). Fall back without thinkingConfig for older models.
-    const configs: Array<Record<string, unknown>> = [
-      {
-        responseMimeType: 'application/json',
-        responseSchema: schema as any,
-        thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
-      },
-      {
-        responseMimeType: 'application/json',
-        responseSchema: schema as any,
-      },
-    ];
-    for (const config of configs) {
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          const response = await ai.models.generateContent({ model, contents: prompt, config: config as any });
-          return {
-            data: validateResult(JSON.parse(geminiResponseText(response)), schema),
-            provider: 'gemini',
-            model,
-            usage: geminiUsage((response as any).usageMetadata),
-          };
-        } catch (error) {
-          lastError = error;
-          const message = String((error as any)?.message || error);
-          // If this model rejects thinkingLevel, skip straight to the no-thinking config.
-          if (config.thinkingConfig && /thinking|invalid.?argument|400/i.test(message)) break;
-        }
+    try {
+      // Prefer minimal thinking (Gemini 3.x defaults to medium and often times out).
+      return await once(model, true);
+    } catch (error) {
+      const message = String((error as any)?.message || error);
+      // Older / mismatched models may reject thinkingLevel — one quick retry without it.
+      if (/thinking|invalid.?argument|400/i.test(message)) {
+        return once(model, false);
       }
+      throw error;
     }
-    throw lastError;
   };
+
   try {
     return await run(primary);
   } catch (error: any) {
@@ -246,13 +248,31 @@ export async function generateStructuredJson(prompt: string, schema: JsonObject,
   const providers = priority.filter(isConfigured);
   if (!providers.length) throw new Error('No AI providers in AI_PROVIDER_PRIORITY are fully configured');
 
+  // Reserve wall-clock for failover. Previously Gemini could retry until the
+  // whole 30s serverless function died — Groq never ran even with GROQ_API_KEY set.
+  const started = Date.now();
+  const deadline = started + timeoutMs;
+  const minSliceMs = 4_000;
+  const reserveForNextMs = 8_000;
+
   const errors: string[] = [];
-  for (const provider of providers) {
+  for (let index = 0; index < providers.length; index += 1) {
+    const provider = providers[index];
+    const remaining = deadline - Date.now();
+    const hasNext = index < providers.length - 1;
+    if (remaining < minSliceMs) {
+      errors.push(`${provider}: skipped (no time left for failover)`);
+      break;
+    }
+    const slice = hasNext
+      ? Math.max(minSliceMs, Math.min(remaining - reserveForNextMs, Math.floor(remaining * 0.6)))
+      : remaining;
+
     try {
-      if (provider === 'gemini') return await generateGemini(prompt, schema, timeoutMs);
-      if (provider === 'groq') return await generateGroq(prompt, schema, timeoutMs);
-      if (provider === 'openai') return await generateOpenAI(prompt, schema, timeoutMs);
-      if (provider === 'anthropic') return await generateAnthropic(prompt, schema, timeoutMs);
+      if (provider === 'gemini') return await generateGemini(prompt, schema, slice);
+      if (provider === 'groq') return await generateGroq(prompt, schema, slice);
+      if (provider === 'openai') return await generateOpenAI(prompt, schema, slice);
+      if (provider === 'anthropic') return await generateAnthropic(prompt, schema, slice);
     } catch (error) {
       const reason = error instanceof Error ? error.message : 'Unknown provider error';
       errors.push(`${provider}: ${reason}`);
