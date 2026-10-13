@@ -241,9 +241,9 @@ function isConfigured(provider: string) {
 
 /** Provider-neutral structured JSON generation with ordered failover across configured providers. */
 export async function generateStructuredJson(prompt: string, schema: JsonObject, timeoutMs = 25_000): Promise<GenerateResult> {
-  const primary = (process.env.AI_PROVIDER || 'gemini').trim().toLowerCase();
-  // Preferred: Gemini primary, Groq fallback. Optional OpenAI/Anthropic remain env-gated.
-  const priority = (process.env.AI_PROVIDER_PRIORITY || `${primary},groq,openai,anthropic`)
+  const primary = (process.env.AI_PROVIDER || 'groq').trim().toLowerCase();
+  // Groq first (Gemini 3.6 often 503s under Google capacity). Optional OpenAI/Anthropic remain env-gated.
+  const priority = (process.env.AI_PROVIDER_PRIORITY || [primary, 'groq', 'gemini', 'openai', 'anthropic'].join(','))
     .split(',').map((item) => item.trim().toLowerCase()).filter((item, index, all) => item && all.indexOf(item) === index);
   const providers = priority.filter(isConfigured);
   if (!providers.length) throw new Error('No AI providers in AI_PROVIDER_PRIORITY are fully configured');
