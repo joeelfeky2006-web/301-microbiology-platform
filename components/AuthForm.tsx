@@ -33,7 +33,12 @@ function authErrorMessage(err: unknown, mode: 'sign-in' | 'sign-up'): string {
       ? 'Too many confirmation emails were sent just now. Wait about 10 minutes, then try again — or sign in if you already created an account.'
       : 'Too many emails were sent just now. Please wait a few minutes before requesting another.';
   }
-  if (message.includes('user already registered') || message.includes('already been registered')) {
+  if (
+    status === 409 ||
+    message.includes('user already registered') ||
+    message.includes('already been registered') ||
+    message.includes('already exists')
+  ) {
     return 'An account with this email already exists. Please sign in or reset your password.';
   }
   if (message.includes('password') && (message.includes('weak') || message.includes('least') || message.includes('characters'))) {
@@ -103,13 +108,14 @@ export default function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
     if (isSignUp && !acceptedLegal) { setError('Please accept the Terms of Use and Privacy Policy to create an account.'); return; }
     setLoading(true);
     try {
+      const normalizedEmail = email.trim().toLowerCase();
       if (isSignUp) {
         // Server path auto-confirms so signup does not hit Supabase's ~2 emails/hour built-in cap.
         const response = await fetch('/api/auth/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email: email.trim(),
+            email: normalizedEmail,
             password,
             name: name.trim(),
             university_id: universityId.trim(),
@@ -121,14 +127,14 @@ export default function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
           throw Object.assign(new Error(payload.error || 'We could not create your account.'), { status: response.status });
         }
         const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
+          email: normalizedEmail,
           password,
         });
         if (signInError) throw signInError;
         trackClient('signup', { method: 'password' });
         router.replace(redirect);
       } else {
-        const { error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+        const { error: authError } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
         if (authError) {
           const message = authError.message.toLowerCase();
           setError(authErrorMessage(authError, 'sign-in'));

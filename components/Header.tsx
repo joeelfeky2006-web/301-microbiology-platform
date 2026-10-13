@@ -136,8 +136,10 @@ export default function Header() {
 
           {/* Navigation Controls */}
           <nav className="flex items-center gap-1 sm:gap-2">
-            {/* Live Atlas Credits */}
-            <CreditBadge onOpenSupport={SHOW_SUPPORT ? () => setSupportModalOpen(true) : undefined} />
+            {/* Live Atlas Credits — only when signed in (avoids /api/credits 401 noise) */}
+            {session ? (
+              <CreditBadge onOpenSupport={SHOW_SUPPORT ? () => setSupportModalOpen(true) : undefined} />
+            ) : null}
 
             {/* Support Community Link */}
             {SHOW_SUPPORT && <button
