@@ -19,8 +19,13 @@ export async function POST(request: NextRequest) {
   let body: any;
   try { body = await request.json(); } catch { return aiError('glitch', 400); }
   if (typeof body?.message !== 'string' || body.message.length > 1000 || !body.message.trim() || typeof body.material_id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.material_id)) return aiError('glitch', 400);
-  const history = Array.isArray(body.history) ? body.history : [];
-  if (history.length > 20 || history.some((item: any) => !item || !['user', 'model'].includes(item.role) || typeof item.text !== 'string' || item.text.length > 500)) return aiError('glitch', 400);
+  // Truncate instead of hard-failing: model replies are allowed up to 5k, but
+  // prior turns only need a short context window for tutoring.
+  const history = (Array.isArray(body.history) ? body.history : [])
+    .filter((item: any) => item && ['user', 'model'].includes(item.role) && typeof item.text === 'string' && item.text.trim())
+    .map((item: any) => ({ role: item.role as 'user' | 'model', text: String(item.text).slice(0, 500) }))
+    .slice(-12);
+  if ((Array.isArray(body.history) ? body.history : []).length > 40) return aiError('glitch', 400);
   const loaded = await loadMaterial(body.material_id);
   if ('response' in loaded) return loaded.response;
   const source = `${loaded.material.ai_context || ''}\n${loaded.material.raw_quiz_text || ''}`.trim();

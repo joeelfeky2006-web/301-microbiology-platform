@@ -93,11 +93,19 @@ export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolea
     setIsLoading(true);
 
     try {
-      // Build history for Gemini
-      const apiHistory = newHistory.map((m) => ({
-        role: m.role,
-        text: m.text,
-      }));
+      // Prior turns only — drop welcome/error bubbles and truncate long replies.
+      const apiHistory = newHistory
+        .slice(0, -1)
+        .filter((m) =>
+          !m.id.startsWith('welcome-')
+          && !m.id.startsWith('msg-err-')
+          && !m.id.startsWith('msg-fallback-')
+          && !m.id.startsWith('msg-bank-'))
+        .slice(-12)
+        .map((m) => ({
+          role: m.role,
+          text: m.text.slice(0, 500),
+        }));
 
       const res = await fetch('/api/gemini/chat', {
         method: 'POST',
@@ -105,7 +113,7 @@ export default function DrAtlasChatbot({ embedded = false }: { embedded?: boolea
         body: JSON.stringify({
           message: textToSend,
           material_id: materialId,
-          history: apiHistory.slice(0, -1), // previous turns
+          history: apiHistory,
           taskComplexity: textToSend.length > 120 ? 'complex' : 'general',
         }),
       });

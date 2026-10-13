@@ -1,5 +1,5 @@
 import 'server-only';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 
 type JsonObject = Record<string, unknown>;
 
@@ -43,30 +43,65 @@ function geminiUsage(meta: any): TokenUsage {
   return { input, output, total };
 }
 
+function geminiResponseText(response: { text?: string | null }): string {
+  // SDK `.text` already excludes thought parts; still guard empty/whitespace.
+  const text = typeof response.text === 'string' ? response.text.trim() : '';
+  if (!text) throw new Error('Gemini returned empty structured output');
+  return text;
+}
+
+function canRetryGeminiModel(message: string): boolean {
+  return /not.?found|unsupported|404|429|rate.?limit|resource_exhausted|timeout|timed out|abort|empty structured|invalid json|unexpected token|missing required/i.test(message);
+}
+
 async function generateGemini(prompt: string, schema: JsonObject, timeoutMs: number): Promise<GenerateResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   const primary = process.env.GEMINI_MODEL;
+  const fallback = process.env.GEMINI_FALLBACK_MODEL?.trim();
   if (!apiKey || !primary) throw new Error('Gemini provider is not configured');
   const ai = new GoogleGenAI({ apiKey, httpOptions: { timeout: timeoutMs } });
   const run = async (model: string): Promise<GenerateResult> => {
     let lastError: unknown;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const response = await ai.models.generateContent({ model, contents: prompt, config: { responseMimeType: 'application/json', responseSchema: schema as any } });
-        return {
-          data: validateResult(JSON.parse(response.text || ''), schema),
-          provider: 'gemini',
-          model,
-          usage: geminiUsage((response as any).usageMetadata),
-        };
-      } catch (error) { lastError = error; }
+    // Prefer minimal thinking (Gemini 3.x defaults to medium and often times out
+    // under the 30s serverless cap). Fall back without thinkingConfig for older models.
+    const configs: Array<Record<string, unknown>> = [
+      {
+        responseMimeType: 'application/json',
+        responseSchema: schema as any,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+      },
+      {
+        responseMimeType: 'application/json',
+        responseSchema: schema as any,
+      },
+    ];
+    for (const config of configs) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const response = await ai.models.generateContent({ model, contents: prompt, config: config as any });
+          return {
+            data: validateResult(JSON.parse(geminiResponseText(response)), schema),
+            provider: 'gemini',
+            model,
+            usage: geminiUsage((response as any).usageMetadata),
+          };
+        } catch (error) {
+          lastError = error;
+          const message = String((error as any)?.message || error);
+          // If this model rejects thinkingLevel, skip straight to the no-thinking config.
+          if (config.thinkingConfig && /thinking|invalid.?argument|400/i.test(message)) break;
+        }
+      }
     }
     throw lastError;
   };
-  try { return await run(primary); }
-  catch (error: any) {
-    if (process.env.GEMINI_FALLBACK_MODEL && /not.?found|unsupported|404/i.test(String(error?.message || error))) {
-      return run(process.env.GEMINI_FALLBACK_MODEL);
+  try {
+    return await run(primary);
+  } catch (error: any) {
+    const message = String(error?.message || error);
+    if (fallback && fallback !== primary && canRetryGeminiModel(message)) {
+      console.warn(`[ai-provider] gemini ${primary} failed; trying GEMINI_FALLBACK_MODEL=${fallback}. ${message}`);
+      return run(fallback);
     }
     throw error;
   }
