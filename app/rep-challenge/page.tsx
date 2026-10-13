@@ -104,14 +104,9 @@ export default function RepChallengePage() {
             <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5"><CalendarClock className="h-4 w-4 text-teal-300" />{date} · {window_} (Cairo)</span>
             <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5"><Timer className="h-4 w-4 text-teal-300" />{REP_CHALLENGE.questions} MCQs · {REP_CHALLENGE.minutes} min</span>
           </div>
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 p-4 sm:col-span-1">
-              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white/80"><Trophy className="h-4 w-4" />1st place</p>
-              <p className="mt-1 text-2xl font-black">200 EGP</p>
-              <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold"><AtlasCoin className="h-4 w-4" />+ 50 Atlas Credits</p>
-            </div>
-            <div className="rounded-2xl bg-white/10 p-4"><p className="text-xs font-bold uppercase tracking-wider text-white/70">2nd place</p><p className="mt-2 flex items-center gap-1.5 text-lg font-bold"><AtlasCoin className="h-5 w-5" />30 Atlas Credits</p></div>
-            <div className="rounded-2xl bg-white/10 p-4"><p className="text-xs font-bold uppercase tracking-wider text-white/70">3rd place</p><p className="mt-2 flex items-center gap-1.5 text-lg font-bold"><AtlasCoin className="h-5 w-5" />20 Atlas Credits</p></div>
+          <div className="mt-6 max-w-sm rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 p-4">
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white/80"><Trophy className="h-4 w-4" />Winner · الفايز</p>
+            <p className="mt-2 flex items-center gap-2 text-2xl font-black"><AtlasCoin className="h-7 w-7" />50 Atlas Credits</p>
           </div>
         </section>
 
