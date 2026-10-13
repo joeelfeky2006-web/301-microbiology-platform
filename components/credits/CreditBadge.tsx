@@ -5,25 +5,39 @@ import { createPortal } from 'react-dom';
 import { Clock, X, HeartHandshake } from 'lucide-react';
 import { authenticatedHeaders } from '@/lib/authHeaders';
 import type { CreditSnapshot } from '@/lib/creditsClient';
+import { useSession } from '@/lib/useSession';
 import { cardClass } from '@/lib/ui';
 import AtlasCoin from '@/components/brand/AtlasCoin';
 
 interface CreditBadgeProps { compact?: boolean; className?: string; onOpenSupport?: () => void }
 
 export default function CreditBadge({ compact = false, className = '', onOpenSupport }: CreditBadgeProps) {
+  const session = useSession();
   const [credits, setCredits] = useState<CreditSnapshot | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
   const refresh = useCallback(async () => {
+    // Skip while session is unknown or signed out — avoids noisy /api/credits 401s in hosting logs.
+    if (!session) return;
     try {
-      const response = await fetch('/api/credits', { headers: await authenticatedHeaders(), cache: 'no-store' });
-      if (response.status === 401) return;
+      const headers = await authenticatedHeaders();
+      if (!headers.Authorization) return;
+      const response = await fetch('/api/credits', { headers, cache: 'no-store' });
+      if (response.status === 401) {
+        setCredits(null);
+        return;
+      }
       const data = await response.json();
       if (response.ok && data.credits) setCredits(data.credits as CreditSnapshot);
     } catch { /* The server enforces balances even when the badge cannot refresh. */ }
-  }, []);
+  }, [session]);
 
   useEffect(() => {
+    if (!session) {
+      setCredits(null);
+      return;
+    }
+
     void refresh();
 
     const applyDetail = (detail: unknown) => {
@@ -58,7 +72,7 @@ export default function CreditBadge({ compact = false, className = '', onOpenSup
       window.removeEventListener('focus', refresh);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [refresh]);
+  }, [refresh, session]);
 
   useEffect(() => {
     if (!modalOpen) return;
