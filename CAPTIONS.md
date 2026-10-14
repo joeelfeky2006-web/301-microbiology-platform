@@ -26,8 +26,8 @@ Ask anything from your lectures and practise bedside cases step by step.
 AI can make mistakes, so always check against your course material. راجع دايماً على المحاضرات.
 
 **5 · Exam packs** (`post-05-exam-packs-01…05`)
-One pack per system: CNS, URS, REP. مراجعة الامتحان 📚
-High-yield notes, recordings, mind maps, question bank and Dr. Atlas cases, all in one place.
+One pack per system for the Mid-Fall 2026 microbiology midterm: CNS 301-2, URS 301, REP 301. مراجعة الميدترم 📚
+Every topic on the official list, with high-yield notes, recordings, mind maps, question bank and Dr. Atlas cases, all in one place.
 
 **6 · CSF table** (`post-06-csf`)
 CSF in meningitis: bacterial vs viral vs TB. احفظ الجدول ده قبل الامتحان 🧠
