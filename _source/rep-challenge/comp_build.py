@@ -35,14 +35,14 @@ TITLE = '<span class="sub">Microbiology</span>REP 301<br><span class="rep">Midte
 AR_TITLE = 'تحدّي ميدترم ميكرو REP 301'
 
 page("post-comp-rep-challenge", 1080, 1350, f'''
-  <div class="top">{LOGO}<span class="chip rep-c">Thu 15 Oct · 9 PM</span></div>
+  <div class="top">{LOGO}<span class="chip rep-c">Tue 20 Oct · 9 PM</span></div>
   <div style="margin-top:44px"><span class="label">New competition · مسابقة جديدة</span></div>
   <div class="h1" style="--h1:100px;margin-top:22px">{TITLE}</div>
   <div class="ar-line" style="margin-top:14px;font-size:52px">{AR_TITLE}</div>
   <div class="body" style="margin-top:10px;font-size:31px">30 MCQs (cases included) on the 2 REP lectures.</div>
   <div style="margin-top:34px">{prize(.95)}</div>
   <div class="facts" style="margin-top:22px">
-    <div class="fact"><b>Thu 15 Oct · 9 PM</b><span class="ar">الخميس 15 أكتوبر، 9 مساءً</span></div>
+    <div class="fact"><b>Tue 20 Oct · 9 PM</b><span class="ar">الثلاثاء 20 أكتوبر، 9 مساءً</span></div>
     <div class="fact"><b>30 MCQs · 40 min</b><span class="ar">30 سؤال في 40 دقيقة</span></div>
   </div>
   <div class="bottom"><span>@medatlas_eg</span><span>rules in stories · القواعد في الستوري</span></div>''',
@@ -51,10 +51,10 @@ page("post-comp-rep-challenge", 1080, 1350, f'''
 rules = [
     ("Follow @medatlas_eg on Instagram and join our WhatsApp Channel", "تابعنا على إنستجرام وانضم لقناة الواتساب"),
     ("Sign up on MedAtlas, free", "سجّل على MedAtlas ببلاش"),
-    ("Thu 15 Oct · opens 9:00 PM · last entry 9:15 PM", "الخميس 15 أكتوبر: يفتح 9:00 م، وآخر دخول 9:15 م"),
+    ("Tue 20 Oct · opens 9:00 PM · last entry 9:15 PM", "الثلاثاء 20 أكتوبر: يفتح 9:00 م، وآخر دخول 9:15 م"),
     ("30 MCQs (cases included) · 40 min · 1 attempt", "30 سؤال منهم حالات مرضية، 40 دقيقة، ومحاولة واحدة"),
     ("Highest score wins · tie? fastest wins", "أعلى درجة تكسب، ولو في تعادل الأسرع يكسب"),
-    ("Winners checked by university ID + Instagram, announced Fri 16 Oct, 8 PM", "هنتأكد من الفايزين ونعلنهم الجمعة 16 أكتوبر 8 م، مع الإجابات"),
+    ("Winners checked by university ID + Instagram, announced Wed 21 Oct, 8 PM", "هنتأكد من الفايزين ونعلنهم الأربعاء 21 أكتوبر 8 م، مع الإجابات"),
 ]
 rl = "".join(f'<div class="rule"><div class="n">{i}</div><div><div class="en">{en}</div><div class="arx">{ar}</div></div></div>'
              for i, (en, ar) in enumerate(rules, 1))
@@ -70,10 +70,10 @@ page("story-comp-rules", 1080, 1920, f'''
 
 page("story-comp-countdown", 1080, 1920, f'''
   <div class="top" style="justify-content:center">{LOGO}</div>
-  <div style="margin-top:110px;text-align:center"><span class="label">Thursday 15 Oct · 9:00 PM</span>
+  <div style="margin-top:110px;text-align:center"><span class="label">Tuesday 20 Oct · 9:00 PM</span>
   <div class="h1" style="--h1:118px;margin-top:22px">{TITLE}</div>
   <div class="ar" style="font-weight:700;font-size:56px;margin-top:18px">{AR_TITLE}</div>
-  <div class="body" style="margin-top:14px;font-size:30px">30 MCQs · 40 min · <span class="ar">الخميس 9 مساءً</span></div></div>
+  <div class="body" style="margin-top:14px;font-size:30px">30 MCQs · 40 min · <span class="ar">الثلاثاء 9 مساءً</span></div></div>
   <div style="margin:48px auto 0">{prize(.95)}</div>
   <div style="flex:1"></div>
   <div class="body" style="text-align:center;font-size:28px;opacity:.7">↓ set a reminder · <span class="ar">فعّل التذكير</span></div>
