@@ -21,7 +21,7 @@ const RULES: [string, string][] = [
   [`${REP_CHALLENGE.questions} MCQs (cases included) on the 2 REP lectures · ${REP_CHALLENGE.minutes} minutes · one attempt`, `${REP_CHALLENGE.questions} سؤال منهم حالات مرضية، ${REP_CHALLENGE.minutes} دقيقة، ومحاولة واحدة`],
   ['Highest score wins. In a tie, the fastest time wins.', 'أعلى درجة تكسب، ولو في تعادل الأسرع يكسب'],
   ['Use the same email as your MedAtlas account. Only your first attempt counts.', 'استخدم نفس إيميل حسابك على MedAtlas، وأول محاولة بس اللي بتتحسب'],
-  ['Winners are checked by university ID and Instagram, and announced with the answers on Friday 16 October, 8 PM.', 'هنتأكد من الفايزين ونعلنهم مع الإجابات الجمعة 16 أكتوبر 8 م'],
+  ['Winners are checked by university ID and Instagram, and announced with the answers on Wednesday 21 October, 8 PM.', 'هنتأكد من الفايزين ونعلنهم مع الإجابات الأربعاء 21 أكتوبر 8 م'],
 ];
 
 function useCountdown(target: number, offset: number) {
@@ -142,7 +142,7 @@ export default function RepChallengePage() {
             )}
             {phase === 'open' && <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">The exam link is loading. If it doesn’t appear in a few seconds, refresh the page.</p>}
             {phase === 'entry-closed' && <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Entry closed at {cairoTime(REP_CHALLENGE.lastEntryAt, { hour: 'numeric', minute: '2-digit' })}. If you already started, finish and submit in your open form. <span dir="rtl" className="block">الدخول قفل. لو بدأت خلّص وسلّم.</span></p>}
-            {phase === 'ended' && <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">The challenge has ended. Winners and answers: Friday 16 October, 8 PM on Instagram. <span dir="rtl" className="block">التحدي خلص، والنتيجة الجمعة 8 م على إنستجرام.</span></p>}
+            {phase === 'ended' && <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">The challenge has ended. Winners and answers: Wednesday 21 October, 8 PM on Instagram. <span dir="rtl" className="block">التحدي خلص، والنتيجة الأربعاء 8 م على إنستجرام.</span></p>}
           </section>
         )}
 
