@@ -1,5 +1,6 @@
 import 'server-only';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { supabaseNoStoreFetch } from '@/lib/supabaseFetch';
 
 /** Server-only service client. Never import this module from a client component. */
 export function createSupabaseAdmin(): SupabaseClient | null {
@@ -8,5 +9,6 @@ export function createSupabaseAdmin(): SupabaseClient | null {
   if (!url || !key) return null;
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: supabaseNoStoreFetch },
   });
 }

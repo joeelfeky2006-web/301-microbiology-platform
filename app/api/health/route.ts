@@ -1,15 +1,32 @@
-import { createClient } from '@supabase/supabase-js';
+import { createSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 export const maxDuration = 30;
 
 export async function GET() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) return Response.json({ ok: false }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
-  const client = createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { error } = await client.from('materials').select('id').limit(1);
-  if (error) return Response.json({ ok: false }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
-  return Response.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } });
+  const admin = createSupabaseAdmin();
+  if (!admin) {
+    return Response.json(
+      { ok: false, reason: 'service_role_missing' },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } },
+    );
+  }
+  const { data, error } = await admin.from('materials').select('id,module');
+  if (error) {
+    return Response.json(
+      { ok: false, reason: 'materials_query_failed' },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } },
+    );
+  }
+  const byModule: Record<string, number> = {};
+  for (const row of data || []) {
+    const mod = typeof row.module === 'string' ? row.module.trim().toUpperCase() : 'UNKNOWN';
+    byModule[mod] = (byModule[mod] || 0) + 1;
+  }
+  return Response.json(
+    { ok: true, count: (data || []).length, byModule },
+    { headers: { 'Cache-Control': 'no-store' } },
+  );
 }
