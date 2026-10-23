@@ -18,7 +18,7 @@ export async function GET(request: NextRequest, { params }: { params: { quizId: 
         const correct = String(item.correctAnswer || item.correct_answer || '').trim().toUpperCase();
         return {
           ...base,
-          correctAnswer: ['A', 'B', 'C', 'D'].includes(correct) ? correct : '',
+          correctAnswer: ['A', 'B', 'C', 'D', 'E'].includes(correct) ? correct : '',
           explanation: typeof item.explanation === 'string' ? item.explanation : '',
         };
       })

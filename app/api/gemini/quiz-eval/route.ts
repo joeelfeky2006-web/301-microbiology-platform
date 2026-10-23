@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
   );
   const results: ScoredRow[] = bank.map((question) => {
     const raw = (answerMap.get(question.id) || '').trim().toUpperCase();
-    const student = ['A', 'B', 'C', 'D'].includes(raw) ? raw : '';
+    const student = ['A', 'B', 'C', 'D', 'E'].includes(raw) ? raw : '';
     return {
       question_id: question.id,
       question: question.question,

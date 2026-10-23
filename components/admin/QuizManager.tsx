@@ -26,6 +26,7 @@ const example = JSON.stringify(
         { id: 'B', text: 'Option B' },
         { id: 'C', text: 'Option C' },
         { id: 'D', text: 'Option D' },
+        { id: 'E', text: 'Option E (optional fifth choice)' },
       ],
       correctAnswer: 'A',
       explanation: 'Add a concise explanation.',
@@ -275,7 +276,7 @@ export default function QuizManager() {
             Published (visible to students)
           </label>
           <label className="block text-sm font-semibold">
-            Questions JSON <span className="font-normal text-slate-500">(1–200 MCQs; four options A–D per question)</span>
+            Questions JSON <span className="font-normal text-slate-500">(1–200 MCQs; 4 or 5 options A–D / A–E per question)</span>
             <textarea
               required
               rows={14}

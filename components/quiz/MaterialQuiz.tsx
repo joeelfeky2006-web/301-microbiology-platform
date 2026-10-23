@@ -8,11 +8,13 @@ import QuizComfortCard from './ComfortCard';
 import CollapsiblePanel from '@/components/ui/CollapsiblePanel';
 import { authenticatedHeaders, redirectAfterSessionExpiry } from '@/lib/authHeaders';
 
+type ChoiceId = 'A' | 'B' | 'C' | 'D' | 'E';
+
 type Question = {
   id: string;
   question: string;
-  options: { id: 'A' | 'B' | 'C' | 'D'; text: string }[];
-  correctAnswer?: 'A' | 'B' | 'C' | 'D' | '';
+  options: { id: ChoiceId; text: string }[];
+  correctAnswer?: ChoiceId | '';
   explanation?: string;
 };
 
@@ -299,7 +301,7 @@ export default function MaterialQuiz({ material }: { material: Pick<Material, 'i
           id: item.id,
           question: item.question,
           options: item.options,
-          correctAnswer: (['A', 'B', 'C', 'D'].includes(correct) ? correct : '') as Question['correctAnswer'],
+          correctAnswer: (['A', 'B', 'C', 'D', 'E'].includes(correct) ? correct : '') as Question['correctAnswer'],
           explanation: typeof item.explanation === 'string' ? item.explanation : '',
         };
       });
