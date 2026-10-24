@@ -52,3 +52,10 @@ Save it and practise all 5 in the URS question bank. Educational use only.
 
 **How to use Exam Vault** (`7-reels/howto-exam-vault`)
 إزاي تستخدم MedAtlas؟ Home → CNS → Exam Vault. Open the Midterm Questions PDF, or open Lecture quizzes for Practice / Exam mode.
+
+**10 · CNS midterm high-yield** (`post-10-cns-hy-01…07`)
+High-yield notes for CNS 301-2 microbiology midterm, from the CNS-2 Qbank. ملاحظات الميدترم 🧠
+Meningitis map, meningococcus, GBS & Listeria, Cryptococcus, tetanus vs botulism, brain abscess. Full bank in Exam Vault.
+
+**Story · CNS HY teaser** (`story-cns-hy-teaser`)
+Coming tomorrow: the 7-slide notes post + the Exam Vault how-to Reel. Add a reminder sticker.

@@ -1,0 +1,59 @@
+<!doctype html><html><head><meta charset="utf-8"><style>:root{--w:1080px;--h:1350px}
+@import url("../../tokens.css");
+@font-face { font-family: "Space Grotesk"; src: url("../../fonts/SpaceGrotesk-Variable.ttf"); font-weight: 300 700; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: var(--w); height: var(--h); overflow: hidden; }
+body { position: relative; font-family: "Space Grotesk", sans-serif; color: #fff; background: #0B1230; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: absolute; inset: 0;
+  background: radial-gradient(55% 40% at 95% 0%, rgba(124, 92, 255, .42), transparent 70%),
+              radial-gradient(55% 40% at 0% 100%, rgba(35, 80, 255, .4), transparent 70%),
+              radial-gradient(40% 30% at 100% 100%, rgba(33, 227, 192, .12), transparent 70%); }
+body::after { content: ""; position: absolute; inset: 0; background-size: 54px 54px;
+  background-image: linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px); }
+.frame { position: absolute; inset: 0; padding: 84px; display: flex; flex-direction: column; z-index: 1; }
+.top, .bottom { display: flex; align-items: center; justify-content: space-between; }
+.top img { height: 46px; }
+.bottom { margin-top: auto; font: 500 24px "IBM Plex Mono"; letter-spacing: .04em; opacity: .7; }
+.count { font: 500 22px "IBM Plex Mono"; letter-spacing: .08em; padding: 8px 14px; border-radius: 999px; border: 1.5px solid rgba(255,255,255,.35); opacity: .85; }
+.label { font: 500 22px "IBM Plex Mono"; letter-spacing: .14em; text-transform: uppercase; color: #B7A6FF; }
+.h1 { font-weight: 700; font-size: var(--h1, 92px); line-height: 1.02; letter-spacing: -.035em; }
+.h2 { font-weight: 700; font-size: var(--h2, 56px); line-height: 1.08; letter-spacing: -.03em; }
+.body { font-size: 30px; line-height: 1.4; opacity: .85; }
+.ar { font-family: "IBM Plex Sans Arabic"; direction: rtl; unicode-bidi: isolate; }
+.ar-line { font-family: "IBM Plex Sans Arabic"; font-weight: 600; direction: rtl; text-align: left; font-size: 40px; line-height: 1.4; }
+.grad { background: linear-gradient(90deg, #B7A6FF, #21E3C0); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.chip { display: inline-flex; align-items: center; gap: 10px; border-radius: 999px; padding: 10px 22px; font: 600 26px "Space Grotesk"; border: 2px solid rgba(183,166,255,.45); color: #D4C8FF; }
+.rows { display: flex; flex-direction: column; gap: 18px; margin-top: 28px; }
+.row { display: grid; grid-template-columns: 210px 1fr; gap: 18px; align-items: start; border-radius: 24px; padding: 22px 26px; background: rgba(255,255,255,.06); border: 1.5px solid rgba(255,255,255,.12); }
+.row .k { font: 700 28px "Space Grotesk"; color: #B7A6FF; letter-spacing: -.02em; }
+.row .v { font-size: 28px; line-height: 1.35; opacity: .92; }
+.bul { list-style: none; margin-top: 26px; }
+.bul li { position: relative; padding: 14px 0 14px 42px; font-size: 30px; line-height: 1.35; border-top: 1.5px solid rgba(255,255,255,.1); }
+.bul li:first-child { border-top: 0; }
+.bul li::before { content: ""; position: absolute; left: 8px; top: 28px; width: 10px; height: 10px; border-radius: 50%; background: #21E3C0; }
+.bul b { color: #fff; font-weight: 700; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 24px; }
+.card { border-radius: 28px; padding: 28px 26px; background: rgba(255,255,255,.06); border: 1.5px solid rgba(255,255,255,.12); }
+.card .t { font: 700 34px "Space Grotesk"; letter-spacing: -.02em; margin-bottom: 14px; }
+.card.tet .t { color: #FF8FA3; }
+.card.bot .t { color: #21E3C0; }
+.card li { font-size: 26px; line-height: 1.4; opacity: .9; padding: 8px 0; list-style: none; position: relative; padding-left: 28px; }
+.card li::before { content: ""; position: absolute; left: 0; top: 18px; width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: .7; }
+.trap { margin-top: 22px; border-radius: 24px; padding: 22px 26px; background: rgba(255,92,122,.12); border: 1.5px solid rgba(255,92,122,.35); }
+.trap .k { font: 700 22px "IBM Plex Mono"; letter-spacing: .1em; text-transform: uppercase; color: #FF8FA3; }
+.trap .v { font-size: 28px; line-height: 1.35; margin-top: 8px; }
+.cta { margin-top: 36px; display: inline-flex; align-items: center; gap: 16px; border-radius: 999px; padding: 22px 36px; background: linear-gradient(135deg, #2350FF, #5B3DF5); font: 700 34px "Space Grotesk"; box-shadow: 0 24px 60px rgba(35,80,255,.4); }
+</style></head><body><div class="frame">
+  <div class="top"><img src="../../../logo/svg/medatlas-horizontal-reversed.svg" alt=""><span class="count">2/7</span></div>
+  <div style="margin-top:36px"><span class="label">01 · Meningitis map</span></div>
+  <div class="h2" style="margin-top:12px">Who is the patient?</div>
+  <div class="ar-line" style="margin-top:6px;font-size:36px">اختار الميكروب حسب السن</div>
+  <div class="rows">
+    <div class="row"><div class="k">Neonate</div><div class="v">GBS · E. coli K1 · <b>Listeria</b></div></div>
+    <div class="row"><div class="k">3 mo–2 yr</div><div class="v">Hib · S. pneumoniae · N. meningitidis</div></div>
+    <div class="row"><div class="k">Teen / adult</div><div class="v">N. meningitidis · S. pneumoniae</div></div>
+    <div class="row"><div class="k">Elderly / ↓CMI</div><div class="v">S. pneumoniae · Listeria · Crypto</div></div>
+  </div>
+  <div class="trap"><div class="k">Acute bacterial CSF</div><div class="v">Turbid · ↑ neutrophils · ↓ glucose · ↑ protein</div></div>
+  <div class="bottom"><span>@medatlas_eg</span><span>swipe →</span></div>
+</div></body></html>
