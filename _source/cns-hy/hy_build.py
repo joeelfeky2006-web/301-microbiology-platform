@@ -1,4 +1,4 @@
-"""CNS 301-2 high-yield Instagram carousel (7 slides) + story teaser."""
+"""CNS 301-2 high-yield Instagram carousel (8 slides) + story teaser."""
 import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -67,13 +67,13 @@ def page(name, w, h, body, extra=""):
         )
 
 
-def foot(swipe=True, n=None, total=7):
+def foot(swipe=True, n=None, total=8):
     right = "swipe →" if swipe else "link in bio"
     left = "@medatlas_eg"
     return f'<div class="bottom"><span>{left}</span><span>{right}</span></div>'
 
 
-def top(n, total=7, chip=None):
+def top(n, total=8, chip=None):
     c = f'<span class="chip">{chip}</span>' if chip else f'<span class="count">{n}/{total}</span>'
     return f'<div class="top">{LOGO}{c}</div>'
 
@@ -84,9 +84,9 @@ page("hy-01", 1080, 1350, f'''
   <div style="margin-top:70px"><span class="label">High-yield · قبل الميدترم</span></div>
   <div class="h1" style="--h1:108px;margin-top:22px">Microbiology<br><span class="grad">CNS midterm</span><br>notes.</div>
   <div class="ar-line" style="margin-top:18px;font-size:48px">ملاحظات عالية القيمة من الـ Qbank</div>
-  <div class="body" style="margin-top:28px;font-size:32px">Bacterial &amp; fungal nervous system infections · 7 slides</div>
+  <div class="body" style="margin-top:28px;font-size:32px">Bacterial &amp; fungal nervous system infections · 8 slides</div>
   <div class="rows" style="margin-top:36px">
-    <div class="row" style="grid-template-columns:1fr"><div class="v"><b>Meningitis map · CSF · Meningococcus · GBS · Listeria · Crypto · Tetanus vs Botulism · Abscess</b></div></div>
+    <div class="row" style="grid-template-columns:1fr"><div class="v"><b>Meningitis map · Meningococcus · GBS · Listeria · Crypto · Tetanus vs Botulism · Abscess · Past exams</b></div></div>
   </div>
   {foot()}
 ''')
@@ -199,7 +199,7 @@ page("hy-06", 1080, 1350, f'''
   {foot()}
 ''')
 
-# 7 abscess + CTA
+# 7 abscess
 page("hy-07", 1080, 1350, f'''
   {top(7)}
   <div style="margin-top:36px"><span class="label">06 · Brain abscess</span></div>
@@ -210,19 +210,36 @@ page("hy-07", 1080, 1350, f'''
     <li>DKA + facial necrosis → <b>mucor</b> (nonseptate hyphae)</li>
     <li>Best imaging: contrast <b>MRI</b> (ring-enhancing)</li>
   </ul>
-  <div class="cta">Full Qbank in Exam Vault →</div>
-  <div class="ar-line" style="margin-top:18px;font-size:34px;opacity:.85">CNS → Exam Vault → Midterm Questions + quizzes</div>
-  {foot(swipe=False)}
+  <div class="trap"><div class="k">Past exam</div><div class="v">Abscess 1 month after dental extraction → <b>viridans strep + GN anaerobes</b></div></div>
+  {foot()}
 ''', ".bul li{font-size:29px}")
+
+# 8 past exam notes + CTA
+page("hy-08", 1080, 1350, f'''
+  {top(8)}
+  <div style="margin-top:28px"><span class="label">07 · Past exams</span></div>
+  <div class="h2" style="margin-top:10px;--h2:50px">Five past-exam<br><span class="grad">must-knows</span></div>
+  <div class="ar-line" style="margin-top:6px;font-size:34px">من أسئلة الامتحانات السابقة</div>
+  <div class="rows" style="margin-top:18px;gap:14px">
+    <div class="row" style="grid-template-columns:1fr"><div class="v"><b>Meningococcus vaccine:</b> MCV4 = A,C,Y,W · serogroup B needs MenB</div></div>
+    <div class="row" style="grid-template-columns:1fr"><div class="v"><b>Neonate + GP chains, β-hemolytic, bacitracin R:</b> GBS (S. agalactiae)</div></div>
+    <div class="row" style="grid-template-columns:1fr"><div class="v"><b>AIDS + India ink capsule + high antigen:</b> Cryptococcus neoformans</div></div>
+    <div class="row" style="grid-template-columns:1fr"><div class="v"><b>Home-canned food + afebrile paralysis:</b> mouse protection test</div></div>
+    <div class="row" style="grid-template-columns:1fr"><div class="v"><b>Brain abscess after dental extraction:</b> viridans strep + GN anaerobes</div></div>
+  </div>
+  <div class="cta" style="margin-top:22px">Full Qbank in Exam Vault →</div>
+  <div class="ar-line" style="margin-top:12px;font-size:30px;opacity:.85">CNS → Exam Vault → Midterm Questions + quizzes</div>
+  {foot(swipe=False)}
+''', ".row{padding:16px 22px}.row .v{font-size:26px;line-height:1.3}.cta{font-size:30px;padding:18px 30px}")
 
 # Story teaser 1080x1920
 page("hy-story", 1080, 1920, f'''
   <div class="top" style="justify-content:center">{LOGO}</div>
   <div style="margin-top:120px;text-align:center">
-    <span class="chip">Tomorrow · بكرة</span>
+    <span class="chip">Tonight · الليلة</span>
     <div class="h1" style="--h1:110px;margin-top:40px">CNS midterm<br><span class="grad">high-yield</span></div>
     <div class="ar" style="font-weight:700;font-size:64px;margin-top:28px">ملاحظات الميدترم</div>
-    <div class="body" style="margin-top:22px;font-size:34px">7 slides · from the CNS-2 Qbank</div>
+    <div class="body" style="margin-top:22px;font-size:34px">8 slides · from the CNS-2 Qbank</div>
   </div>
   <div style="margin:70px 40px 0;border-radius:36px;padding:40px 36px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.14);text-align:center">
     <div style="font:700 40px Space Grotesk;letter-spacing:-.02em">Post + Reel</div>
